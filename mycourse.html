@@ -1,0 +1,1173 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0"/>
+<title>আমার কোর্স</title>
+<link rel="icon" id="favicon" href=""/>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=Hind+Siliguri:wght@400;500;600;700&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet"/>
+
+<script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore-compat.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="config.js"></script>
+
+<style>
+/* ── TOKENS ───────────────────────────── */
+:root {
+  --bg:      #0D0F14;
+  --surface: #13161E;
+  --card:    #181C27;
+  --card2:   #1E2335;
+  --border:  rgba(255,255,255,.07);
+  --border2: rgba(255,255,255,.13);
+  --ink:     #ECEEF5;
+  --muted:   #6B7280;
+  --soft:    #9CA3AF;
+  --primary: #4361EE;
+  --primary2:#3A56E4;
+  --cyan:    #06D6A0;
+  --amber:   #FFB703;
+  --rose:    #FB5607;
+  --bn: 'Hind Siliguri', sans-serif;
+  --en: 'Inter', sans-serif;
+  --r: 16px;
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; }
+body {
+  font-family: var(--bn);
+  background: var(--bg);
+  color: var(--ink);
+  min-height: 100vh;
+  max-width: 480px;
+  margin: 0 auto;
+  padding-bottom: 7rem;
+  -webkit-font-smoothing: antialiased;
+}
+a { text-decoration: none; color: inherit; }
+button { font-family: var(--bn); cursor: pointer; border: none; background: none; }
+
+/* ── LOADER ───────────────────────────── */
+#pageLoader {
+  position: fixed; inset: 0; z-index: 9999;
+  background: var(--bg);
+  display: flex; align-items: center; justify-content: center;
+  flex-direction: column; gap: 1rem;
+  transition: opacity .4s, visibility .4s;
+}
+#pageLoader.gone { opacity: 0; visibility: hidden; pointer-events: none; }
+.ld-logo {
+  width: 50px; height: 50px; border-radius: 14px;
+  background: var(--primary);
+  display: flex; align-items: center; justify-content: center;
+  font-family: var(--en); font-size: 1.4rem; font-weight: 800; color: #fff;
+  animation: ldPulse 1.4s ease-in-out infinite;
+}
+@keyframes ldPulse { 0%,100%{transform:scale(1)} 50%{transform:scale(.9);opacity:.7} }
+.ld-bar { width: 110px; height: 3px; background: var(--border2); border-radius: 10px; overflow: hidden; }
+.ld-fill { height: 100%; width: 40%; background: var(--primary); border-radius: 10px; animation: ldSlide 1.2s ease-in-out infinite; }
+@keyframes ldSlide { 0%{transform:translateX(-100%)} 100%{transform:translateX(350%)} }
+
+/* ── TOP BAR ──────────────────────────── */
+.topbar {
+  position: sticky; top: 0; z-index: 100;
+  background: rgba(13,15,20,.92);
+  backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+  border-bottom: 1px solid var(--border);
+  height: 58px;
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 0 1.1rem;
+}
+.topbar-left { display: flex; align-items: center; gap: .75rem; }
+.back-btn {
+  width: 36px; height: 36px; border-radius: 10px;
+  background: var(--card); border: 1px solid var(--border2);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 1rem; cursor: pointer; transition: background .18s, border-color .18s;
+  text-decoration: none; color: var(--ink); flex-shrink: 0;
+}
+.back-btn:hover { background: var(--card2); border-color: var(--primary); }
+.topbar-title { font-family: var(--en); font-size: 1rem; font-weight: 700; }
+.enrolled-badge {
+  background: rgba(67,97,238,.18); border: 1px solid rgba(67,97,238,.3);
+  color: #818CF8; font-family: var(--en); font-size: .68rem; font-weight: 700;
+  padding: .18rem .55rem; border-radius: 20px; display: none;
+}
+.enrolled-badge.show { display: inline-block; }
+
+/* ── BODY ─────────────────────────────── */
+.scroll-body { padding: 1.1rem 1.1rem 0; }
+
+/* ── STATS ROW ────────────────────────── */
+.stats-row {
+  display: grid; grid-template-columns: repeat(3, 1fr);
+  gap: .65rem; margin-bottom: 1.3rem;
+  animation: fadeUp .35s ease both;
+}
+.stat-pill {
+  background: var(--card); border: 1px solid var(--border);
+  border-radius: 14px; padding: .85rem .5rem;
+  text-align: center; position: relative; overflow: hidden;
+}
+.stat-pill::before {
+  content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px;
+  border-radius: 14px 14px 0 0;
+}
+.stat-pill.c1::before { background: var(--primary); }
+.stat-pill.c2::before { background: var(--cyan); }
+.stat-pill.c3::before { background: var(--amber); }
+.stat-num {
+  font-family: var(--en); font-size: 1.6rem; font-weight: 800;
+  line-height: 1;
+}
+.stat-pill.c1 .stat-num { color: var(--primary); }
+.stat-pill.c2 .stat-num { color: var(--cyan); }
+.stat-pill.c3 .stat-num { color: var(--amber); }
+.stat-lbl { font-size: .68rem; color: var(--muted); margin-top: .25rem; }
+
+/* ── FILTER TABS ──────────────────────── */
+.filter-tabs {
+  display: flex; gap: .45rem; margin-bottom: 1.1rem;
+  overflow-x: auto; padding-bottom: .15rem;
+  scrollbar-width: none; animation: fadeUp .35s ease .05s both;
+}
+.filter-tabs::-webkit-scrollbar { display: none; }
+.tab-btn {
+  padding: .38rem .9rem; border-radius: 20px; flex-shrink: 0;
+  font-size: .75rem; font-weight: 600; font-family: var(--en);
+  background: var(--card); border: 1px solid var(--border2);
+  color: var(--soft); cursor: pointer;
+  transition: background .18s, border-color .18s, color .18s;
+}
+.tab-btn.active {
+  background: rgba(67,97,238,.18); border-color: rgba(67,97,238,.35); color: #818CF8;
+}
+
+/* ── COURSE LIST ──────────────────────── */
+.course-list { display: flex; flex-direction: column; gap: .85rem; }
+
+/* ── COURSE CARD ──────────────────────── */
+.course-card {
+  background: var(--card); border: 1px solid var(--border);
+  border-radius: var(--r); overflow: hidden;
+  transition: border-color .2s, transform .18s, box-shadow .18s;
+  animation: fadeUp .4s ease both;
+}
+.course-card:nth-child(2) { animation-delay:.06s; }
+.course-card:nth-child(3) { animation-delay:.12s; }
+.course-card:nth-child(4) { animation-delay:.18s; }
+.course-card:hover { border-color: rgba(67,97,238,.35); transform: translateY(-2px); box-shadow: 0 8px 28px rgba(0,0,0,.35); }
+
+/* thumbnail */
+.course-thumb {
+  width: 100%; height: 160px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 3.5rem; position: relative; overflow: hidden;
+}
+.course-thumb::after {
+  content: ''; position: absolute; inset: 0;
+  background: linear-gradient(to bottom, transparent 40%, rgba(13,15,20,.7));
+  pointer-events: none;
+}
+.course-thumb.g1 { background: linear-gradient(135deg,#1a1f35,#2d3561); }
+.course-thumb.g2 { background: linear-gradient(135deg,#0d2137,#0a4769); }
+.course-thumb.g3 { background: linear-gradient(135deg,#1a0d24,#3d1a52); }
+.course-thumb.g4 { background: linear-gradient(135deg,#0d1f1a,#0d4032); }
+.course-thumb.g5 { background: linear-gradient(135deg,#241a0d,#52380d); }
+.course-thumb.g6 { background: linear-gradient(135deg,#1f0d0d,#521a1a); }
+.course-thumb img {
+  position: absolute; inset: 0; width: 100%; height: 100%;
+  object-fit: cover; transition: transform .4s;
+}
+.course-card:hover .course-thumb img { transform: scale(1.04); }
+.cat-badge {
+  position: absolute; bottom: .6rem; left: .7rem; z-index: 2;
+  background: rgba(13,15,20,.75); backdrop-filter: blur(6px);
+  color: #818CF8; font-size: .62rem; font-weight: 700;
+  padding: .17rem .6rem; border-radius: 20px;
+  border: 1px solid rgba(67,97,238,.3);
+  text-transform: uppercase; letter-spacing: .05em;
+  font-family: var(--en);
+}
+
+/* body */
+.course-body { padding: 1rem 1.1rem; }
+.price-badge {
+  display: inline-flex; align-items: center; gap: .25rem;
+  font-size: .65rem; font-weight: 700;
+  padding: .18rem .6rem; border-radius: 20px;
+  margin-bottom: .55rem; font-family: var(--en);
+}
+.price-free { background: rgba(6,214,160,.1); color: var(--cyan); border: 1px solid rgba(6,214,160,.2); }
+.price-paid { background: rgba(255,183,3,.12); color: var(--amber); border: 1px solid rgba(255,183,3,.25); }
+
+.course-title {
+  font-family: var(--en); font-size: .97rem; font-weight: 700;
+  line-height: 1.4; margin-bottom: .3rem;
+  display: -webkit-box; -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical; overflow: hidden;
+}
+.course-meta-row {
+  display: flex; align-items: center; gap: .5rem; flex-wrap: wrap;
+  font-size: .75rem; color: var(--muted); margin-bottom: .8rem;
+}
+.course-meta-row span { display: flex; align-items: center; gap: .2rem; }
+
+/* rating */
+.rating-row { display: flex; align-items: center; gap: .35rem; margin-bottom: .7rem; }
+.stars-display { display: flex; gap: 1px; }
+.star-f { color: var(--amber); font-size: .78rem; }
+.star-e { color: var(--border2); font-size: .78rem; }
+.rating-count { font-size: .7rem; color: var(--muted); font-family: var(--en); }
+
+/* progress */
+.progress-wrap { margin-bottom: .9rem; }
+.progress-top {
+  display: flex; justify-content: space-between;
+  font-size: .72rem; color: var(--muted); margin-bottom: .4rem;
+}
+.progress-top span:last-child { font-family: var(--en); font-weight: 700; color: var(--cyan); }
+.progress-bar { height: 6px; background: var(--border2); border-radius: 10px; overflow: hidden; }
+.progress-fill {
+  height: 100%; border-radius: 10px;
+  background: linear-gradient(90deg, var(--primary), var(--cyan));
+  transition: width .7s cubic-bezier(.4,0,.2,1);
+}
+.progress-fill.done { background: linear-gradient(90deg, var(--cyan), #00b38a); }
+
+/* action buttons */
+.btn-wrap { display: flex; flex-direction: column; gap: .45rem; }
+.btn-action {
+  width: 100%; padding: .65rem;
+  border-radius: 10px; font-size: .83rem; font-weight: 700;
+  transition: all .18s; font-family: var(--bn);
+}
+.btn-continue {
+  background: rgba(67,97,238,.15); color: #818CF8;
+  border: 1px solid rgba(67,97,238,.25);
+}
+.btn-continue:hover { background: var(--primary); color: #fff; }
+.btn-done {
+  background: rgba(6,214,160,.1); color: var(--cyan);
+  border: 1px solid rgba(6,214,160,.2); cursor: default;
+}
+.btn-cert {
+  background: linear-gradient(135deg,#C8A96E,#e6c87a); color: #0D0F14; font-weight: 800;
+}
+.btn-cert:hover { filter: brightness(1.1); transform: translateY(-1px); }
+.btn-rate {
+  background: rgba(255,183,3,.1); color: var(--amber);
+  border: 1px solid rgba(255,183,3,.2);
+}
+.btn-rate:hover { background: rgba(255,183,3,.2); }
+
+/* ── SKELETON ─────────────────────────── */
+.sk-card {
+  background: var(--card); border: 1px solid var(--border);
+  border-radius: var(--r); overflow: hidden;
+}
+.sk-thumb-full { height: 160px; }
+.sk-body-pad { padding: 1rem 1.1rem; display: flex; flex-direction: column; gap: .55rem; }
+.sk-line {
+  height: 11px; border-radius: 6px;
+  background: linear-gradient(90deg, var(--card) 25%, rgba(255,255,255,.04) 50%, var(--card) 75%);
+  background-size: 200% 100%;
+  animation: skShim 1.3s ease-in-out infinite;
+}
+.sk-line.w90 { width: 90%; }
+.sk-line.w70 { width: 70%; }
+.sk-line.w45 { width: 45%; height: 8px; }
+.sk-line.full { width: 100%; height: 160px; border-radius: 0; }
+@keyframes skShim { 0%{background-position:200% 0} 100%{background-position:-200% 0} }
+
+/* ── EMPTY STATE ──────────────────────── */
+.empty-state {
+  text-align: center; padding: 4rem 2rem;
+  background: var(--card); border: 1px dashed var(--border2);
+  border-radius: var(--r);
+}
+.empty-icon { font-size: 2.8rem; margin-bottom: .8rem; }
+.empty-title { font-family: var(--en); font-size: .95rem; font-weight: 700; margin-bottom: .3rem; }
+.empty-desc { font-size: .82rem; color: var(--muted); margin-bottom: 1.1rem; }
+.empty-link {
+  display: inline-block; padding: .55rem 1.5rem;
+  background: var(--primary); color: #fff; border-radius: 9px;
+  font-size: .82rem; font-weight: 700; font-family: var(--bn);
+}
+
+/* ── BOTTOM NAV ───────────────────────── */
+.bnav {
+  position: fixed; bottom: .9rem; left: 50%; transform: translateX(-50%);
+  z-index: 200; width: calc(100% - 2rem); max-width: 444px; height: 58px;
+  background: rgba(18,22,36,.75);
+  backdrop-filter: blur(28px) saturate(1.8); -webkit-backdrop-filter: blur(28px) saturate(1.8);
+  border: 1px solid rgba(255,255,255,.09); border-radius: 22px;
+  display: flex; align-items: center; padding: 0 .4rem;
+  box-shadow: 0 8px 32px rgba(0,0,0,.5), inset 0 1px 0 rgba(255,255,255,.06);
+}
+.bnav-item {
+  flex: 1; display: flex; flex-direction: column; align-items: center;
+  justify-content: center; gap: .15rem; cursor: pointer;
+  color: var(--muted); padding: .45rem .1rem; border-radius: 14px;
+  transition: color .18s, background .18s; text-decoration: none;
+  font-family: var(--bn); position: relative;
+}
+.bnav-item.active { color: var(--primary); }
+.bnav-item.active::before {
+  content: ''; position: absolute; top: 3px;
+  width: 20px; height: 3px; border-radius: 2px;
+  background: var(--primary); box-shadow: 0 0 8px var(--primary);
+}
+.bnav-item:hover:not(.active) { color: var(--soft); background: rgba(255,255,255,.04); }
+.bnav-icon  { font-size: 1.2rem; line-height: 1; }
+.bnav-label { font-size: .58rem; font-weight: 600; letter-spacing: .02em; white-space: nowrap; }
+
+/* ══════════════════════════════════════
+   RATING MODAL
+══════════════════════════════════════ */
+.modal-overlay {
+  display: none; position: fixed; inset: 0; z-index: 700;
+  background: rgba(0,0,0,.78); backdrop-filter: blur(10px);
+  align-items: flex-end; justify-content: center; padding: 0;
+}
+.modal-overlay.show { display: flex; animation: fadeOv .2s ease; }
+@keyframes fadeOv { from{opacity:0} to{opacity:1} }
+
+.modal-sheet {
+  background: var(--surface); border: 1px solid var(--border2);
+  border-radius: 24px 24px 0 0; width: 100%; max-width: 480px;
+  padding: 1.5rem 1.4rem 2.2rem; position: relative;
+  box-shadow: 0 -16px 60px rgba(0,0,0,.5);
+  animation: slideUp .3s cubic-bezier(.34,1.3,.64,1) both;
+  max-height: 92vh; overflow-y: auto;
+}
+@keyframes slideUp { from{transform:translateY(100%)} to{transform:translateY(0)} }
+
+.sheet-handle {
+  width: 40px; height: 4px; background: var(--border2);
+  border-radius: 2px; margin: 0 auto .9rem;
+}
+.sheet-close {
+  position: absolute; top: 1rem; right: 1rem;
+  width: 30px; height: 30px; border-radius: 8px;
+  background: var(--card); border: 1px solid var(--border);
+  color: var(--muted); display: flex; align-items: center; justify-content: center;
+  font-size: .9rem; cursor: pointer; transition: background .2s;
+}
+.sheet-close:hover { background: var(--border2); color: var(--ink); }
+.sheet-title { font-family: var(--en); font-size: 1.05rem; font-weight: 800; margin-bottom: .25rem; }
+.sheet-sub { font-size: .8rem; color: var(--muted); margin-bottom: 1.4rem;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+/* star picker */
+.star-picker { display: flex; gap: .45rem; justify-content: center; margin-bottom: .9rem; }
+.star-pick-btn {
+  font-size: 2.2rem; background: none; border: none; cursor: pointer;
+  transition: transform .15s; line-height: 1;
+  filter: grayscale(1) brightness(.45);
+}
+.star-pick-btn.lit { filter: none; }
+.star-pick-btn:hover { transform: scale(1.18); }
+.star-label {
+  text-align: center; font-size: .82rem; color: var(--soft);
+  margin-bottom: 1.1rem; min-height: 1.2em;
+}
+.rate-textarea {
+  width: 100%; padding: .75rem 1rem;
+  background: var(--card); border: 1.5px solid var(--border);
+  border-radius: 10px; color: var(--ink);
+  font-size: .85rem; font-family: var(--bn);
+  outline: none; resize: vertical; min-height: 80px;
+  transition: border-color .2s; margin-bottom: 1rem;
+}
+.rate-textarea:focus { border-color: var(--primary); }
+.rate-textarea::placeholder { color: var(--muted); }
+.btn-submit-rate {
+  width: 100%; padding: .75rem;
+  background: var(--amber); color: #0D0F14;
+  border-radius: 10px; font-size: .9rem; font-weight: 700;
+  transition: filter .2s, transform .15s;
+}
+.btn-submit-rate:hover { filter: brightness(1.1); transform: translateY(-1px); }
+.btn-submit-rate:disabled { opacity: .5; cursor: not-allowed; transform: none; }
+.sheet-msg {
+  margin-top: .7rem; padding: .55rem 1rem; border-radius: 8px;
+  font-size: .82rem; text-align: center; display: none;
+}
+.sheet-msg.ok  { background: rgba(6,214,160,.1); color: var(--cyan);   border: 1px solid rgba(6,214,160,.2); display: block; }
+.sheet-msg.err { background: rgba(251,86,7,.1);  color: #fb8c5a;        border: 1px solid rgba(251,86,7,.2);  display: block; }
+
+/* ══════════════════════════════════════
+   CERTIFICATE MODAL
+══════════════════════════════════════ */
+.cert-sheet {
+  background: var(--surface); border: 1px solid var(--border2);
+  border-radius: 24px 24px 0 0; width: 100%; max-width: 480px;
+  padding: 1.5rem 1.4rem 2.2rem; position: relative;
+  box-shadow: 0 -16px 60px rgba(0,0,0,.5);
+  animation: slideUp .3s cubic-bezier(.34,1.3,.64,1) both;
+  max-height: 94vh; overflow-y: auto;
+}
+
+/* certificate preview */
+.cert-preview {
+  position: relative; border-radius: 14px; overflow: hidden;
+  margin-bottom: 1.1rem; text-align: center;
+  background: linear-gradient(135deg,#1a1506,#2a2208 50%,#1a1506);
+  border: 2px solid #C8A96E;
+}
+.cert-preview::before {
+  content: ''; position: absolute; inset: 6px;
+  border: 1px solid rgba(200,169,110,.2); border-radius: 10px;
+  pointer-events: none; z-index: 0;
+}
+.cert-frame-bg {
+  position: absolute; inset: 0; width: 100%; height: 100%;
+  object-fit: cover; z-index: 0; border-radius: 14px; display: none;
+}
+.cert-inner { position: relative; z-index: 1; padding: 1.5rem 1.2rem; }
+.cp-corner { position: absolute; font-size: 1.2rem; opacity: .3; z-index: 1; }
+.cp-corner.tl{top:8px;left:10px} .cp-corner.tr{top:8px;right:10px}
+.cp-corner.bl{bottom:8px;left:10px} .cp-corner.br{bottom:8px;right:10px}
+.cp-logo {
+  width: 48px; height: 48px; border-radius: 11px;
+  background: rgba(200,169,110,.15); border: 1.5px solid rgba(200,169,110,.3);
+  display: flex; align-items: center; justify-content: center;
+  margin: 0 auto .65rem; overflow: hidden;
+}
+.cp-logo img { width: 100%; height: 100%; object-fit: cover; border-radius: 10px; }
+.cp-logo-letter { font-size: 1.3rem; font-weight: 800; color: #C8A96E; }
+.cp-school { font-size: .6rem; font-weight: 700; letter-spacing: .18em; text-transform: uppercase; color: #C8A96E; margin-bottom: .4rem; opacity: .8; }
+.cp-heading { font-size: 1rem; font-weight: 800; color: #f5e6c0; margin-bottom: .25rem; }
+.cp-certify { font-size: .68rem; color: rgba(245,230,192,.4); margin-bottom: .5rem; }
+.cp-name { font-size: 1.35rem; font-weight: 800; color: #C8A96E; margin-bottom: .25rem; }
+.cp-course-label { font-size: .65rem; color: rgba(245,230,192,.4); margin-bottom: .2rem; }
+.cp-course { font-size: .88rem; font-weight: 700; color: #f5e6c0; margin-bottom: .85rem; line-height: 1.35; }
+.cp-divider { height: 1px; background: linear-gradient(90deg,transparent,rgba(200,169,110,.3),transparent); margin-bottom: .85rem; }
+.cp-meta { display: flex; justify-content: space-between; align-items: flex-end; }
+.cp-meta-col { text-align: center; }
+.cp-meta-label { font-size: .58rem; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: rgba(245,230,192,.3); margin-bottom: .18rem; }
+.cp-meta-val { font-size: .7rem; font-weight: 700; color: rgba(245,230,192,.75); }
+.cp-seal { width: 38px; height: 38px; border-radius: 50%; border: 1.5px solid rgba(200,169,110,.35); background: rgba(200,169,110,.08); display: flex; align-items: center; justify-content: center; font-size: 1rem; margin: 0 auto; }
+.cp-signature { max-height: 40px; max-width: 100px; object-fit: contain; margin: 0 auto; display: block; opacity: .85; }
+.cp-id { margin-top: .6rem; font-family: monospace; font-size: .58rem; color: rgba(200,169,110,.4); letter-spacing: .06em; }
+
+/* cert action buttons */
+.cert-actions { display: grid; grid-template-columns: 1fr 1fr; gap: .55rem; }
+.btn-cert-dl {
+  padding: .65rem; border-radius: 10px;
+  font-size: .82rem; font-weight: 700; font-family: var(--en);
+  cursor: pointer; transition: filter .2s, transform .15s;
+  display: flex; align-items: center; justify-content: center; gap: .4rem;
+}
+.btn-cert-dl:hover { filter: brightness(1.1); transform: translateY(-1px); }
+.btn-cert-dl:disabled { opacity: .5; cursor: not-allowed; transform: none; }
+.btn-dl-pdf    { background: linear-gradient(135deg,#C8A96E,#e6c87a); color: #0D0F14; border: none; }
+.btn-dl-verify { background: rgba(67,97,238,.12); color: var(--primary); border: 1px solid rgba(67,97,238,.2); }
+
+/* frame‑mode cert text colours */
+.cert-preview.has-frame .cp-heading,
+.cert-preview.has-frame .cp-course,
+.cert-preview.has-frame .cp-name { color: #1a1506; }
+.cert-preview.has-frame .cp-certify,
+.cert-preview.has-frame .cp-course-label,
+.cert-preview.has-frame .cp-meta-label { color: rgba(26,21,6,.45); }
+.cert-preview.has-frame .cp-school { color: #7a5c1e; }
+.cert-preview.has-frame .cp-meta-val { color: #2a2208; }
+.cert-preview.has-frame .cp-id { color: rgba(26,21,6,.38); }
+.cert-preview.has-frame .cp-divider { background: linear-gradient(90deg,transparent,rgba(26,21,6,.2),transparent); }
+
+/* ── ANIMATIONS ───────────────────────── */
+@keyframes fadeUp { from{opacity:0;transform:translateY(10px)} to{opacity:1;transform:translateY(0)} }
+</style>
+</head>
+<body>
+
+<!-- LOADER -->
+<div id="pageLoader">
+  <div class="ld-logo" id="ldInitial">L</div>
+  <div class="ld-bar"><div class="ld-fill"></div></div>
+</div>
+
+<!-- TOP BAR -->
+<header class="topbar">
+  <div class="topbar-left">
+    <a class="back-btn" href="home.html">←</a>
+    <span class="topbar-title">📖 আমার কোর্স</span>
+    <span class="enrolled-badge" id="enrolledBadge"></span>
+  </div>
+</header>
+
+<!-- BODY -->
+<div class="scroll-body">
+
+  <!-- Stats -->
+  <div class="stats-row" id="statsRow">
+    <div class="stat-pill c1">
+      <div class="stat-num" id="sTotal">—</div>
+      <div class="stat-lbl">এনরোল্ড</div>
+    </div>
+    <div class="stat-pill c2">
+      <div class="stat-num" id="sCompleted">—</div>
+      <div class="stat-lbl">সম্পন্ন</div>
+    </div>
+    <div class="stat-pill c3">
+      <div class="stat-num" id="sInProgress">—</div>
+      <div class="stat-lbl">চলমান</div>
+    </div>
+  </div>
+
+  <!-- Filter tabs -->
+  <div class="filter-tabs">
+    <button class="tab-btn active" data-filter="all"        onclick="setFilter(this)">সব</button>
+    <button class="tab-btn"        data-filter="inprogress" onclick="setFilter(this)">▶ চলমান</button>
+    <button class="tab-btn"        data-filter="completed"  onclick="setFilter(this)">✅ সম্পন্ন</button>
+    <button class="tab-btn"        data-filter="notstarted" onclick="setFilter(this)">🆕 শুরু হয়নি</button>
+  </div>
+
+  <!-- Course list -->
+  <div class="course-list" id="courseList">
+    <!-- skeleton -->
+    <div class="sk-card">
+      <div class="sk-line full"></div>
+      <div class="sk-body-pad">
+        <div class="sk-line w90"></div>
+        <div class="sk-line w70"></div>
+        <div class="sk-line w45"></div>
+      </div>
+    </div>
+    <div class="sk-card">
+      <div class="sk-line full"></div>
+      <div class="sk-body-pad">
+        <div class="sk-line w90"></div>
+        <div class="sk-line w70"></div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- BOTTOM NAV -->
+<nav class="bnav">
+  <a class="bnav-item" href="home.html">
+    <span class="bnav-icon">🏠</span>
+    <span class="bnav-label">হোম</span>
+  </a>
+  <a class="bnav-item" href="dashboard.html">
+    <span class="bnav-icon">📚</span>
+    <span class="bnav-label">সকল কোর্স</span>
+  </a>
+  <a class="bnav-item active" href="mycourse.html">
+    <span class="bnav-icon">🎓</span>
+    <span class="bnav-label">আমার কোর্স</span>
+  </a>
+  <a class="bnav-item" href="notish.html">
+    <span class="bnav-icon">📢</span>
+    <span class="bnav-label">নোটিশ</span>
+  </a>
+</nav>
+
+<!-- ══════════════════════════════════
+     RATING MODAL (bottom sheet)
+══════════════════════════════════ -->
+<div class="modal-overlay" id="rateOverlay" onclick="closeRateModal(event)">
+  <div class="modal-sheet" id="rateSheet">
+    <div class="sheet-handle"></div>
+    <button class="sheet-close" onclick="closeRateModal(null,true)">✕</button>
+    <div class="sheet-title">⭐ রেটিং দিন</div>
+    <div class="sheet-sub" id="rateCourseName">—</div>
+
+    <div class="star-picker" id="starPicker">
+      <button class="star-pick-btn" onclick="pickStar(1)">⭐</button>
+      <button class="star-pick-btn" onclick="pickStar(2)">⭐</button>
+      <button class="star-pick-btn" onclick="pickStar(3)">⭐</button>
+      <button class="star-pick-btn" onclick="pickStar(4)">⭐</button>
+      <button class="star-pick-btn" onclick="pickStar(5)">⭐</button>
+    </div>
+    <div class="star-label" id="starLabel">কতটা ভালো লেগেছে?</div>
+
+    <textarea class="rate-textarea" id="rateReview" placeholder="আপনার মতামত লিখুন (ঐচ্ছিক)..."></textarea>
+    <button class="btn-submit-rate" id="btnSubmitRate" onclick="submitRating()">⭐ রেটিং জমা দিন</button>
+    <div class="sheet-msg" id="rateMsg"></div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════
+     CERTIFICATE MODAL (bottom sheet)
+══════════════════════════════════ -->
+<div class="modal-overlay" id="certOverlay" onclick="closeCertModal(event)">
+  <div class="cert-sheet" id="certSheet">
+    <div class="sheet-handle"></div>
+    <button class="sheet-close" onclick="closeCertModal(null,true)">✕</button>
+    <div class="sheet-title" style="margin-bottom:1rem">🎓 আপনার সার্টিফিকেট</div>
+
+    <!-- Preview -->
+    <div class="cert-preview" id="certPreview">
+      <img class="cert-frame-bg" id="certFrameBg" src="" alt=""/>
+      <span class="cp-corner tl">✦</span><span class="cp-corner tr">✦</span>
+      <span class="cp-corner bl">✦</span><span class="cp-corner br">✦</span>
+      <div class="cert-inner">
+        <div class="cp-logo" id="cpLogoWrap"><span class="cp-logo-letter" id="cpLogoLetter">L</span></div>
+        <div class="cp-school" id="cpSchool">LMS Academy</div>
+        <div class="cp-heading">Certificate of Completion</div>
+        <div class="cp-certify">এই সার্টিফিকেট প্রদান করা হচ্ছে</div>
+        <div class="cp-name" id="cpName">—</div>
+        <div class="cp-course-label">সফলভাবে সম্পন্ন করেছেন</div>
+        <div class="cp-course" id="cpCourse">—</div>
+        <div class="cp-divider"></div>
+        <div class="cp-meta">
+          <div class="cp-meta-col">
+            <div class="cp-meta-label">Issue Date</div>
+            <div class="cp-meta-val" id="cpDate">—</div>
+          </div>
+          <div class="cp-meta-col">
+            <div class="cp-seal">🎓</div>
+          </div>
+          <div class="cp-meta-col">
+            <div id="cpSigWrap" style="min-height:36px;display:flex;align-items:flex-end;justify-content:center;margin-bottom:.15rem"></div>
+            <div class="cp-meta-val" id="cpInstructor">—</div>
+            <div class="cp-meta-label">Instructor</div>
+          </div>
+        </div>
+        <div class="cp-id" id="cpId">CERT-———</div>
+      </div>
+    </div>
+
+    <div class="cert-actions">
+      <button class="btn-cert-dl btn-dl-pdf"    onclick="downloadCertPdf(this)">📄 PDF Download</button>
+      <button class="btn-cert-dl btn-dl-verify" onclick="openVerifyPage()">🔗 Verify</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════
+     FIREBASE LOGIC
+══════════════════════════════════ -->
+<script>
+firebase.initializeApp(LMS_CONFIG.firebase);
+const auth = firebase.auth();
+const db   = firebase.firestore();
+
+/* ── State ────────────────────────── */
+let currentUser     = null;
+let userDoc         = null;
+let myCourses       = [];   // enrolled + progress attached
+let userRatings     = {};   // courseId → {id, rating, review}
+let userCerts       = {};   // courseId → certId
+let activeRateCourse = null;
+let pickedStar       = 0;
+let activeCert       = null;
+let siteAppName      = '';
+let siteLogoUrl      = '';
+let certSignatureUrl = '';
+let certFrameUrl     = '';
+let activeFilter     = 'all';
+
+const GRADIENTS   = ['g1','g2','g3','g4','g5','g6'];
+const STAR_LABELS = ['','খুব খারাপ 😞','খারাপ 😕','ঠিক আছে 😐','ভালো 😊','অসাধারণ! 🤩'];
+
+/* ── Auth ─────────────────────────── */
+auth.onAuthStateChanged(async user => {
+  if (!user) { window.location.href = 'index.html'; return; }
+  currentUser = user;
+
+  const snap = await db.collection('users').doc(user.uid).get();
+  userDoc = snap.exists ? snap.data() : { name: user.displayName || 'Student', enrolledCourses: [] };
+
+  await loadSiteSettings();
+  await Promise.all([loadMyCourses(), loadUserRatings(), loadUserCerts()]);
+
+  document.getElementById('pageLoader').classList.add('gone');
+});
+
+/* ── Site Settings ─────────────────── */
+async function loadSiteSettings() {
+  try {
+    const snap = await db.collection('siteSettings').doc('main').get();
+    if (!snap.exists) return;
+    const s = snap.data();
+    siteAppName      = s.appName         || 'LMS';
+    siteLogoUrl      = s.logoUrl         || '';
+    certSignatureUrl = s.certSignatureUrl || '';
+    certFrameUrl     = s.certFrameUrl    || '';
+    document.getElementById('ldInitial').textContent = siteAppName.charAt(0).toUpperCase();
+    if (s.faviconUrl)   document.getElementById('favicon').href = s.faviconUrl;
+    if (s.primaryColor) document.documentElement.style.setProperty('--primary', s.primaryColor);
+  } catch(e) { console.warn('Settings:', e); }
+}
+
+/* ── Load My Courses ───────────────── */
+async function loadMyCourses() {
+  const enrolledIds = userDoc.enrolledCourses || [];
+
+  if (!enrolledIds.length) {
+    myCourses = [];
+    updateStats();
+    renderCourses();
+    return;
+  }
+
+  try {
+    const [coursesSnap, progressSnap] = await Promise.all([
+      db.collection('courses').where('published','==',true).get(),
+      db.collection('userProgress').doc(currentUser.uid).collection('courses').get()
+    ]);
+
+    const progressMap = {};
+    progressSnap.forEach(d => { progressMap[d.id] = d.data().progress || 0; });
+
+    myCourses = [];
+    coursesSnap.forEach(doc => {
+      if (enrolledIds.includes(doc.id)) {
+        myCourses.push({ id: doc.id, ...doc.data(), _prog: progressMap[doc.id] || 0 });
+      }
+    });
+
+    /* sort: in-progress → not started → completed */
+    myCourses.sort((a,b) => {
+      const rank = c => c._prog > 0 && c._prog < 100 ? 0 : c._prog === 0 ? 1 : 2;
+      return rank(a) - rank(b);
+    });
+
+    updateStats();
+
+    /* badge */
+    const badge = document.getElementById('enrolledBadge');
+    badge.textContent = myCourses.length;
+    badge.classList.add('show');
+
+    renderCourses();
+  } catch(e) {
+    console.warn('Courses:', e);
+    document.getElementById('courseList').innerHTML =
+      `<div class="empty-state"><div class="empty-icon">⚠️</div><div class="empty-title">লোড হয়নি</div></div>`;
+  }
+}
+
+/* ── Update Stats ──────────────────── */
+function updateStats() {
+  const total     = myCourses.length;
+  const completed = myCourses.filter(c => c._prog >= 100).length;
+  const inprog    = myCourses.filter(c => c._prog > 0 && c._prog < 100).length;
+  document.getElementById('sTotal').textContent     = total;
+  document.getElementById('sCompleted').textContent = completed;
+  document.getElementById('sInProgress').textContent= inprog;
+}
+
+/* ── Load Ratings ──────────────────── */
+async function loadUserRatings() {
+  try {
+    const snap = await db.collection('ratings').where('userId','==',currentUser.uid).get();
+    snap.forEach(doc => {
+      const d = doc.data();
+      userRatings[d.courseId] = { id: doc.id, rating: d.rating, review: d.review || '' };
+    });
+  } catch(e) { console.warn('Ratings:', e); }
+}
+
+/* ── Load Certs ────────────────────── */
+async function loadUserCerts() {
+  try {
+    const snap = await db.collection('certificates').where('userId','==',currentUser.uid).get();
+    snap.forEach(doc => { userCerts[doc.data().courseId] = doc.id; });
+  } catch(e) { console.warn('Certs:', e); }
+}
+
+/* ── Filter ────────────────────────── */
+function setFilter(btn) {
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  activeFilter = btn.dataset.filter;
+  renderCourses();
+}
+
+/* ── Render ────────────────────────── */
+function renderCourses() {
+  let list = myCourses;
+  if (activeFilter === 'inprogress') list = myCourses.filter(c => c._prog > 0 && c._prog < 100);
+  else if (activeFilter === 'completed')  list = myCourses.filter(c => c._prog >= 100);
+  else if (activeFilter === 'notstarted') list = myCourses.filter(c => c._prog === 0);
+
+  const el = document.getElementById('courseList');
+
+  if (!list.length && myCourses.length === 0) {
+    el.innerHTML = `
+      <div class="empty-state">
+        <div class="empty-icon">📖</div>
+        <div class="empty-title">কোনো কোর্সে ভর্তি নেই</div>
+        <div class="empty-desc">সব কোর্স সেকশনে গিয়ে পছন্দের কোর্সে ভর্তি হন।</div>
+        <a class="empty-link" href="dashboard.html">কোর্স দেখুন →</a>
+      </div>`;
+    return;
+  }
+
+  if (!list.length) {
+    el.innerHTML = `
+      <div class="empty-state">
+        <div class="empty-icon">🔍</div>
+        <div class="empty-title">এই ফিল্টারে কোনো কোর্স নেই</div>
+        <div class="empty-desc">অন্য ক্যাটাগরি বেছে নিন।</div>
+      </div>`;
+    return;
+  }
+
+  el.innerHTML = list.map((c,i) => courseCardHTML(c,i)).join('');
+}
+
+/* ── Course Card HTML ──────────────── */
+function courseCardHTML(c, i) {
+  const g       = GRADIENTS[i % GRADIENTS.length];
+  const prog    = c._prog || 0;
+  const lessons = c.totalLessons || c.lessons || 0;
+  const myR     = userRatings[c.id];
+  const hasCert = c.certificate === true;
+
+  /* thumb */
+  const thumbInner = c.thumbnailUrl
+    ? `<img src="${c.thumbnailUrl}" alt="${esc(c.title)}" loading="lazy"/>
+       <span class="cat-badge">${esc(c.category||'General')}</span>`
+    : `📚<span class="cat-badge">${esc(c.category||'General')}</span>`;
+
+  /* price */
+  const isPaid = (c.price || 0) > 0;
+  const priceBadge = isPaid
+    ? `<span class="price-badge price-paid">💰 ৳${c.price}</span>`
+    : `<span class="price-badge price-free">✦ Free</span>`;
+
+  /* rating */
+  const avg = c.avgRating ? parseFloat(c.avgRating).toFixed(1) : null;
+  const ratingHTML = avg ? `
+    <div class="rating-row">
+      <div class="stars-display">${starsHtml(parseFloat(avg))}</div>
+      <span class="rating-count">${avg} (${c.totalRatings||0})</span>
+    </div>` : '';
+
+  /* progress section */
+  const progSection = `
+    <div class="progress-wrap">
+      <div class="progress-top">
+        <span>অগ্রগতি</span>
+        <span>${prog}%</span>
+      </div>
+      <div class="progress-bar">
+        <div class="progress-fill ${prog>=100?'done':''}" style="width:${prog}%"></div>
+      </div>
+    </div>`;
+
+  /* action buttons */
+  const rateBtn = `<button class="btn-action btn-rate" onclick="event.stopPropagation();openRateModal('${c.id}')">
+    ${myR ? `✏️ রেটিং পরিবর্তন (${myR.rating}⭐)` : '⭐ রেটিং দিন'}
+  </button>`;
+
+  let actionBtns = '';
+  if (prog >= 100) {
+    const certBtn = hasCert
+      ? `<button class="btn-action btn-cert" onclick="event.stopPropagation();openCertModal('${c.id}')">🎓 সার্টিফিকেট দেখুন</button>`
+      : '';
+    actionBtns = `
+      <button class="btn-action btn-done">✓ সম্পন্ন হয়েছে</button>
+      ${certBtn}
+      ${rateBtn}`;
+  } else {
+    actionBtns = `
+      <button class="btn-action btn-continue" onclick="event.stopPropagation();window.location.href='course.html?id=${c.id}'">▶ চালিয়ে যান</button>
+      ${rateBtn}`;
+  }
+
+  return `
+  <div class="course-card" onclick="window.location.href='course.html?id=${c.id}'">
+    <div class="course-thumb ${c.thumbnailUrl?'':g}">${thumbInner}</div>
+    <div class="course-body">
+      ${priceBadge}
+      <div class="course-title">${esc(c.title)}</div>
+      <div class="course-meta-row">
+        <span>👨‍🏫 ${esc(c.instructor||'Admin')}</span>
+        <span>·</span>
+        <span>📹 ${lessons} লেসন</span>
+      </div>
+      ${ratingHTML}
+      ${progSection}
+      <div class="btn-wrap">${actionBtns}</div>
+    </div>
+  </div>`;
+}
+
+/* ── Stars HTML ────────────────────── */
+function starsHtml(avg) {
+  let html = '';
+  for (let i = 1; i <= 5; i++) {
+    html += i <= Math.round(avg)
+      ? `<span class="star-f">★</span>`
+      : `<span class="star-e">★</span>`;
+  }
+  return html;
+}
+
+/* ── Escape ────────────────────────── */
+function esc(s) {
+  return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+/* ══════════════════════════════════
+   RATING MODAL
+══════════════════════════════════ */
+function openRateModal(courseId) {
+  const course = myCourses.find(c => c.id === courseId);
+  if (!course) return;
+  activeRateCourse = course;
+  pickedStar = 0;
+
+  document.getElementById('rateCourseName').textContent = course.title;
+  document.getElementById('rateMsg').className = 'sheet-msg';
+  document.getElementById('rateMsg').textContent = '';
+
+  const existing = userRatings[courseId];
+  if (existing) {
+    pickedStar = existing.rating;
+    document.getElementById('rateReview').value = existing.review || '';
+    document.getElementById('starLabel').textContent = STAR_LABELS[existing.rating];
+    document.getElementById('btnSubmitRate').textContent = '✏️ রেটিং আপডেট করুন';
+  } else {
+    document.getElementById('rateReview').value = '';
+    document.getElementById('starLabel').textContent = 'কতটা ভালো লেগেছে?';
+    document.getElementById('btnSubmitRate').textContent = '⭐ রেটিং জমা দিন';
+  }
+  updateStarUI(pickedStar);
+  document.getElementById('rateOverlay').classList.add('show');
+  document.body.style.overflow = 'hidden';
+}
+
+function closeRateModal(event, force) {
+  if (!force && event && document.getElementById('rateSheet').contains(event.target)) return;
+  document.getElementById('rateOverlay').classList.remove('show');
+  document.body.style.overflow = '';
+  activeRateCourse = null; pickedStar = 0;
+}
+
+function pickStar(n) {
+  pickedStar = n;
+  updateStarUI(n);
+  document.getElementById('starLabel').textContent = STAR_LABELS[n];
+}
+function updateStarUI(n) {
+  document.querySelectorAll('.star-pick-btn').forEach((b,i) => b.classList.toggle('lit', i < n));
+}
+
+async function submitRating() {
+  if (!activeRateCourse) return;
+  if (!pickedStar) { showMsg('rateMsg','err','❌ আগে star বেছে নিন'); return; }
+  const review = document.getElementById('rateReview').value.trim();
+  const btn = document.getElementById('btnSubmitRate');
+  btn.disabled = true; btn.textContent = 'জমা হচ্ছে...';
+
+  try {
+    const courseId = activeRateCourse.id;
+    const existing = userRatings[courseId];
+    const payload  = {
+      courseId, userId: currentUser.uid,
+      userName: userDoc.name || currentUser.displayName || 'Student',
+      rating: pickedStar, review,
+      updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+    };
+    const batch = db.batch();
+    let ratingRef;
+    if (existing) {
+      ratingRef = db.collection('ratings').doc(existing.id);
+      batch.update(ratingRef, payload);
+    } else {
+      ratingRef = db.collection('ratings').doc();
+      payload.createdAt = firebase.firestore.FieldValue.serverTimestamp();
+      batch.set(ratingRef, payload);
+    }
+    /* recalc avg */
+    const allSnap = await db.collection('ratings').where('courseId','==',courseId).get();
+    let sum = pickedStar, count = 1;
+    allSnap.forEach(doc => { if (doc.id !== (existing?.id||'__')) { sum += doc.data().rating; count++; } });
+    const avg = Math.round((sum/count)*10)/10;
+    batch.update(db.collection('courses').doc(courseId), { avgRating: avg, totalRatings: count });
+    await batch.commit();
+
+    userRatings[courseId] = { id: existing?.id||ratingRef.id, rating: pickedStar, review };
+    const c = myCourses.find(x => x.id === courseId);
+    if (c) { c.avgRating = avg; c.totalRatings = count; }
+
+    showMsg('rateMsg','ok','✅ রেটিং সফলভাবে জমা হয়েছে! ধন্যবাদ।');
+    btn.textContent = '✓ জমা হয়েছে';
+    setTimeout(() => {
+      renderCourses();
+      closeRateModal(null,true);
+      btn.disabled = false;
+      btn.textContent = existing ? '✏️ রেটিং আপডেট করুন' : '⭐ রেটিং জমা দিন';
+    }, 1500);
+  } catch(e) {
+    console.error(e);
+    showMsg('rateMsg','err','❌ সমস্যা হয়েছে, আবার চেষ্টা করুন');
+    btn.disabled = false; btn.textContent = '⭐ রেটিং জমা দিন';
+  }
+}
+
+/* ══════════════════════════════════
+   CERTIFICATE MODAL
+══════════════════════════════════ */
+async function openCertModal(courseId) {
+  const course = myCourses.find(c => c.id === courseId);
+  if (!course) return;
+
+  document.getElementById('certOverlay').classList.add('show');
+  document.body.style.overflow = 'hidden';
+
+  /* frame */
+  const preview = document.getElementById('certPreview');
+  const frameBg = document.getElementById('certFrameBg');
+  if (certFrameUrl) {
+    frameBg.src = certFrameUrl; frameBg.style.display = 'block';
+    preview.className = 'cert-preview has-frame';
+  } else {
+    frameBg.src = ''; frameBg.style.display = 'none';
+    preview.className = 'cert-preview';
+  }
+
+  /* signature */
+  const sigUrl = course.signatureUrl || certSignatureUrl || '';
+  const sigWrap = document.getElementById('cpSigWrap');
+  sigWrap.innerHTML = sigUrl
+    ? `<img class="cp-signature" src="${sigUrl}" alt="signature" crossorigin="anonymous"/>`
+    : '';
+
+  /* cert doc */
+  let certId = userCerts[courseId];
+  let issuedAt;
+  if (!certId) {
+    certId = 'CERT-' + Date.now().toString(36).toUpperCase() + '-' + Math.random().toString(36).substr(2,4).toUpperCase();
+    issuedAt = new Date();
+    try {
+      await db.collection('certificates').doc(certId).set({
+        certId, userId: currentUser.uid,
+        userName: userDoc.name || currentUser.displayName || 'Student',
+        courseId, courseTitle: course.title,
+        instructor: course.instructor || 'Admin',
+        issuedAt: firebase.firestore.FieldValue.serverTimestamp(),
+      });
+      userCerts[courseId] = certId;
+    } catch(e) { console.warn('Cert save:', e); }
+  } else {
+    try {
+      const snap = await db.collection('certificates').doc(certId).get();
+      if (snap.exists) issuedAt = snap.data().issuedAt?.toDate?.() || new Date();
+    } catch(e) { issuedAt = new Date(); }
+  }
+
+  issuedAt = issuedAt || new Date();
+  const dateStr = issuedAt.toLocaleDateString('en-GB',{year:'numeric',month:'long',day:'numeric'});
+  const name    = userDoc.name || currentUser.displayName || 'Student';
+
+  document.getElementById('cpName').textContent       = name;
+  document.getElementById('cpCourse').textContent     = course.title;
+  document.getElementById('cpInstructor').textContent = course.instructor || 'Admin';
+  document.getElementById('cpDate').textContent       = dateStr;
+  document.getElementById('cpId').textContent         = certId;
+  document.getElementById('cpSchool').textContent     = siteAppName || 'LMS Academy';
+
+  const logoWrap = document.getElementById('cpLogoWrap');
+  if (siteLogoUrl) {
+    logoWrap.innerHTML = `<img src="${siteLogoUrl}" alt="logo" crossorigin="anonymous"/>`;
+  } else {
+    document.getElementById('cpLogoLetter').textContent = (siteAppName||'L')[0].toUpperCase();
+  }
+
+  activeCert = { certId, name, course, dateStr, issuedAt, sigUrl };
+}
+
+function closeCertModal(event, force) {
+  if (!force && event && document.getElementById('certSheet').contains(event.target)) return;
+  document.getElementById('certOverlay').classList.remove('show');
+  document.body.style.overflow = '';
+  const fb = document.getElementById('certFrameBg');
+  fb.src = ''; fb.style.display = 'none';
+  document.getElementById('certPreview').className = 'cert-preview';
+}
+
+/* ── PDF Download (same logic as original) ── */
+async function downloadCertPdf(btn) {
+  if (!activeCert) return;
+  btn.textContent = '⏳ তৈরি হচ্ছে...'; btn.disabled = true;
+  try {
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF({orientation:'landscape',unit:'mm',format:'a4'});
+    const W=297, H=210;
+    if (certFrameUrl) {
+      doc.addImage(certFrameUrl,'PNG',0,0,W,H);
+    } else {
+      doc.setFillColor(26,21,6); doc.rect(0,0,W,H,'F');
+      doc.setDrawColor(200,169,110); doc.setLineWidth(.8); doc.rect(6,6,W-12,H-12);
+      doc.setDrawColor(200,169,110); doc.setLineWidth(.25); doc.rect(10,10,W-20,H-20);
+    }
+    const dark = !certFrameUrl;
+    doc.setTextColor(...(dark?[200,169,110]:[100,70,20]));
+    doc.setFontSize(10); doc.setFont('helvetica','bold');
+    doc.text((siteAppName||'LMS ACADEMY').toUpperCase(),W/2,28,{align:'center'});
+    doc.setTextColor(...(dark?[245,230,192]:[30,20,5]));
+    doc.setFontSize(24); doc.text('Certificate of Completion',W/2,46,{align:'center'});
+    doc.setTextColor(...(dark?[150,140,120]:[120,100,60]));
+    doc.setFontSize(10); doc.setFont('helvetica','normal');
+    doc.text('This is to certify that',W/2,62,{align:'center'});
+    doc.setTextColor(...(dark?[200,169,110]:[120,80,10]));
+    doc.setFontSize(28); doc.setFont('helvetica','bold');
+    doc.text(activeCert.name,W/2,82,{align:'center'});
+    doc.setTextColor(...(dark?[130,120,100]:[100,80,40]));
+    doc.setFontSize(10); doc.setFont('helvetica','normal');
+    doc.text('has successfully completed',W/2,96,{align:'center'});
+    doc.setTextColor(...(dark?[245,230,192]:[20,15,5]));
+    doc.setFontSize(15); doc.setFont('helvetica','bold');
+    doc.text(activeCert.course.title,W/2,112,{align:'center',maxWidth:200});
+    doc.setDrawColor(...(dark?[200,169,110]:[150,120,60]));
+    doc.setLineWidth(.25); doc.line(50,126,W-50,126);
+    doc.setTextColor(...(dark?[130,120,100]:[100,80,40]));
+    doc.setFontSize(8); doc.setFont('helvetica','normal');
+    doc.text('DATE',70,140,{align:'center'});
+    doc.setTextColor(...(dark?[200,190,170]:[30,20,5]));
+    doc.setFontSize(10); doc.setFont('helvetica','bold');
+    doc.text(activeCert.dateStr,70,150,{align:'center'});
+    if (activeCert.sigUrl) {
+      try { doc.addImage(activeCert.sigUrl,'PNG',W-90,128,40,18,undefined,'FAST'); } catch(e){}
+    }
+    doc.setTextColor(...(dark?[200,190,170]:[30,20,5]));
+    doc.setFontSize(10); doc.setFont('helvetica','bold');
+    doc.text(activeCert.course.instructor||'Admin',W-70,152,{align:'center'});
+    doc.setTextColor(...(dark?[130,120,100]:[100,80,40]));
+    doc.setFontSize(8); doc.setFont('helvetica','normal');
+    doc.text('Instructor',W-70,159,{align:'center'});
+    doc.setFontSize(7); doc.setFont('courier','normal');
+    doc.text(activeCert.certId,W/2,168,{align:'center'});
+    doc.save(`certificate-${activeCert.certId}.pdf`);
+  } catch(e) {
+    console.error(e); alert('PDF তৈরিতে সমস্যা হয়েছে।');
+  }
+  btn.textContent = '📄 PDF Download'; btn.disabled = false;
+}
+
+function openVerifyPage() {
+  if (!activeCert) return;
+  window.open(`certificate.html?id=${activeCert.certId}`, '_blank');
+}
+
+/* ── Helper ────────────────────────── */
+function showMsg(id, type, text) {
+  const el = document.getElementById(id);
+  el.className = 'sheet-msg ' + type;
+  el.textContent = text;
+}
+
+/* close modals on Escape */
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') {
+    closeRateModal(null,true);
+    closeCertModal(null,true);
+  }
+});
+</script>
+</body>
+</html>
