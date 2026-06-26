@@ -3,296 +3,440 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>Certificate Verification</title>
+<title>আমার সার্টিফিকেট</title>
+<link rel="icon" id="favicon" href=""/>
 <link rel="preconnect" href="https://fonts.googleapis.com"/>
-<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;800;900&family=DM+Sans:wght@400;500;600;700&family=Hind+Siliguri:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Hind+Siliguri:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css"/>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore-compat.js"></script>
+<!-- ⚠️ CONFIG — শুধু এই ফাইলটি পরিবর্তন করুন নতুন client এর জন্য -->
 <script src="config.js"></script>
 <style>
+:root{
+  --bg:#000000;--surface:#1C1C1E;--card:#1C1C1E;--card2:#2C2C2E;
+  --border:rgba(255,255,255,.07);--border2:rgba(255,255,255,.13);
+  --ink:#FFFFFF;--muted:#8E8E93;--soft:#AEAEB2;
+  --primary:#0A84FF;--primary2:#2997FF;--green:#30D158;--amber:#FF9F0A;--rose:#FF453A;
+  --font:'Inter',-apple-system,BlinkMacSystemFont,sans-serif;--bn:'Hind Siliguri',sans-serif;--r:16px;
+}
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
-:root {
-  --ink: #0A0A0F; --paper: #F5F3EE; --cream: #EDE9E0;
-  --accent: #C8A96E; --blue: #1B4FBE; --muted: #7A7570;
-  --border: rgba(10,10,15,.1);
-  --serif: 'Playfair Display',serif;
-  --sans: 'DM Sans',sans-serif;
-  --bn: 'Hind Siliguri',sans-serif;
-}
-html { scroll-behavior:smooth; }
-body {
-  font-family: var(--sans);
-  background: var(--ink);
-  color: #ECEEF5;
-  min-height: 100vh;
-  display: flex; flex-direction: column;
-  align-items: center; justify-content: center;
-  padding: 2rem 1rem;
-}
+body{font-family:var(--font);background:var(--bg);color:var(--ink);min-height:100vh;}
+a{text-decoration:none;color:inherit;}
+button{font-family:var(--font);cursor:pointer;}
 
 /* loader */
-.vfy-loader {
-  display: flex; flex-direction: column;
-  align-items: center; gap: 1rem;
-  font-family: var(--bn); color: rgba(255,255,255,.4);
-  font-size: .9rem;
-}
-.spinner {
-  width: 40px; height: 40px;
-  border: 3px solid rgba(200,169,110,.15);
-  border-top-color: var(--accent);
-  border-radius: 50%;
-  animation: spin .8s linear infinite;
-}
-@keyframes spin { to { transform: rotate(360deg); } }
+#loader{position:fixed;inset:0;z-index:9999;background:var(--bg);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1rem;transition:opacity .4s,visibility .4s;}
+#loader.gone{opacity:0;visibility:hidden;}
+.ld-ring{width:40px;height:40px;border:3px solid rgba(10,132,255,.15);border-top-color:var(--primary);border-radius:50%;animation:spin .75s linear infinite;}
+@keyframes spin{to{transform:rotate(360deg);}}
 
-/* status badges */
-.vfy-status {
-  display: inline-flex; align-items: center; gap: .5rem;
-  padding: .4rem 1rem; border-radius: 20px;
-  font-size: .8rem; font-weight: 700;
-  margin-bottom: 1.5rem;
-}
-.vfy-status.valid {
-  background: rgba(6,214,160,.1); color: #06D6A0;
-  border: 1px solid rgba(6,214,160,.2);
-}
-.vfy-status.invalid {
-  background: rgba(251,86,7,.1); color: #fb8c5a;
-  border: 1px solid rgba(251,86,7,.2);
-}
+/* topbar */
+.topnav{position:sticky;top:0;z-index:100;height:58px;background:rgba(0,0,0,.85);backdrop-filter:blur(20px);border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 1.2rem;gap:.9rem;}
+.back-btn{display:flex;align-items:center;gap:.4rem;background:none;border:none;color:var(--soft);font-size:.82rem;font-weight:600;padding:.4rem .6rem;border-radius:9px;}
+.back-btn:hover{background:var(--card2);color:var(--ink);}
+.nav-title{font-size:.92rem;font-weight:700;}
 
-/* certificate card */
-.cert-wrap {
-  width: 100%; max-width: 680px;
-  animation: popUp .5s cubic-bezier(.34,1.56,.64,1) both;
-}
-@keyframes popUp {
-  from { opacity:0; transform:scale(.94) translateY(20px); }
-  to   { opacity:1; transform:scale(1) translateY(0); }
-}
+.content{max-width:760px;margin:0 auto;padding:1.6rem 1.2rem 3rem;}
+.page-head{margin-bottom:1.4rem;}
+.page-head h1{font-size:1.4rem;font-weight:800;margin-bottom:.3rem;display:flex;align-items:center;gap:.5rem;}
+.page-head h1 i{color:var(--amber);}
+.page-head p{font-size:.84rem;color:var(--muted);font-family:var(--bn);}
 
-.cert-card {
-  background: linear-gradient(135deg,#1a1506 0%,#2a2208 50%,#1a1506 100%);
-  border: 2.5px solid var(--accent);
-  border-radius: 20px; padding: 3rem 2.5rem;
-  text-align: center; position: relative; overflow: hidden;
-  margin-bottom: 1.5rem;
-  box-shadow: 0 32px 80px rgba(0,0,0,.5), 0 0 0 1px rgba(200,169,110,.1);
-}
-.cert-card::before {
-  content:''; position:absolute; inset:10px;
-  border:1px solid rgba(200,169,110,.15); border-radius:14px; pointer-events:none;
-}
-.cert-corner { position:absolute; font-size:1.6rem; opacity:.25; }
-.cert-corner.tl{top:14px;left:18px;}
-.cert-corner.tr{top:14px;right:18px;}
-.cert-corner.bl{bottom:14px;left:18px;}
-.cert-corner.br{bottom:14px;right:18px;}
+/* cert grid */
+.cert-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:1rem;margin-bottom:2rem;}
+.cert-card{background:var(--card);border:1px solid var(--border);border-radius:var(--r);padding:1.2rem;cursor:pointer;transition:border-color .18s,transform .18s,background .18s;position:relative;overflow:hidden;}
+.cert-card:hover{border-color:rgba(200,169,110,.4);background:var(--card2);transform:translateY(-2px);}
+.cert-card::before{content:'';position:absolute;top:-30px;right:-30px;width:90px;height:90px;background:radial-gradient(circle,rgba(200,169,110,.18),transparent 70%);}
+.cc-icon{width:42px;height:42px;border-radius:11px;background:rgba(200,169,110,.12);border:1px solid rgba(200,169,110,.25);display:flex;align-items:center;justify-content:center;color:#C8A96E;font-size:1.1rem;margin-bottom:.8rem;}
+.cc-title{font-size:.9rem;font-weight:700;line-height:1.35;margin-bottom:.5rem;min-height:2.4em;}
+.cc-date{font-size:.72rem;color:var(--muted);font-family:var(--bn);display:flex;align-items:center;gap:.35rem;margin-bottom:.3rem;}
+.cc-id{font-size:.66rem;color:var(--muted);font-family:monospace;letter-spacing:.03em;opacity:.7;}
+.cc-view{margin-top:.8rem;font-size:.76rem;font-weight:700;color:var(--primary);display:flex;align-items:center;gap:.35rem;}
 
-.cert-logo {
-  width: 64px; height: 64px; border-radius: 14px;
-  background: rgba(200,169,110,.12);
-  border: 1.5px solid rgba(200,169,110,.25);
-  display: flex; align-items: center; justify-content: center;
-  margin: 0 auto 1rem; overflow: hidden;
-}
-.cert-logo img { width:100%; height:100%; object-fit:cover; border-radius:12px; }
-.cert-logo-letter { font-size:1.8rem; font-weight:800; color:var(--accent); }
+.empty{text-align:center;padding:3rem 1.5rem;background:var(--card);border:1px dashed var(--border2);border-radius:var(--r);margin-bottom:2rem;}
+.empty i{font-size:2.2rem;color:var(--muted);margin-bottom:.8rem;display:block;}
+.empty h3{font-size:.95rem;font-weight:700;margin-bottom:.4rem;}
+.empty p{font-size:.82rem;color:var(--muted);font-family:var(--bn);margin-bottom:1.2rem;}
+.skel{background:linear-gradient(90deg,var(--card) 25%,rgba(255,255,255,.05) 50%,var(--card) 75%);background-size:200% 100%;animation:shim 1.3s infinite;border-radius:var(--r);height:150px;}
+@keyframes shim{0%{background-position:200% 0}100%{background-position:-200% 0}}
 
-.cert-school { font-size:.72rem; font-weight:700; letter-spacing:.18em; text-transform:uppercase; color:var(--accent); margin-bottom:.8rem; opacity:.8; }
-.cert-heading { font-family:var(--serif); font-size:clamp(1.4rem,3vw,2rem); font-weight:900; color:#f5e6c0; margin-bottom:.5rem; }
-.cert-certify { font-size:.8rem; color:rgba(245,230,192,.4); font-family:var(--bn); margin-bottom:.8rem; }
-.cert-name { font-family:var(--serif); font-size:clamp(1.8rem,4vw,2.8rem); font-weight:900; color:var(--accent); margin-bottom:.5rem; }
-.cert-course-label { font-size:.78rem; color:rgba(245,230,192,.4); font-family:var(--bn); margin-bottom:.4rem; }
-.cert-course { font-size:clamp(1rem,2vw,1.3rem); font-weight:700; color:#f5e6c0; line-height:1.4; margin-bottom:1.5rem; }
+/* bottom verify CTA */
+.verify-cta{background:var(--card);border:1px solid rgba(10,132,255,.2);border-radius:var(--r);padding:1.4rem;display:flex;align-items:center;gap:1rem;flex-wrap:wrap;}
+.verify-cta-icon{width:46px;height:46px;border-radius:12px;background:rgba(10,132,255,.12);display:flex;align-items:center;justify-content:center;color:var(--primary);font-size:1.2rem;flex-shrink:0;}
+.verify-cta-text{flex:1;min-width:160px;}
+.verify-cta-text h4{font-size:.9rem;font-weight:700;margin-bottom:.2rem;}
+.verify-cta-text p{font-size:.76rem;color:var(--muted);font-family:var(--bn);}
+.btn{display:inline-flex;align-items:center;gap:.45rem;padding:.65rem 1.2rem;border-radius:11px;border:none;font-size:.82rem;font-weight:700;transition:all .18s;}
+.btn-primary{background:var(--primary);color:#fff;}
+.btn-primary:hover{background:var(--primary2);transform:translateY(-1px);}
 
-.cert-divider {
-  height:1px; margin-bottom:1.5rem;
-  background: linear-gradient(90deg,transparent,rgba(200,169,110,.3),transparent);
-}
-.cert-meta { display:flex; justify-content:space-between; align-items:flex-end; flex-wrap:wrap; gap:1rem; }
-.cert-meta-col { text-align:center; }
-.cert-meta-label { font-size:.65rem; font-weight:700; letter-spacing:.1em; text-transform:uppercase; color:rgba(245,230,192,.3); margin-bottom:.3rem; }
-.cert-meta-val { font-size:.9rem; font-weight:700; color:rgba(245,230,192,.8); }
-.cert-seal {
-  width:52px; height:52px; border-radius:50%;
-  border:1.5px solid rgba(200,169,110,.35);
-  background:rgba(200,169,110,.07);
-  display:flex; align-items:center; justify-content:center;
-  font-size:1.4rem; margin:0 auto;
-}
-.cert-id {
-  margin-top:1.5rem; font-family:monospace;
-  font-size:.7rem; color:rgba(200,169,110,.45);
-  letter-spacing:.06em;
-}
-
-/* verify footer */
-.vfy-footer {
-  text-align:center;
-}
-.vfy-badge {
-  display:inline-flex; align-items:center; gap:.5rem;
-  background:rgba(6,214,160,.08); border:1px solid rgba(6,214,160,.15);
-  color:#06D6A0; border-radius:10px; padding:.6rem 1.2rem;
-  font-size:.82rem; font-weight:700; margin-bottom:1rem;
-}
-.vfy-url {
-  font-family:monospace; font-size:.72rem; color:rgba(255,255,255,.25);
-  word-break:break-all; margin-bottom:1.5rem;
-}
-.btn-back {
-  display:inline-flex; align-items:center; gap:.4rem;
-  background:rgba(200,169,110,.1); border:1px solid rgba(200,169,110,.2);
-  color:var(--accent); border-radius:10px;
-  padding:.6rem 1.4rem; font-size:.85rem; font-weight:700;
-  font-family:var(--sans); cursor:pointer; text-decoration:none;
-  transition:background .2s;
-}
-.btn-back:hover { background:rgba(200,169,110,.2); }
-
-/* not found state */
-.vfy-notfound {
-  text-align:center; max-width:400px;
-  animation: popUp .4s ease both;
-}
-.vfy-notfound .icon { font-size:3.5rem; margin-bottom:1rem; }
-.vfy-notfound h2 { font-family:var(--serif); font-size:1.6rem; margin-bottom:.6rem; color:#f5e6c0; }
-.vfy-notfound p { font-family:var(--bn); color:rgba(255,255,255,.4); font-size:.9rem; line-height:1.7; }
+/* ── CERT MODAL (golden design — অপরিবর্তিত) ── */
+.cert-overlay{display:none;position:fixed;inset:0;z-index:700;background:rgba(0,0,0,.85);backdrop-filter:blur(10px);align-items:center;justify-content:center;padding:1rem;}
+.cert-overlay.show{display:flex;animation:fadeOv .2s ease;}
+@keyframes fadeOv{from{opacity:0}to{opacity:1}}
+.cert-modal{background:var(--surface);border:1px solid var(--border2);border-radius:20px;width:100%;max-width:520px;padding:1.8rem;position:relative;box-shadow:0 32px 80px rgba(0,0,0,.6);animation:popUp .3s cubic-bezier(.34,1.56,.64,1) both;max-height:90vh;overflow-y:auto;}
+@keyframes popUp{from{opacity:0;transform:scale(.9) translateY(20px)}to{opacity:1;transform:scale(1) translateY(0)}}
+.cert-close{position:absolute;top:1rem;right:1rem;background:var(--card);border:1px solid var(--border);color:var(--muted);border-radius:8px;width:30px;height:30px;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:.85rem;}
+.cert-close:hover{background:var(--border2);color:var(--ink);}
+.cert-preview{position:relative;border-radius:14px;overflow:hidden;margin-bottom:1.2rem;text-align:center;}
+.cert-frame-bg{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;z-index:0;border-radius:14px;}
+.cert-preview-inner{position:relative;z-index:1;padding:2rem 1.5rem;}
+.cert-preview.no-frame{background:linear-gradient(135deg,#1a1506 0%,#2a2208 50%,#1a1506 100%);border:2px solid #C8A96E;}
+.cert-preview.no-frame::before{content:'';position:absolute;inset:6px;border:1px solid rgba(200,169,110,.2);border-radius:10px;pointer-events:none;z-index:0;}
+.cert-preview.has-frame .cp-heading,.cert-preview.has-frame .cp-course,.cert-preview.has-frame .cp-name{color:#1a1506;}
+.cert-preview.has-frame .cp-certify,.cert-preview.has-frame .cp-course-label,.cert-preview.has-frame .cp-meta-label{color:rgba(26,21,6,.5);}
+.cert-preview.has-frame .cp-school{color:#7a5c1e;}
+.cert-preview.has-frame .cp-meta-val{color:#2a2208;}
+.cert-preview.has-frame .cp-id{color:rgba(26,21,6,.4);}
+.cert-preview.has-frame .cp-divider{background:linear-gradient(90deg,transparent,rgba(26,21,6,.2),transparent);}
+.cp-corner{position:absolute;font-size:1.4rem;opacity:.3;z-index:1;}
+.cp-corner.tl{top:10px;left:12px;}.cp-corner.tr{top:10px;right:12px;}
+.cp-corner.bl{bottom:10px;left:12px;}.cp-corner.br{bottom:10px;right:12px;}
+.cp-logo{width:52px;height:52px;border-radius:12px;background:rgba(200,169,110,.15);border:1.5px solid rgba(200,169,110,.3);display:flex;align-items:center;justify-content:center;margin:0 auto .8rem;overflow:hidden;}
+.cp-logo img{width:100%;height:100%;object-fit:cover;border-radius:10px;}
+.cp-logo-letter{font-size:1.4rem;font-weight:800;color:#C8A96E;}
+.cp-school{font-size:.62rem;font-weight:700;letter-spacing:.18em;text-transform:uppercase;color:#C8A96E;margin-bottom:.5rem;opacity:.8;}
+.cp-heading{font-size:1.1rem;font-weight:800;color:#f5e6c0;margin-bottom:.3rem;}
+.cp-certify{font-size:.7rem;color:rgba(245,230,192,.4);font-family:var(--bn);margin-bottom:.6rem;}
+.cp-name{font-size:1.5rem;font-weight:800;color:#C8A96E;margin-bottom:.3rem;}
+.cp-course-label{font-size:.68rem;color:rgba(245,230,192,.4);font-family:var(--bn);margin-bottom:.25rem;}
+.cp-course{font-size:.9rem;font-weight:700;color:#f5e6c0;margin-bottom:1rem;line-height:1.35;}
+.cp-divider{height:1px;background:linear-gradient(90deg,transparent,rgba(200,169,110,.3),transparent);margin-bottom:1rem;}
+.cp-meta{display:flex;justify-content:space-between;align-items:flex-end;}
+.cp-meta-col{text-align:center;}
+.cp-meta-label{font-size:.6rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:rgba(245,230,192,.3);margin-bottom:.2rem;}
+.cp-meta-val{font-size:.72rem;font-weight:700;color:rgba(245,230,192,.75);}
+.cp-seal{width:40px;height:40px;border-radius:50%;border:1.5px solid rgba(200,169,110,.35);background:rgba(200,169,110,.08);display:flex;align-items:center;justify-content:center;font-size:1.1rem;margin:0 auto;}
+.cp-signature{max-height:44px;max-width:120px;object-fit:contain;margin:0 auto;display:block;opacity:.85;}
+.cp-id{margin-top:.7rem;font-family:monospace;font-size:.6rem;color:rgba(200,169,110,.45);letter-spacing:.06em;}
+.cert-actions{display:grid;grid-template-columns:1fr 1fr 1fr;gap:.6rem;}
+.btn-cert-dl{padding:.7rem .4rem;border:none;border-radius:10px;font-size:.78rem;font-weight:700;font-family:var(--font);cursor:pointer;transition:filter .2s,transform .15s;display:flex;align-items:center;justify-content:center;gap:.35rem;}
+.btn-cert-dl:hover{filter:brightness(1.1);transform:translateY(-1px);}
+.btn-cert-dl:disabled{opacity:.5;cursor:not-allowed;transform:none;}
+.btn-dl-pdf{background:linear-gradient(135deg,#C8A96E,#e6c87a);color:#0D0F14;}
+.btn-dl-png{background:var(--card2);color:var(--soft);}
+.btn-dl-verify{background:rgba(10,132,255,.12);color:var(--primary);border:1px solid rgba(10,132,255,.2);}
 
 @media(max-width:520px){
-  .cert-card { padding:2rem 1.2rem; }
-  .cert-meta { justify-content:center; }
+  .cert-actions{grid-template-columns:1fr;}
+  .cert-grid{grid-template-columns:1fr 1fr;}
+  .content{padding:1.2rem .9rem 2.5rem;}
 }
 </style>
 </head>
 <body>
 
-<div id="vfyLoader" class="vfy-loader">
-  <div class="spinner"></div>
-  <span>সার্টিফিকেট যাচাই হচ্ছে...</span>
-</div>
+<div id="loader"><div class="ld-ring"></div></div>
 
-<div id="vfyValid" style="display:none; width:100%; max-width:680px;">
-  <div style="text-align:center; margin-bottom:1rem">
-    <div class="vfy-status valid">✅ এই সার্টিফিকেটটি বৈধ</div>
+<nav class="topnav">
+  <button class="back-btn" onclick="window.location.href='profile.html'"><i class="fa-solid fa-arrow-left"></i> প্রোফাইল</button>
+  <span class="nav-title">আমার সার্টিফিকেট</span>
+</nav>
+
+<div class="content">
+  <div class="page-head">
+    <h1><i class="fa-solid fa-award"></i> আমার সার্টিফিকেট</h1>
+    <p>আপনার অর্জিত সব সার্টিফিকেট এখানে দেখুন ও ডাউনলোড করুন</p>
   </div>
 
-  <div class="cert-wrap">
-    <div class="cert-card" id="certCard">
-      <span class="cert-corner tl">✦</span>
-      <span class="cert-corner tr">✦</span>
-      <span class="cert-corner bl">✦</span>
-      <span class="cert-corner br">✦</span>
+  <div class="cert-grid" id="certGrid">
+    <div class="skel"></div>
+    <div class="skel"></div>
+  </div>
 
-      <div class="cert-logo" id="certLogo">
-        <span class="cert-logo-letter" id="certLogoLetter">L</span>
-      </div>
-      <div class="cert-school" id="certSchool">LMS Academy</div>
-      <div class="cert-heading">Certificate of Completion</div>
-      <div class="cert-certify">এই সার্টিফিকেট প্রদান করা হচ্ছে</div>
-      <div class="cert-name" id="certName">—</div>
-      <div class="cert-course-label">সফলভাবে সম্পন্ন করেছেন</div>
-      <div class="cert-course" id="certCourse">—</div>
-      <div class="cert-divider"></div>
-      <div class="cert-meta">
-        <div class="cert-meta-col">
-          <div class="cert-meta-label">Instructor</div>
-          <div class="cert-meta-val" id="certInstructor">—</div>
-        </div>
-        <div class="cert-meta-col">
-          <div class="cert-seal">🎓</div>
-        </div>
-        <div class="cert-meta-col">
-          <div class="cert-meta-label">Issue Date</div>
-          <div class="cert-meta-val" id="certDate">—</div>
-        </div>
-      </div>
-      <div class="cert-id" id="certId">—</div>
+  <div class="verify-cta">
+    <div class="verify-cta-icon"><i class="fa-solid fa-shield-halved"></i></div>
+    <div class="verify-cta-text">
+      <h4>সার্টিফিকেট ভেরিফাই করুন</h4>
+      <p>কোনো সার্টিফিকেট আসল কিনা যাচাই করতে ID দিয়ে সার্চ করুন</p>
     </div>
-
-    <div class="vfy-footer">
-      <div class="vfy-badge">🔒 Verified by <span id="vfySchool" style="margin-left:.3rem">LMS</span></div>
-      <div class="vfy-url" id="vfyUrl"></div>
-      <a href="index.html" class="btn-back">← মূল পেজে ফিরে যান</a>
-    </div>
+    <a class="btn btn-primary" href="verify.html"><i class="fa-solid fa-magnifying-glass"></i> ভেরিফাই করুন</a>
   </div>
 </div>
 
-<div id="vfyInvalid" style="display:none">
-  <div class="vfy-notfound">
-    <div class="icon">❌</div>
-    <h2>সার্টিফিকেট পাওয়া যায়নি</h2>
-    <p>এই Certificate ID টি বৈধ নয় অথবা মুছে ফেলা হয়েছে।<br/>সঠিক লিংক ব্যবহার করুন।</p>
-    <br/>
-    <a href="index.html" class="btn-back">← মূল পেজে ফিরে যান</a>
+<!-- CERT MODAL -->
+<div class="cert-overlay" id="certOverlay" onclick="closeCertModal(event)">
+  <div class="cert-modal" id="certModal">
+    <button class="cert-close" onclick="closeCertModal(null,true)"><i class="fa-solid fa-xmark"></i></button>
+    <div style="font-size:1rem;font-weight:800;margin-bottom:1rem"><i class="fa-solid fa-award" style="color:#C8A96E"></i> সার্টিফিকেট</div>
+
+    <div class="cert-preview no-frame" id="certPreview">
+      <img class="cert-frame-bg" id="certFrameBg" src="" alt="" style="display:none"/>
+      <span class="cp-corner tl">✦</span><span class="cp-corner tr">✦</span>
+      <span class="cp-corner bl">✦</span><span class="cp-corner br">✦</span>
+      <div class="cert-preview-inner">
+        <div class="cp-logo" id="cpLogoWrap"><span class="cp-logo-letter" id="cpLogoLetter">L</span></div>
+        <div class="cp-school" id="cpSchool">LMS Academy</div>
+        <div class="cp-heading">Certificate of Completion</div>
+        <div class="cp-certify">এই সার্টিফিকেট প্রদান করা হচ্ছে</div>
+        <div class="cp-name" id="cpName">—</div>
+        <div class="cp-course-label">সফলভাবে সম্পন্ন করেছেন</div>
+        <div class="cp-course" id="cpCourse">—</div>
+        <div class="cp-divider"></div>
+        <div class="cp-meta">
+          <div class="cp-meta-col">
+            <div class="cp-meta-label">Issue Date</div>
+            <div class="cp-meta-val" id="cpDate">—</div>
+          </div>
+          <div class="cp-meta-col" id="cpSealWrap">
+            <div class="cp-seal"><i class="fa-solid fa-graduation-cap"></i></div>
+          </div>
+          <div class="cp-meta-col">
+            <div id="cpSignatureWrap" style="min-height:44px;display:flex;align-items:flex-end;justify-content:center;margin-bottom:.2rem"></div>
+            <div class="cp-meta-val" id="cpInstructor">—</div>
+            <div class="cp-meta-label">Instructor</div>
+          </div>
+        </div>
+        <div class="cp-id" id="cpId">CERT-———</div>
+      </div>
+    </div>
+
+    <div class="cert-actions">
+      <button class="btn-cert-dl btn-dl-pdf" onclick="downloadCertPdf(this)"><i class="fa-solid fa-file-pdf"></i> PDF</button>
+      <button class="btn-cert-dl btn-dl-png" onclick="downloadCertImg(this)"><i class="fa-solid fa-image"></i> PNG</button>
+      <button class="btn-cert-dl btn-dl-verify" onclick="goToVerify()"><i class="fa-solid fa-shield-halved"></i> ভেরিফাই</button>
+    </div>
   </div>
 </div>
 
 <script>
-(async () => {
-  // স্ক্রিনশটের গাইডলাইন অনুযায়ী Firebase ইনিশিয়েলাইজেশন চেক
-  if (!firebase.apps.length) {
-    if (typeof LMS_CONFIG !== 'undefined' && LMS_CONFIG.firebase) {
-      firebase.initializeApp(LMS_CONFIG.firebase);
-    } else {
-      console.error("Firebase Configuration (LMS_CONFIG) পাওয়া যায়নি! config.js চেক করুন।");
-    }
+firebase.initializeApp(LMS_CONFIG.firebase);
+const auth=firebase.auth(), db=firebase.firestore();
+
+let currentUser=null, userDoc=null, certsList=[], activeCert=null;
+let siteAppName='', siteLogoUrl='', certSignatureUrl='', certFrameUrl='';
+
+auth.onAuthStateChanged(async user=>{
+  if(!user){ window.location.href='index.html'; return; }
+  currentUser=user;
+
+  const uSnap=await db.collection('users').doc(user.uid).get();
+  userDoc=uSnap.exists?uSnap.data():{ name:user.displayName||'Student' };
+
+  await loadSiteSettings();
+  await loadCerts();
+  renderCertList();
+
+  document.getElementById('loader').classList.add('gone');
+});
+
+async function loadSiteSettings(){
+  try{
+    const snap=await db.collection('siteSettings').doc('main').get();
+    if(!snap.exists) return;
+    const s=snap.data();
+    siteAppName=s.appName||'LMS Academy';
+    siteLogoUrl=s.logoUrl||'';
+    certSignatureUrl=s.certSignatureUrl||'';
+    certFrameUrl=s.certFrameUrl||'';
+    if(s.faviconUrl) document.getElementById('favicon').href=s.faviconUrl;
+    if(s.primaryColor) document.documentElement.style.setProperty('--primary',s.primaryColor);
+  }catch(e){ console.warn('settings',e); }
+}
+
+async function loadCerts(){
+  try{
+    const snap=await db.collection('certificates').where('userId','==',currentUser.uid).get();
+    certsList=[];
+    snap.forEach(doc=>certsList.push({ certId:doc.id, ...doc.data() }));
+    certsList.sort((a,b)=>(b.issuedAt?.seconds||0)-(a.issuedAt?.seconds||0));
+  }catch(e){ console.warn('certs',e); certsList=[]; }
+}
+
+function renderCertList(){
+  const grid=document.getElementById('certGrid');
+  if(!certsList.length){
+    grid.outerHTML=`<div class="empty" id="certGrid">
+      <i class="fa-solid fa-award"></i>
+      <h3>এখনো কোনো সার্টিফিকেট নেই</h3>
+      <p>কোনো কোর্স ১০০% সম্পন্ন করলে এখানে সার্টিফিকেট দেখা যাবে</p>
+      <a class="btn btn-primary" href="dashboard.html"><i class="fa-solid fa-book-open"></i> কোর্সে যান</a>
+    </div>`;
+    return;
+  }
+  grid.innerHTML=certsList.map((c,i)=>{
+    const date=c.issuedAt?.toDate?.()?.toLocaleDateString('en-GB',{year:'numeric',month:'short',day:'numeric'})||'—';
+    return `
+    <div class="cert-card" onclick="openCertView(${i})">
+      <div class="cc-icon"><i class="fa-solid fa-award"></i></div>
+      <div class="cc-title">${c.courseTitle||'কোর্স'}</div>
+      <div class="cc-date"><i class="fa-solid fa-calendar-days"></i> ${date}</div>
+      <div class="cc-id">${c.certId}</div>
+      <div class="cc-view">দেখুন/ডাউনলোড <i class="fa-solid fa-arrow-right"></i></div>
+    </div>`;
+  }).join('');
+}
+
+function openCertView(i){
+  const c=certsList[i];
+  if(!c) return;
+
+  document.getElementById('certOverlay').classList.add('show');
+  document.body.style.overflow='hidden';
+
+  const preview=document.getElementById('certPreview');
+  const frameBg=document.getElementById('certFrameBg');
+  if(certFrameUrl){
+    frameBg.src=''; frameBg.style.display='block'; frameBg.src=certFrameUrl;
+    preview.className='cert-preview has-frame';
+  } else {
+    frameBg.src=''; frameBg.style.display='none';
+    preview.className='cert-preview no-frame';
   }
 
-  const params = new URLSearchParams(location.search);
-  const certId = params.get('id');
-
-  if (!certId) { showInvalid(); return; }
-
-  try {
-    // load site settings
-    const settSnap = await firebase.firestore().collection('siteSettings').doc('main').get();
-    const s = settSnap.exists ? settSnap.data() : {};
-    const appName = s.appName || 'LMS Academy';
-
-    document.getElementById('certSchool').textContent  = appName;
-    document.getElementById('vfySchool').textContent   = appName;
-    document.getElementById('vfyUrl').textContent      = location.href;
-
-    if (s.logoUrl) {
-      document.getElementById('certLogo').innerHTML = `<img src="${s.logoUrl}" alt="logo"/>`;
-    } else {
-      document.getElementById('certLogoLetter').textContent = appName[0].toUpperCase();
-    }
-    if (s.primaryColor) {
-      document.documentElement.style.setProperty('--accent', s.primaryColor);
-    }
-
-    // load certificate
-    const snap = await firebase.firestore().collection('certificates').doc(certId).get();
-    if (!snap.exists) { showInvalid(); return; }
-
-    const c = snap.data();
-    const date = c.issuedAt?.toDate?.().toLocaleDateString('bn-BD', {
-      year:'numeric', month:'long', day:'numeric'
-    }) || '—';
-
-    document.getElementById('certName').textContent       = c.userName || '—';
-    document.getElementById('certCourse').textContent     = c.courseTitle || '—';
-    document.getElementById('certInstructor').textContent = c.instructor || 'Admin';
-    document.getElementById('certDate').textContent       = date;
-    document.getElementById('certId').textContent         = c.certId || certId;
-
-    document.getElementById('vfyLoader').style.display  = 'none';
-    document.getElementById('vfyValid').style.display   = 'block';
-    document.title = `Certificate — ${c.userName}`;
-
-  } catch(e) {
-    console.error(e); showInvalid();
+  const sigWrap=document.getElementById('cpSignatureWrap');
+  const sealWrap=document.getElementById('cpSealWrap');
+  if(certSignatureUrl){
+    sigWrap.innerHTML=`<img class="cp-signature" src="${certSignatureUrl}" alt="signature" crossorigin="anonymous"/>`;
+    sealWrap.innerHTML=`<div class="cp-seal"><i class="fa-solid fa-graduation-cap"></i></div>`;
+  } else {
+    sigWrap.innerHTML='';
+    sealWrap.innerHTML=`<div class="cp-seal"><i class="fa-solid fa-graduation-cap"></i></div>`;
   }
-})();
 
-function showInvalid() {
-  document.getElementById('vfyLoader').style.display  = 'none';
-  document.getElementById('vfyInvalid').style.display = 'block';
+  const dateStr=c.issuedAt?.toDate?.()?.toLocaleDateString('en-GB',{year:'numeric',month:'long',day:'numeric'})||'—';
+  const name=c.userName||userDoc.name||'Student';
+
+  document.getElementById('cpName').textContent=name;
+  document.getElementById('cpCourse').textContent=c.courseTitle||'—';
+  document.getElementById('cpInstructor').textContent=c.instructor||'Admin';
+  document.getElementById('cpDate').textContent=dateStr;
+  document.getElementById('cpId').textContent=c.certId;
+  document.getElementById('cpSchool').textContent=siteAppName||'LMS Academy';
+
+  const logoWrap=document.getElementById('cpLogoWrap');
+  if(siteLogoUrl) logoWrap.innerHTML=`<img src="${siteLogoUrl}" alt="logo" crossorigin="anonymous"/>`;
+  else document.getElementById('cpLogoLetter').textContent=(siteAppName||'L')[0].toUpperCase();
+
+  activeCert={ certId:c.certId, name, course:{title:c.courseTitle,instructor:c.instructor}, dateStr, sigUrl:certSignatureUrl };
+}
+
+function closeCertModal(event,force){
+  if(!force && event && document.getElementById('certModal').contains(event.target)) return;
+  document.getElementById('certOverlay').classList.remove('show');
+  document.body.style.overflow='';
+  const frameBg=document.getElementById('certFrameBg');
+  if(frameBg){ frameBg.src=''; frameBg.style.display='none'; }
+  document.getElementById('certPreview').className='cert-preview no-frame';
+}
+
+function goToVerify(){
+  if(!activeCert) return;
+  window.location.href=`verify.html?id=${activeCert.certId}`;
+}
+
+/* ── Download PNG ── */
+async function downloadCertImg(btn){
+  const old=btn.innerHTML;
+  btn.innerHTML='<i class="fa-solid fa-spinner fa-spin"></i> তৈরি হচ্ছে...'; btn.disabled=true;
+  try{
+    const { default: html2canvas } = await import('https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.esm.min.js');
+    const canvas = await html2canvas(document.getElementById('certPreview'), {
+      scale:3, useCORS:true, allowTaint:true,
+      backgroundColor: certFrameUrl ? null : '#1a1506', logging:false
+    });
+    const a=document.createElement('a');
+    a.href=canvas.toDataURL('image/png');
+    a.download=`certificate-${activeCert?.certId||'cert'}.png`;
+    a.click();
+  }catch(e){ drawCertCanvas(); }
+  btn.innerHTML=old; btn.disabled=false;
+}
+
+function drawCertCanvas(){
+  if(!activeCert) return;
+  const { certId, name, course, dateStr } = activeCert;
+  const W=1000,H=700;
+  const cv=document.createElement('canvas'); cv.width=W; cv.height=H;
+  const ctx=cv.getContext('2d');
+  const bg=ctx.createLinearGradient(0,0,W,H);
+  bg.addColorStop(0,'#1a1506'); bg.addColorStop(.5,'#2a2208'); bg.addColorStop(1,'#1a1506');
+  ctx.fillStyle=bg; ctx.fillRect(0,0,W,H);
+  ctx.strokeStyle='#C8A96E'; ctx.lineWidth=3; ctx.strokeRect(15,15,W-30,H-30);
+  ctx.strokeStyle='rgba(200,169,110,.25)'; ctx.lineWidth=1; ctx.strokeRect(28,28,W-56,H-56);
+  ctx.fillStyle='#C8A96E'; ctx.font='bold 14px sans-serif'; ctx.textAlign='center';
+  ctx.fillText((siteAppName||'LMS ACADEMY').toUpperCase(),W/2,105);
+  ctx.fillStyle='#f5e6c0'; ctx.font='bold 34px serif';
+  ctx.fillText('Certificate of Completion',W/2,158);
+  ctx.fillStyle='rgba(245,230,192,.4)'; ctx.font='14px sans-serif';
+  ctx.fillText('এই সার্টিফিকেট প্রদান করা হচ্ছে',W/2,205);
+  ctx.fillStyle='#C8A96E'; ctx.font='bold 46px serif';
+  ctx.fillText(name,W/2,278);
+  ctx.fillStyle='rgba(245,230,192,.38)'; ctx.font='14px sans-serif';
+  ctx.fillText('সফলভাবে সম্পন্ন করেছেন',W/2,320);
+  ctx.fillStyle='#f5e6c0'; ctx.font='bold 22px sans-serif';
+  if(ctx.measureText(course.title).width>700) ctx.font='bold 17px sans-serif';
+  ctx.fillText(course.title,W/2,365);
+  const dg=ctx.createLinearGradient(100,0,W-100,0);
+  dg.addColorStop(0,'transparent'); dg.addColorStop(.5,'rgba(200,169,110,.3)'); dg.addColorStop(1,'transparent');
+  ctx.strokeStyle=dg; ctx.lineWidth=1;
+  ctx.beginPath(); ctx.moveTo(100,408); ctx.lineTo(W-100,408); ctx.stroke();
+  ctx.fillStyle='rgba(245,230,192,.3)'; ctx.font='11px sans-serif';
+  ctx.fillText('INSTRUCTOR',200,448); ctx.fillText('DATE',W-200,448);
+  ctx.fillStyle='rgba(245,230,192,.75)'; ctx.font='bold 14px sans-serif';
+  ctx.fillText(course.instructor||'Admin',200,470); ctx.fillText(dateStr,W-200,470);
+  function finish(){
+    ctx.font='11px monospace'; ctx.fillStyle='rgba(200,169,110,.4)';
+    ctx.fillText(certId,W/2,530);
+    const a=document.createElement('a'); a.href=cv.toDataURL('image/png');
+    a.download=`certificate-${certId}.png`; a.click();
+  }
+  if(certSignatureUrl){
+    const sig=new Image(); sig.crossOrigin='anonymous'; sig.src=certSignatureUrl;
+    sig.onload=()=>{ ctx.drawImage(sig,W/2-50,430,100,50); finish(); };
+    sig.onerror=finish;
+    return;
+  }
+  finish();
+}
+
+/* ── Download PDF ── */
+async function downloadCertPdf(btn){
+  if(!activeCert) return;
+  const old=btn.innerHTML;
+  btn.innerHTML='<i class="fa-solid fa-spinner fa-spin"></i> তৈরি হচ্ছে...'; btn.disabled=true;
+  try{
+    const { jsPDF } = window.jspdf;
+    const doc=new jsPDF({orientation:'landscape',unit:'mm',format:'a4'});
+    const W=297,H=210;
+    if(certFrameUrl){ doc.addImage(certFrameUrl,'PNG',0,0,W,H); }
+    else{
+      doc.setFillColor(26,21,6); doc.rect(0,0,W,H,'F');
+      doc.setDrawColor(200,169,110); doc.setLineWidth(.8); doc.rect(6,6,W-12,H-12);
+      doc.setDrawColor(200,169,110); doc.setLineWidth(.25); doc.rect(10,10,W-20,H-20);
+    }
+    const dark=!certFrameUrl;
+    doc.setTextColor(...(dark?[200,169,110]:[100,70,20])); doc.setFontSize(10); doc.setFont('helvetica','bold');
+    doc.text((siteAppName||'LMS ACADEMY').toUpperCase(),W/2,28,{align:'center'});
+    doc.setTextColor(...(dark?[245,230,192]:[30,20,5])); doc.setFontSize(24); doc.setFont('helvetica','bold');
+    doc.text('Certificate of Completion',W/2,46,{align:'center'});
+    doc.setTextColor(...(dark?[150,140,120]:[120,100,60])); doc.setFontSize(10); doc.setFont('helvetica','normal');
+    doc.text('This is to certify that',W/2,62,{align:'center'});
+    doc.setTextColor(...(dark?[200,169,110]:[120,80,10])); doc.setFontSize(28); doc.setFont('helvetica','bold');
+    doc.text(activeCert.name,W/2,82,{align:'center'});
+    doc.setTextColor(...(dark?[130,120,100]:[100,80,40])); doc.setFontSize(10); doc.setFont('helvetica','normal');
+    doc.text('has successfully completed',W/2,96,{align:'center'});
+    doc.setTextColor(...(dark?[245,230,192]:[20,15,5])); doc.setFontSize(15); doc.setFont('helvetica','bold');
+    doc.text(activeCert.course.title,W/2,112,{align:'center',maxWidth:200});
+    doc.setDrawColor(...(dark?[200,169,110]:[150,120,60])); doc.setLineWidth(.25); doc.line(50,126,W-50,126);
+    doc.setTextColor(...(dark?[130,120,100]:[100,80,40])); doc.setFontSize(8); doc.setFont('helvetica','normal');
+    doc.text('DATE',70,140,{align:'center'});
+    doc.setTextColor(...(dark?[200,190,170]:[30,20,5])); doc.setFontSize(10); doc.setFont('helvetica','bold');
+    doc.text(activeCert.dateStr,70,150,{align:'center'});
+    const sigUrl=activeCert.sigUrl;
+    if(sigUrl){ try{ doc.addImage(sigUrl,'PNG',W-90,128,40,18,undefined,'FAST'); }catch(e){} }
+    doc.setTextColor(...(dark?[200,190,170]:[30,20,5])); doc.setFontSize(10); doc.setFont('helvetica','bold');
+    doc.text(activeCert.course.instructor||'Admin',W-70,152,{align:'center'});
+    doc.setTextColor(...(dark?[130,120,100]:[100,80,40])); doc.setFontSize(8); doc.setFont('helvetica','normal');
+    doc.text('Instructor',W-70,159,{align:'center'});
+    doc.setTextColor(...(dark?[130,120,100]:[100,80,40])); doc.setFontSize(7); doc.setFont('courier','normal');
+    doc.text(activeCert.certId,W/2,168,{align:'center'});
+    doc.save(`certificate-${activeCert.certId}.pdf`);
+  }catch(e){ console.error(e); alert('PDF তৈরিতে সমস্যা হয়েছে। PNG ডাউনলোড করে দেখুন।'); }
+  btn.innerHTML=old; btn.disabled=false;
 }
 </script>
 </body>

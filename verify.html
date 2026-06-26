@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>সার্টিফিকেট ভেরিফাই</title>
+<link rel="icon" id="favicon" href=""/>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Hind+Siliguri:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css"/>
+<script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore-compat.js"></script>
+<!-- ⚠️ CONFIG — শুধু এই ফাইলটি পরিবর্তন করুন নতুন client এর জন্য -->
+<script src="config.js"></script>
+<style>
+:root{
+  --bg:#000000;--surface:#1C1C1E;--card:#1C1C1E;--card2:#2C2C2E;
+  --border:rgba(255,255,255,.07);--border2:rgba(255,255,255,.13);
+  --ink:#FFFFFF;--muted:#8E8E93;--soft:#AEAEB2;
+  --primary:#0A84FF;--primary2:#2997FF;--green:#30D158;--rose:#FF453A;
+  --font:'Inter',-apple-system,BlinkMacSystemFont,sans-serif;--bn:'Hind Siliguri',sans-serif;--r:16px;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:var(--font);background:var(--bg);color:var(--ink);min-height:100vh;}
+a{text-decoration:none;color:inherit;}
+button{font-family:var(--font);cursor:pointer;}
+
+.topnav{position:sticky;top:0;z-index:100;height:58px;background:rgba(0,0,0,.85);backdrop-filter:blur(20px);border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;padding:0 1.2rem;}
+.brand{display:flex;align-items:center;gap:.6rem;}
+.brand-logo{width:30px;height:30px;border-radius:9px;background:var(--primary);display:flex;align-items:center;justify-content:center;font-weight:800;font-size:.85rem;overflow:hidden;}
+.brand-logo img{width:100%;height:100%;object-fit:cover;}
+.brand-name{font-size:.92rem;font-weight:700;}
+.back-btn{display:flex;align-items:center;gap:.4rem;background:none;border:none;color:var(--soft);font-size:.8rem;font-weight:600;padding:.4rem .6rem;border-radius:9px;}
+.back-btn:hover{background:var(--card2);color:var(--ink);}
+
+.wrap{max-width:560px;margin:0 auto;padding:2.4rem 1.2rem 4rem;}
+.head{text-align:center;margin-bottom:2rem;}
+.head-icon{width:60px;height:60px;border-radius:18px;background:rgba(10,132,255,.12);border:1px solid rgba(10,132,255,.25);display:flex;align-items:center;justify-content:center;color:var(--primary);font-size:1.6rem;margin:0 auto 1rem;}
+.head h1{font-size:1.3rem;font-weight:800;margin-bottom:.4rem;}
+.head p{font-size:.85rem;color:var(--muted);font-family:var(--bn);line-height:1.6;}
+
+.search-box{display:flex;gap:.6rem;background:var(--card);border:1px solid var(--border);border-radius:var(--r);padding:.5rem;margin-bottom:1.6rem;}
+.search-box input{flex:1;background:none;border:none;color:var(--ink);font-size:.92rem;padding:.6rem .8rem;outline:none;font-family:monospace;letter-spacing:.03em;}
+.search-box input::placeholder{color:var(--muted);font-family:var(--font);letter-spacing:0;}
+.search-btn{background:var(--primary);color:#fff;border:none;border-radius:11px;padding:.7rem 1.3rem;font-size:.85rem;font-weight:700;display:flex;align-items:center;gap:.5rem;transition:background .18s;flex-shrink:0;}
+.search-btn:hover{background:var(--primary2);}
+.search-btn:disabled{opacity:.5;cursor:not-allowed;}
+
+#resultArea{min-height:40px;}
+
+/* not-found state */
+.nf-box{text-align:center;padding:2.2rem 1.5rem;background:rgba(255,69,58,.08);border:1px solid rgba(255,69,58,.25);border-radius:var(--r);}
+.nf-box i{font-size:2.2rem;color:var(--rose);margin-bottom:.8rem;display:block;}
+.nf-box h3{font-size:1rem;font-weight:800;margin-bottom:.4rem;}
+.nf-box p{font-size:.82rem;color:var(--soft);font-family:var(--bn);}
+
+/* verified badge */
+.verified-tag{display:flex;align-items:center;justify-content:center;gap:.5rem;background:rgba(48,209,88,.1);border:1px solid rgba(48,209,88,.25);color:var(--green);font-size:.85rem;font-weight:700;padding:.7rem;border-radius:12px;margin-bottom:1.2rem;}
+
+/* cert preview (golden design — same as certificate.html) */
+.cert-preview{position:relative;border-radius:14px;overflow:hidden;margin-bottom:1.2rem;text-align:center;}
+.cert-frame-bg{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;z-index:0;border-radius:14px;}
+.cert-preview-inner{position:relative;z-index:1;padding:2rem 1.5rem;}
+.cert-preview.no-frame{background:linear-gradient(135deg,#1a1506 0%,#2a2208 50%,#1a1506 100%);border:2px solid #C8A96E;}
+.cert-preview.no-frame::before{content:'';position:absolute;inset:6px;border:1px solid rgba(200,169,110,.2);border-radius:10px;pointer-events:none;z-index:0;}
+.cert-preview.has-frame .cp-heading,.cert-preview.has-frame .cp-course,.cert-preview.has-frame .cp-name{color:#1a1506;}
+.cert-preview.has-frame .cp-certify,.cert-preview.has-frame .cp-course-label,.cert-preview.has-frame .cp-meta-label{color:rgba(26,21,6,.5);}
+.cert-preview.has-frame .cp-school{color:#7a5c1e;}
+.cert-preview.has-frame .cp-meta-val{color:#2a2208;}
+.cert-preview.has-frame .cp-id{color:rgba(26,21,6,.4);}
+.cert-preview.has-frame .cp-divider{background:linear-gradient(90deg,transparent,rgba(26,21,6,.2),transparent);}
+.cp-corner{position:absolute;font-size:1.4rem;opacity:.3;z-index:1;}
+.cp-corner.tl{top:10px;left:12px;}.cp-corner.tr{top:10px;right:12px;}
+.cp-corner.bl{bottom:10px;left:12px;}.cp-corner.br{bottom:10px;right:12px;}
+.cp-logo{width:52px;height:52px;border-radius:12px;background:rgba(200,169,110,.15);border:1.5px solid rgba(200,169,110,.3);display:flex;align-items:center;justify-content:center;margin:0 auto .8rem;overflow:hidden;}
+.cp-logo img{width:100%;height:100%;object-fit:cover;border-radius:10px;}
+.cp-logo-letter{font-size:1.4rem;font-weight:800;color:#C8A96E;}
+.cp-school{font-size:.62rem;font-weight:700;letter-spacing:.18em;text-transform:uppercase;color:#C8A96E;margin-bottom:.5rem;opacity:.8;}
+.cp-heading{font-size:1.1rem;font-weight:800;color:#f5e6c0;margin-bottom:.3rem;}
+.cp-certify{font-size:.7rem;color:rgba(245,230,192,.4);font-family:var(--bn);margin-bottom:.6rem;}
+.cp-name{font-size:1.5rem;font-weight:800;color:#C8A96E;margin-bottom:.3rem;}
+.cp-course-label{font-size:.68rem;color:rgba(245,230,192,.4);font-family:var(--bn);margin-bottom:.25rem;}
+.cp-course{font-size:.9rem;font-weight:700;color:#f5e6c0;margin-bottom:1rem;line-height:1.35;}
+.cp-divider{height:1px;background:linear-gradient(90deg,transparent,rgba(200,169,110,.3),transparent);margin-bottom:1rem;}
+.cp-meta{display:flex;justify-content:space-between;align-items:flex-end;}
+.cp-meta-col{text-align:center;}
+.cp-meta-label{font-size:.6rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:rgba(245,230,192,.3);margin-bottom:.2rem;}
+.cp-meta-val{font-size:.72rem;font-weight:700;color:rgba(245,230,192,.75);}
+.cp-seal{width:40px;height:40px;border-radius:50%;border:1.5px solid rgba(200,169,110,.35);background:rgba(200,169,110,.08);display:flex;align-items:center;justify-content:center;font-size:1.1rem;margin:0 auto;}
+.cp-signature{max-height:44px;max-width:120px;object-fit:contain;margin:0 auto;display:block;opacity:.85;}
+.cp-id{margin-top:.7rem;font-family:monospace;font-size:.6rem;color:rgba(200,169,110,.45);letter-spacing:.06em;}
+
+.spin{animation:spin .8s linear infinite;display:inline-block;}
+@keyframes spin{to{transform:rotate(360deg)}}
+</style>
+</head>
+<body>
+
+<nav class="topnav">
+  <div class="brand">
+    <div class="brand-logo" id="brandLogo">L</div>
+    <span class="brand-name" id="brandName">LMS</span>
+  </div>
+  <a class="back-btn" href="index.html"><i class="fa-solid fa-house"></i> হোম</a>
+</nav>
+
+<div class="wrap">
+  <div class="head">
+    <div class="head-icon"><i class="fa-solid fa-shield-halved"></i></div>
+    <h1>সার্টিফিকেট ভেরিফাই করুন</h1>
+    <p>যেকোনো সার্টিফিকেটের ID দিয়ে সার্চ করে এর সত্যতা যাচাই করুন</p>
+  </div>
+
+  <div class="search-box">
+    <input id="searchInput" type="text" placeholder="যেমন: CERT-LX9F2K-A8B3" autocomplete="off"/>
+    <button class="search-btn" id="searchBtn" onclick="doVerify()"><i class="fa-solid fa-magnifying-glass"></i> সার্চ</button>
+  </div>
+
+  <div id="resultArea"></div>
+</div>
+
+<script>
+firebase.initializeApp(LMS_CONFIG.firebase);
+const db=firebase.firestore();
+let siteAppName='LMS Academy', siteLogoUrl='', certFrameUrl='', certSignatureUrl='';
+
+(async function init(){
+  try{
+    const snap=await db.collection('siteSettings').doc('main').get();
+    if(snap.exists){
+      const s=snap.data();
+      siteAppName=s.appName||'LMS Academy';
+      siteLogoUrl=s.logoUrl||'';
+      certFrameUrl=s.certFrameUrl||'';
+      certSignatureUrl=s.certSignatureUrl||'';
+      document.getElementById('brandName').textContent=siteAppName;
+      if(siteLogoUrl) document.getElementById('brandLogo').innerHTML=`<img src="${siteLogoUrl}" alt=""/>`;
+      else document.getElementById('brandLogo').textContent=siteAppName.charAt(0).toUpperCase();
+      if(s.faviconUrl) document.getElementById('favicon').href=s.faviconUrl;
+      if(s.primaryColor) document.documentElement.style.setProperty('--primary',s.primaryColor);
+    }
+  }catch(e){ console.warn('settings',e); }
+
+  const urlId=new URLSearchParams(location.search).get('id');
+  if(urlId){
+    document.getElementById('searchInput').value=urlId;
+    doVerify();
+  }
+})();
+
+document.getElementById('searchInput').addEventListener('keydown', e=>{ if(e.key==='Enter') doVerify(); });
+
+async function doVerify(){
+  const raw=document.getElementById('searchInput').value.trim();
+  const id=raw.toUpperCase();
+  const area=document.getElementById('resultArea');
+  const btn=document.getElementById('searchBtn');
+  if(!id){ area.innerHTML=''; return; }
+
+  btn.disabled=true; btn.innerHTML='<i class="fa-solid fa-spinner spin"></i> খোঁজা হচ্ছে...';
+  area.innerHTML='';
+
+  try{
+    const snap=await db.collection('certificates').doc(id).get();
+    if(!snap.exists){
+      area.innerHTML=`
+        <div class="nf-box">
+          <i class="fa-solid fa-circle-xmark"></i>
+          <h3>সার্টিফিকেট পাওয়া যায়নি</h3>
+          <p>"${escapeHtml(raw)}" — এই ID দিয়ে কোনো সার্টিফিকেট খুঁজে পাওয়া যায়নি। ID টি আবার চেক করুন।</p>
+        </div>`;
+    } else {
+      renderFoundCert({ certId:snap.id, ...snap.data() });
+    }
+  }catch(e){
+    console.error(e);
+    area.innerHTML=`<div class="nf-box"><i class="fa-solid fa-triangle-exclamation"></i><h3>সমস্যা হয়েছে</h3><p>একটু পরে আবার চেষ্টা করুন।</p></div>`;
+  }
+  btn.disabled=false; btn.innerHTML='<i class="fa-solid fa-magnifying-glass"></i> সার্চ';
+}
+
+function renderFoundCert(c){
+  const area=document.getElementById('resultArea');
+  const dateStr=c.issuedAt?.toDate?.()?.toLocaleDateString('en-GB',{year:'numeric',month:'long',day:'numeric'})||'—';
+  const hasFrame=!!certFrameUrl;
+
+  area.innerHTML=`
+    <div class="verified-tag"><i class="fa-solid fa-circle-check"></i> এটি একটি বৈধ সার্টিফিকেট</div>
+    <div class="cert-preview ${hasFrame?'has-frame':'no-frame'}">
+      ${hasFrame?`<img class="cert-frame-bg" src="${certFrameUrl}" alt=""/>`:''}
+      <span class="cp-corner tl">✦</span><span class="cp-corner tr">✦</span>
+      <span class="cp-corner bl">✦</span><span class="cp-corner br">✦</span>
+      <div class="cert-preview-inner">
+        <div class="cp-logo">${siteLogoUrl?`<img src="${siteLogoUrl}" alt=""/>`:`<span class="cp-logo-letter">${siteAppName.charAt(0).toUpperCase()}</span>`}</div>
+        <div class="cp-school">${siteAppName}</div>
+        <div class="cp-heading">Certificate of Completion</div>
+        <div class="cp-certify">এই সার্টিফিকেট প্রদান করা হয়েছে</div>
+        <div class="cp-name">${c.userName||'Student'}</div>
+        <div class="cp-course-label">সফলভাবে সম্পন্ন করেছেন</div>
+        <div class="cp-course">${c.courseTitle||'—'}</div>
+        <div class="cp-divider"></div>
+        <div class="cp-meta">
+          <div class="cp-meta-col">
+            <div class="cp-meta-label">Issue Date</div>
+            <div class="cp-meta-val">${dateStr}</div>
+          </div>
+          <div class="cp-meta-col">
+            <div class="cp-seal"><i class="fa-solid fa-graduation-cap"></i></div>
+          </div>
+          <div class="cp-meta-col">
+            ${certSignatureUrl?`<img class="cp-signature" src="${certSignatureUrl}" alt=""/>`:''}
+            <div class="cp-meta-val">${c.instructor||'Admin'}</div>
+            <div class="cp-meta-label">Instructor</div>
+          </div>
+        </div>
+        <div class="cp-id">${c.certId}</div>
+      </div>
+    </div>`;
+}
+
+function escapeHtml(s){
+  const d=document.createElement('div'); d.textContent=s; return d.innerHTML;
+}
+</script>
+</body>
+</html>
