@@ -4,2383 +4,952 @@
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 <title>কোর্স ম্যানেজমেন্ট</title>
+<link rel="icon" id="favicon" href=""/>
 <link rel="preconnect" href="https://fonts.googleapis.com"/>
-<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Hind+Siliguri:wght@400;500;600;700&display=swap" rel="stylesheet"/>
-<!-- Font Awesome CDN -->
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Hind+Siliguri:wght@400;500;600;700&display=swap" rel="stylesheet"/>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css"/>
+<script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore-compat.js"></script>
+<!-- ⚠️ CONFIG — শুধু এই ফাইলটি পরিবর্তন করুন নতুন client এর জন্য -->
+<script src="config.js"></script>
 <style>
-/* ═══════════════════════════════════════
-   DESIGN TOKENS — matches admin.html
-═══════════════════════════════════════ */
-:root {
-  --bg:        #080B12;
-  --surface:   #0E1220;
-  --card:      #121829;
-  --card2:     #161D2E;
-  --card3:     #1A2236;
-  --border:    rgba(255,255,255,.07);
-  --border2:   rgba(255,255,255,.13);
-  --ink:       #E8ECF8;
-  --muted:     #5A6480;
-  --soft:      #8892B0;
-  --primary:   #5865F2;
-  --primary-h: #4752C4;
-  --primary-glow: rgba(88,101,242,.18);
-  --green:     #23D18B;
-  --green-dim: rgba(35,209,139,.12);
-  --amber:     #F0A500;
-  --amber-dim: rgba(240,165,0,.12);
-  --rose:      #F04747;
-  --rose-dim:  rgba(240,71,71,.1);
-  --cyan:      #00BCD4;
-  --cyan-dim:  rgba(0,188,212,.12);
-  --violet:    #A855F7;
-  --violet-dim:rgba(168,85,247,.12);
-  --sidebar-w: 260px;
-  --topbar-h:  60px;
-  --font:      'Outfit', sans-serif;
-  --bn:        'Hind Siliguri', sans-serif;
-  --r:         12px;
-  --r-sm:      8px;
+:root{
+  --bg:#000000;--surface:#1C1C1E;--card:#1C1C1E;--card2:#2C2C2E;
+  --border:rgba(255,255,255,.07);--border2:rgba(255,255,255,.13);
+  --ink:#FFFFFF;--muted:#8E8E93;--soft:#AEAEB2;
+  --primary:#0A84FF;--primary2:#2997FF;--green:#30D158;--amber:#FF9F0A;--rose:#FF453A;
+  --font:'Inter',-apple-system,BlinkMacSystemFont,sans-serif;--bn:'Hind Siliguri',sans-serif;--r:16px;
 }
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:var(--font);background:var(--bg);color:var(--ink);min-height:100vh;}
+a{text-decoration:none;color:inherit;}
+button{font-family:var(--font);cursor:pointer;}
+input,select,textarea{font-family:var(--font);}
 
-*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-html { scroll-behavior: smooth; }
-body { font-family: var(--font); background: var(--bg); color: var(--ink); min-height: 100vh; overflow-x: hidden; }
-a { text-decoration: none; color: inherit; }
-button { font-family: var(--font); cursor: pointer; border: none; outline: none; }
-input, textarea, select { font-family: var(--font); }
-ul { list-style: none; }
+/* loader */
+#loader{position:fixed;inset:0;z-index:9999;background:var(--bg);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1rem;transition:opacity .4s,visibility .4s;}
+#loader.gone{opacity:0;visibility:hidden;}
+.ld-ring{width:40px;height:40px;border:3px solid rgba(10,132,255,.15);border-top-color:var(--primary);border-radius:50%;animation:spin .75s linear infinite;}
+@keyframes spin{to{transform:rotate(360deg);}}
 
-/* ═══════════════════════════════════════
-   SCROLLBAR
-═══════════════════════════════════════ */
-::-webkit-scrollbar { width: 6px; height: 6px; }
-::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: rgba(255,255,255,.1); border-radius: 3px; }
-::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,.18); }
+/* topbar */
+.topnav{position:sticky;top:0;z-index:150;height:58px;background:rgba(0,0,0,.85);backdrop-filter:blur(20px);border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;padding:0 1.2rem;}
+.tn-left{display:flex;align-items:center;gap:.9rem;}
+.back-btn{display:flex;align-items:center;gap:.4rem;background:none;border:none;color:var(--soft);font-size:.82rem;font-weight:600;padding:.4rem .6rem;border-radius:9px;}
+.back-btn:hover{background:var(--card2);color:var(--ink);}
+.nav-title{font-size:.92rem;font-weight:700;}
 
-/* ═══════════════════════════════════════
-   LAYOUT
-═══════════════════════════════════════ */
-.shell { display: flex; min-height: 100vh; }
+.content{max-width:1180px;margin:0 auto;padding:1.6rem 1.2rem 3rem;}
+.page-head{display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:1rem;margin-bottom:1.6rem;}
+.page-head h1{font-size:1.4rem;font-weight:800;margin-bottom:.3rem;display:flex;align-items:center;gap:.5rem;}
+.page-head h1 i{color:var(--primary);}
+.page-head p{font-size:.84rem;color:var(--muted);font-family:var(--bn);}
 
-/* ═══════════════════════════════════════
-   SIDEBAR
-═══════════════════════════════════════ */
-.sidebar {
-  width: var(--sidebar-w); height: 100vh;
-  position: fixed; top: 0; left: 0; z-index: 300;
-  background: var(--surface);
-  border-right: 1px solid var(--border);
-  display: flex; flex-direction: column;
-  transition: transform .28s cubic-bezier(.4,0,.2,1);
-}
-.sb-top {
-  display: flex; align-items: center; gap: .75rem;
-  padding: 1rem 1.2rem; min-height: var(--topbar-h);
-  border-bottom: 1px solid var(--border);
-}
-.sb-logo {
-  width: 34px; height: 34px; border-radius: 9px;
-  background: linear-gradient(135deg, var(--primary), #7C3AED);
-  flex-shrink: 0; display: flex; align-items: center; justify-content: center;
-  font-weight: 800; font-size: .95rem; color: #fff;
-  box-shadow: 0 0 0 1px rgba(88,101,242,.4), 0 4px 12px rgba(88,101,242,.25);
-}
-.sb-app-name { font-size: .92rem; font-weight: 700; }
-.sb-admin-tag {
-  margin-left: auto;
-  background: rgba(88,101,242,.2); color: #818CF8;
-  font-size: .58rem; font-weight: 700; letter-spacing: .07em;
-  padding: .18rem .5rem; border-radius: 20px; text-transform: uppercase;
-}
+.btn{display:inline-flex;align-items:center;gap:.45rem;padding:.65rem 1.2rem;border-radius:11px;border:none;font-size:.82rem;font-weight:700;transition:all .18s;}
+.btn-primary{background:var(--primary);color:#fff;}
+.btn-primary:hover{background:var(--primary2);transform:translateY(-1px);}
+.btn-ghost{background:var(--card2);color:var(--soft);}
+.btn-ghost:hover{background:#3A3A3C;color:var(--ink);}
+.btn-rose{background:rgba(255,69,58,.12);color:#FF8A82;border:1px solid rgba(255,69,58,.2);}
+.btn-rose:hover{background:rgba(255,69,58,.22);}
+.btn-green{background:rgba(48,209,88,.12);color:var(--green);border:1px solid rgba(48,209,88,.2);}
+.btn-green:hover{background:rgba(48,209,88,.22);}
+.btn-sm{padding:.4rem .75rem;font-size:.74rem;}
+.btn:disabled{opacity:.5;cursor:not-allowed;transform:none!important;}
+.btn-block{width:100%;justify-content:center;}
 
-.sb-nav { flex: 1; padding: .75rem .65rem; overflow-y: auto; }
-.sb-group-label {
-  font-size: .63rem; font-weight: 700; letter-spacing: .12em;
-  text-transform: uppercase; color: var(--muted);
-  padding: .6rem .6rem .3rem; margin-top: .4rem;
-}
-.sb-btn {
-  display: flex; align-items: center; gap: .75rem;
-  width: 100%; padding: .62rem .85rem; border-radius: 9px;
-  background: none; color: var(--soft);
-  font-size: .84rem; font-weight: 500; text-align: left;
-  transition: all .15s; margin-bottom: 2px;
-}
-.sb-btn:hover { background: rgba(255,255,255,.05); color: var(--ink); }
-.sb-btn.active { background: rgba(88,101,242,.15); color: #818CF8; font-weight: 600; }
-.sb-btn .sb-ico { width: 16px; text-align: center; flex-shrink: 0; opacity: .7; }
-.sb-btn.active .sb-ico { opacity: 1; }
+/* COURSE GRID */
+.course-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:1rem;}
+.course-card{background:var(--card);border:1px solid var(--border);border-radius:var(--r);overflow:hidden;transition:border-color .18s,transform .18s;}
+.course-card:hover{border-color:var(--border2);transform:translateY(-2px);}
+.cc-thumb{height:140px;background:linear-gradient(135deg,#1a1f35,#0f1628);position:relative;display:flex;align-items:center;justify-content:center;color:rgba(255,255,255,.3);font-size:2rem;}
+.cc-thumb img{width:100%;height:100%;object-fit:cover;position:absolute;inset:0;}
+.cc-badges{position:absolute;top:.6rem;left:.6rem;right:.6rem;display:flex;gap:.4rem;flex-wrap:wrap;z-index:1;}
+.cc-body{padding:1rem 1.1rem;}
+.cc-title{font-size:.92rem;font-weight:700;margin-bottom:.5rem;line-height:1.35;min-height:2.5em;}
+.cc-meta-row{display:flex;gap:.5rem;flex-wrap:wrap;margin-bottom:.9rem;}
+.cc-actions{display:flex;gap:.45rem;flex-wrap:wrap;}
+.badge{font-size:.62rem;font-weight:700;padding:.18rem .55rem;border-radius:20px;display:inline-flex;align-items:center;gap:.3rem;}
+.badge-pub{background:rgba(48,209,88,.15);color:var(--green);}
+.badge-draft{background:var(--card2);color:var(--soft);}
+.badge-amber{background:rgba(255,159,10,.15);color:var(--amber);}
+.badge-primary{background:rgba(10,132,255,.15);color:var(--primary);}
+.badge-rose{background:rgba(255,69,58,.15);color:#FF8A82;}
 
-.sb-footer { padding: .8rem; border-top: 1px solid var(--border); }
-.sb-user-card {
-  display: flex; align-items: center; gap: .7rem;
-  padding: .75rem .9rem; background: var(--card);
-  border: 1px solid var(--border); border-radius: 10px;
-  margin-bottom: .5rem;
-}
-.sb-avatar {
-  width: 32px; height: 32px; border-radius: 50%;
-  background: linear-gradient(135deg,var(--primary),var(--cyan));
-  display: flex; align-items: center; justify-content: center;
-  font-weight: 800; font-size: .8rem; flex-shrink: 0;
-}
-.sb-uname { font-size: .8rem; font-weight: 600; }
-.sb-urole { font-size: .67rem; color: var(--muted); }
-.sb-logout {
-  width: 100%; padding: .5rem;
-  background: var(--rose-dim); border: 1px solid rgba(240,71,71,.2);
-  color: #F08080; border-radius: 9px; font-size: .78rem; font-weight: 600;
-  transition: background .2s;
-}
-.sb-logout:hover { background: rgba(240,71,71,.2); }
+.empty{text-align:center;padding:3rem 1.5rem;background:var(--card);border:1px dashed var(--border2);border-radius:var(--r);}
+.empty i{font-size:2.2rem;color:var(--muted);margin-bottom:.8rem;display:block;}
+.empty h3{font-size:.95rem;font-weight:700;margin-bottom:.4rem;}
+.empty p{font-size:.82rem;color:var(--muted);font-family:var(--bn);}
+.skel{background:linear-gradient(90deg,var(--card) 25%,rgba(255,255,255,.05) 50%,var(--card) 75%);background-size:200% 100%;animation:shim 1.3s infinite;border-radius:var(--r);height:240px;}
+@keyframes shim{0%{background-position:200% 0}100%{background-position:-200% 0}}
 
-/* sidebar mobile */
-@media (max-width: 900px) {
-  .sidebar { transform: translateX(-100%); }
-  .sidebar.open { transform: translateX(0); }
-  .sb-overlay { display: block !important; }
-}
-.sb-overlay {
-  display: none; position: fixed; inset: 0; z-index: 299;
-  background: rgba(0,0,0,.6); backdrop-filter: blur(3px);
-}
-.sb-overlay.show { display: block !important; }
+/* FORMS (shared) */
+.fg{margin-bottom:1rem;}
+.fg label{display:block;font-size:.72rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:.45rem;}
+.fg input,.fg select,.fg textarea{width:100%;padding:.7rem .9rem;background:var(--surface);border:1.5px solid var(--border);border-radius:10px;color:var(--ink);font-size:.86rem;outline:none;transition:border-color .2s;}
+.fg input:focus,.fg select:focus,.fg textarea:focus{border-color:var(--primary);}
+.fg textarea{resize:vertical;min-height:70px;font-family:var(--bn);}
+.fg-hint{font-size:.7rem;color:var(--muted);font-family:var(--bn);margin-top:.35rem;}
+.fg-row{display:grid;grid-template-columns:1fr 1fr;gap:1rem;}
+.fg-row3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:1rem;}
+.checkbox-row{display:flex;align-items:center;gap:.6rem;padding:.8rem .9rem;background:var(--surface);border:1.5px solid var(--border);border-radius:10px;cursor:pointer;}
+.checkbox-row input{width:auto;flex-shrink:0;}
+.checkbox-row span{font-size:.84rem;font-weight:600;font-family:var(--bn);}
+.msg{font-size:.82rem;font-family:var(--bn);padding:.6rem .9rem;border-radius:9px;margin:.8rem 0;display:none;}
+.msg.ok{display:block;background:rgba(48,209,88,.1);color:var(--green);border:1px solid rgba(48,209,88,.2);}
+.msg.err{display:block;background:rgba(255,69,58,.1);color:#FF8A82;border:1px solid rgba(255,69,58,.2);}
 
-/* ═══════════════════════════════════════
-   TOPBAR
-═══════════════════════════════════════ */
-.topbar {
-  position: fixed; top: 0;
-  left: var(--sidebar-w); right: 0; z-index: 200;
-  height: var(--topbar-h);
-  background: rgba(8,11,18,.85); backdrop-filter: blur(18px);
-  border-bottom: 1px solid var(--border);
-  display: flex; align-items: center; justify-content: space-between;
-  padding: 0 1.8rem;
-}
-@media (max-width: 900px) {
-  .topbar { left: 0; }
-  .main { margin-left: 0 !important; }
-}
-.topbar-left { display: flex; align-items: center; gap: .8rem; }
-.hamburger {
-  display: none; background: none;
-  color: var(--ink); font-size: 1.2rem; padding: .3rem;
-  border-radius: 6px; transition: background .15s;
-}
-.hamburger:hover { background: rgba(255,255,255,.06); }
-@media (max-width: 900px) { .hamburger { display: flex; align-items: center; } }
-.topbar-title { font-size: 1rem; font-weight: 700; }
-.topbar-right { display: flex; align-items: center; gap: .6rem; }
-.tb-badge {
-  padding: .28rem .75rem; border-radius: 20px;
-  background: var(--primary-glow); color: #818CF8;
-  font-size: .7rem; font-weight: 700;
-  border: 1px solid rgba(88,101,242,.25);
-}
-.tb-icon-btn {
-  width: 34px; height: 34px; border-radius: 8px;
-  background: rgba(255,255,255,.05); color: var(--soft);
-  display: flex; align-items: center; justify-content: center;
-  font-size: .85rem; transition: all .15s;
-}
-.tb-icon-btn:hover { background: rgba(255,255,255,.1); color: var(--ink); }
+/* requirements dynamic list */
+.req-row{display:flex;gap:.5rem;margin-bottom:.5rem;}
+.req-row input{flex:1;}
+.req-del{background:rgba(255,69,58,.12);border:1px solid rgba(255,69,58,.2);color:#FF8A82;border-radius:9px;width:38px;flex-shrink:0;}
 
-/* ═══════════════════════════════════════
-   MAIN
-═══════════════════════════════════════ */
-.main { margin-left: var(--sidebar-w); padding-top: var(--topbar-h); min-height: 100vh; flex: 1; }
-.content { padding: 1.8rem; max-width: 1260px; }
+/* thumbnail uploader */
+.thumb-wrap{position:relative;}
+.thumb-preview{position:relative;border-radius:10px;overflow:hidden;margin-bottom:.6rem;}
+.thumb-preview img{width:100%;height:140px;object-fit:cover;display:block;}
+.thumb-remove{position:absolute;top:.5rem;right:.5rem;background:rgba(0,0,0,.7);border:none;color:#fff;width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;}
+.thumb-dz{border:1.5px dashed var(--border2);border-radius:10px;padding:1.6rem 1rem;text-align:center;cursor:pointer;transition:border-color .2s,background .2s;}
+.thumb-dz:hover,.thumb-dz.drag{border-color:var(--primary);background:rgba(10,132,255,.05);}
+.thumb-dz i{font-size:1.6rem;color:var(--muted);margin-bottom:.5rem;display:block;}
+.thumb-dz-text{font-size:.82rem;color:var(--soft);font-family:var(--bn);}
+.thumb-dz-text span{color:var(--primary);font-weight:700;}
+.thumb-dz-hint{font-size:.7rem;color:var(--muted);margin-top:.3rem;}
+.thumb-progress{display:flex;align-items:center;gap:.6rem;}
+.thumb-progress-bar{flex:1;height:6px;background:var(--card2);border-radius:10px;overflow:hidden;}
+.thumb-progress-fill{height:100%;background:var(--primary);border-radius:10px;width:0%;transition:width .2s;}
 
-/* pages */
-.page { display: none; animation: fadeUp .28s ease; }
-.page.active { display: block; }
-@keyframes fadeUp {
-  from { opacity: 0; transform: translateY(8px); }
-  to   { opacity: 1; transform: translateY(0); }
-}
+/* MODALS */
+.modal-bg{display:none;position:fixed;inset:0;z-index:800;background:rgba(0,0,0,.75);backdrop-filter:blur(8px);align-items:center;justify-content:center;padding:1rem;overflow-y:auto;}
+.modal-bg.open{display:flex;}
+.modal{background:var(--surface);border:1px solid var(--border2);border-radius:18px;width:100%;max-width:640px;padding:1.6rem;max-height:90vh;overflow-y:auto;animation:popUp .25s cubic-bezier(.34,1.56,.64,1) both;margin:auto;}
+.modal.wide{max-width:780px;}
+@keyframes popUp{from{opacity:0;transform:scale(.94) translateY(14px)}to{opacity:1;transform:scale(1) translateY(0)}}
+.modal-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:1.2rem;}
+.modal-header h3{font-size:1rem;font-weight:800;display:flex;align-items:center;gap:.5rem;}
+.modal-close{background:var(--card2);border:none;color:var(--muted);width:30px;height:30px;border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:.85rem;}
+.modal-close:hover{background:#3A3A3C;color:var(--ink);}
+.modal-footer{display:flex;justify-content:flex-end;gap:.6rem;margin-top:1.2rem;}
+.section-divider{border-top:1px solid var(--border);margin:1.4rem 0;padding-top:1.2rem;}
+.section-divider h4{font-size:.85rem;font-weight:700;margin-bottom:.9rem;display:flex;align-items:center;gap:.5rem;}
 
-/* ═══════════════════════════════════════
-   PAGE HEADER
-═══════════════════════════════════════ */
-.ph {
-  display: flex; align-items: flex-start;
-  justify-content: space-between; flex-wrap: wrap;
-  gap: 1rem; margin-bottom: 1.8rem;
-}
-.ph-left h1 { font-size: 1.45rem; font-weight: 800; margin-bottom: .2rem; }
-.ph-left p { font-family: var(--bn); color: var(--muted); font-size: .83rem; }
-.ph-right { display: flex; gap: .6rem; flex-wrap: wrap; align-items: center; }
+/* UNITS & LESSONS */
+.unit-add-row{display:flex;gap:.6rem;margin-bottom:1.2rem;}
+.unit-add-row input{flex:1;}
+.unit-block{background:var(--card);border:1px solid var(--border);border-radius:13px;margin-bottom:.9rem;overflow:hidden;}
+.unit-head{display:flex;align-items:center;gap:.7rem;padding:.85rem 1rem;background:var(--card2);}
+.unit-head i.drag{color:var(--muted);font-size:.8rem;}
+.unit-name-input{flex:1;background:none;border:none;color:var(--ink);font-size:.88rem;font-weight:700;padding:.3rem .4rem;border-radius:6px;outline:none;}
+.unit-name-input:focus{background:var(--surface);}
+.unit-count{font-size:.7rem;color:var(--muted);background:var(--surface);padding:.2rem .55rem;border-radius:20px;flex-shrink:0;}
+.unit-actions{display:flex;gap:.4rem;flex-shrink:0;}
+.icon-btn{width:30px;height:30px;border-radius:8px;background:var(--surface);border:none;color:var(--soft);display:flex;align-items:center;justify-content:center;font-size:.78rem;}
+.icon-btn:hover{background:var(--border2);color:var(--ink);}
+.icon-btn.danger:hover{background:rgba(255,69,58,.15);color:#FF8A82;}
+.unit-lessons{padding:.6rem;}
+.lesson-row{display:flex;align-items:center;gap:.7rem;padding:.6rem .7rem;border-radius:10px;transition:background .15s;}
+.lesson-row:hover{background:var(--card2);}
+.lr-order{width:24px;height:24px;border-radius:7px;background:var(--surface);color:var(--muted);font-size:.7rem;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.lr-title{flex:1;min-width:0;font-size:.84rem;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.lr-badges{display:flex;gap:.3rem;flex-shrink:0;}
+.lr-badge{font-size:.6rem;font-weight:700;padding:.12rem .4rem;border-radius:8px;}
+.lr-yt{background:rgba(255,69,58,.1);color:#FF7A70;}
+.lr-pdf{background:rgba(48,209,88,.1);color:#5EDB8E;}
+.lr-quiz{background:rgba(10,132,255,.1);color:#5AA8FF;}
+.lr-free{background:rgba(48,209,88,.18);color:var(--green);}
+.lr-actions{display:flex;gap:.3rem;flex-shrink:0;}
+.unit-empty{font-size:.78rem;color:var(--muted);font-family:var(--bn);padding:.6rem .7rem;}
+.add-lesson-here{width:100%;padding:.6rem;background:none;border:1px dashed var(--border2);border-radius:9px;color:var(--muted);font-size:.78rem;font-weight:600;margin-top:.4rem;}
+.add-lesson-here:hover{border-color:var(--primary);color:var(--primary);}
+.no-unit-note{font-size:.76rem;color:var(--muted);font-family:var(--bn);text-align:center;padding:1rem;}
 
-/* ═══════════════════════════════════════
-   BUTTONS
-═══════════════════════════════════════ */
-.btn {
-  display: inline-flex; align-items: center; gap: .45rem;
-  padding: .55rem 1.1rem; border-radius: 9px;
-  font-size: .84rem; font-weight: 600; transition: all .15s;
-  white-space: nowrap;
-}
-.btn-primary {
-  background: var(--primary); color: #fff;
-  box-shadow: 0 2px 10px rgba(88,101,242,.3);
-}
-.btn-primary:hover { background: var(--primary-h); transform: translateY(-1px); }
-.btn-ghost {
-  background: rgba(255,255,255,.06); color: var(--soft);
-  border: 1px solid var(--border2);
-}
-.btn-ghost:hover { background: rgba(255,255,255,.1); color: var(--ink); }
-.btn-green { background: var(--green-dim); color: var(--green); border: 1px solid rgba(35,209,139,.2); }
-.btn-green:hover { background: rgba(35,209,139,.2); }
-.btn-amber { background: var(--amber-dim); color: var(--amber); border: 1px solid rgba(240,165,0,.2); }
-.btn-amber:hover { background: rgba(240,165,0,.2); }
-.btn-rose  { background: var(--rose-dim);  color: var(--rose);  border: 1px solid rgba(240,71,71,.2); }
-.btn-rose:hover  { background: rgba(240,71,71,.18); }
-.btn-cyan  { background: var(--cyan-dim);  color: var(--cyan);  border: 1px solid rgba(0,188,212,.2); }
-.btn-cyan:hover  { background: rgba(0,188,212,.2); }
-.btn-violet { background: var(--violet-dim); color: var(--violet); border: 1px solid rgba(168,85,247,.2); }
-.btn-violet:hover { background: rgba(168,85,247,.2); }
-.btn-sm { padding: .35rem .75rem; font-size: .76rem; border-radius: 7px; }
-.btn-xs { padding: .22rem .55rem; font-size: .7rem; border-radius: 6px; }
+/* quiz builder (reused) */
+.quiz-section-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:.8rem;}
+.quiz-section-head h4{font-size:.85rem;font-weight:700;font-family:var(--bn);}
+.quiz-question-block{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:.9rem;margin-bottom:.7rem;}
+.quiz-q-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:.6rem;font-size:.78rem;font-weight:700;color:var(--soft);}
+.quiz-opt-row{display:flex;align-items:center;gap:.5rem;margin-bottom:.4rem;}
+.quiz-opt-row input[type=radio]{flex-shrink:0;width:auto;}
+.quiz-opt-row input[type=text]{flex:1;padding:.5rem .7rem;font-size:.8rem;}
 
-/* ═══════════════════════════════════════
-   FORM ELEMENTS
-═══════════════════════════════════════ */
-.field { margin-bottom: 1rem; }
-.field label { display: block; font-size: .78rem; font-weight: 600; color: var(--soft); margin-bottom: .4rem; }
-.field label .req { color: var(--rose); margin-left: 2px; }
-.inp, .sel, .texta {
-  width: 100%; padding: .6rem .85rem;
-  background: var(--card3); border: 1px solid var(--border2);
-  border-radius: var(--r-sm); color: var(--ink); font-size: .85rem;
-  transition: border-color .15s, box-shadow .15s;
-  outline: none;
-}
-.inp:focus, .sel:focus, .texta:focus {
-  border-color: var(--primary); box-shadow: 0 0 0 3px rgba(88,101,242,.12);
-}
-.sel { appearance: none; cursor: pointer; }
-.texta { resize: vertical; min-height: 80px; }
-.inp::placeholder, .texta::placeholder { color: var(--muted); }
-.inp-row { display: grid; grid-template-columns: 1fr 1fr; gap: .8rem; }
-@media (max-width: 560px) { .inp-row { grid-template-columns: 1fr; } }
+#toast{position:fixed;bottom:1.5rem;left:50%;transform:translateX(-50%) translateY(80px);z-index:9000;padding:.7rem 1.4rem;border-radius:11px;font-size:.85rem;font-weight:600;opacity:0;transition:all .3s cubic-bezier(.34,1.56,.64,1);pointer-events:none;white-space:nowrap;font-family:var(--bn);}
+#toast.show{transform:translateX(-50%) translateY(0);opacity:1;}
+#toast.ok{background:rgba(48,209,88,.15);color:var(--green);border:1px solid rgba(48,209,88,.3);}
+#toast.err{background:rgba(255,69,58,.15);color:#FF8A82;border:1px solid rgba(255,69,58,.3);}
 
-/* toggle */
-.toggle-wrap { display: flex; align-items: center; gap: .6rem; }
-.toggle { position: relative; width: 38px; height: 20px; }
-.toggle input { opacity: 0; width: 0; height: 0; }
-.toggle-slider {
-  position: absolute; inset: 0; border-radius: 20px;
-  background: var(--card3); border: 1px solid var(--border2);
-  cursor: pointer; transition: .2s;
+@media(max-width:640px){
+  .fg-row,.fg-row3{grid-template-columns:1fr;}
+  .modal{padding:1.2rem;}
+  .content{padding:1.2rem .9rem 2.5rem;}
+  .course-grid{grid-template-columns:1fr 1fr;}
 }
-.toggle-slider::after {
-  content: ''; position: absolute;
-  width: 14px; height: 14px; border-radius: 50%;
-  background: var(--muted); top: 2px; left: 2px;
-  transition: .2s;
-}
-.toggle input:checked + .toggle-slider { background: var(--primary); border-color: var(--primary); }
-.toggle input:checked + .toggle-slider::after { transform: translateX(18px); background: #fff; }
-.toggle-label { font-size: .82rem; color: var(--soft); }
-
-/* ═══════════════════════════════════════
-   CARDS
-═══════════════════════════════════════ */
-.card {
-  background: var(--card); border: 1px solid var(--border);
-  border-radius: var(--r); padding: 1.2rem;
-}
-.card-title {
-  font-size: .9rem; font-weight: 700; margin-bottom: 1rem;
-  display: flex; align-items: center; gap: .5rem;
-}
-.card-title i { color: var(--primary); }
-
-/* ═══════════════════════════════════════
-   STAT PILLS
-═══════════════════════════════════════ */
-.stats-row { display: flex; gap: .7rem; flex-wrap: wrap; margin-bottom: 1.5rem; }
-.stat-pill {
-  display: flex; align-items: center; gap: .5rem;
-  padding: .45rem .9rem; border-radius: 20px;
-  font-size: .78rem; font-weight: 600;
-  background: var(--card); border: 1px solid var(--border);
-}
-.stat-pill i { font-size: .8rem; }
-.stat-pill.blue  { border-color: rgba(88,101,242,.25);  color: #818CF8; background: var(--primary-glow); }
-.stat-pill.green { border-color: rgba(35,209,139,.25);  color: var(--green); background: var(--green-dim); }
-.stat-pill.amber { border-color: rgba(240,165,0,.25);   color: var(--amber); background: var(--amber-dim); }
-.stat-pill.cyan  { border-color: rgba(0,188,212,.25);   color: var(--cyan);  background: var(--cyan-dim); }
-
-/* ═══════════════════════════════════════
-   COURSE CARD GRID
-═══════════════════════════════════════ */
-.course-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-  gap: 1rem; margin-bottom: 1.5rem;
-}
-.course-card {
-  background: var(--card); border: 1px solid var(--border);
-  border-radius: var(--r); overflow: hidden;
-  transition: border-color .2s, transform .2s, box-shadow .2s;
-  cursor: pointer;
-}
-.course-card:hover {
-  border-color: var(--border2); transform: translateY(-2px);
-  box-shadow: 0 8px 30px rgba(0,0,0,.3);
-}
-.course-card.selected {
-  border-color: var(--primary); box-shadow: 0 0 0 1px var(--primary), 0 8px 30px rgba(88,101,242,.2);
-}
-.cc-thumb {
-  width: 100%; height: 140px; object-fit: cover;
-  background: linear-gradient(135deg, #161D2E, #1A2236);
-  display: flex; align-items: center; justify-content: center;
-  font-size: 2.5rem; color: var(--muted); position: relative;
-}
-.cc-thumb img { width: 100%; height: 100%; object-fit: cover; position: absolute; inset: 0; }
-.cc-thumb-icon { position: relative; z-index: 1; }
-.cc-badge {
-  position: absolute; top: 8px; right: 8px; z-index: 2;
-  padding: .2rem .55rem; border-radius: 20px; font-size: .66rem; font-weight: 700;
-}
-.cc-badge.published { background: var(--green-dim); color: var(--green); border: 1px solid rgba(35,209,139,.25); }
-.cc-badge.draft { background: var(--amber-dim); color: var(--amber); border: 1px solid rgba(240,165,0,.25); }
-.cc-body { padding: .85rem 1rem 1rem; }
-.cc-level {
-  font-size: .68rem; font-weight: 700; text-transform: uppercase; letter-spacing: .08em;
-  color: var(--cyan); margin-bottom: .3rem;
-}
-.cc-title { font-size: .95rem; font-weight: 700; margin-bottom: .4rem; line-height: 1.35; }
-.cc-meta {
-  display: flex; align-items: center; gap: .7rem;
-  font-size: .73rem; color: var(--muted); flex-wrap: wrap; margin-bottom: .7rem;
-}
-.cc-meta i { font-size: .7rem; }
-.cc-actions { display: flex; gap: .4rem; flex-wrap: wrap; }
-
-/* ═══════════════════════════════════════
-   UNIT / LESSON BUILDER
-═══════════════════════════════════════ */
-.builder-wrap {
-  display: grid;
-  grid-template-columns: 340px 1fr;
-  gap: 1.2rem; align-items: start;
-}
-@media (max-width: 860px) {
-  .builder-wrap { grid-template-columns: 1fr; }
-}
-
-/* unit list panel */
-.units-panel {
-  background: var(--card); border: 1px solid var(--border);
-  border-radius: var(--r); overflow: hidden;
-}
-.units-panel-hd {
-  padding: .85rem 1rem;
-  border-bottom: 1px solid var(--border);
-  display: flex; align-items: center; justify-content: space-between;
-}
-.units-panel-hd h3 { font-size: .9rem; font-weight: 700; }
-.unit-list { padding: .5rem; }
-.unit-item {
-  border-radius: var(--r-sm); overflow: hidden; margin-bottom: 4px;
-}
-.unit-header {
-  display: flex; align-items: center; gap: .6rem;
-  padding: .65rem .8rem; cursor: pointer;
-  background: transparent; width: 100%; text-align: left;
-  border-radius: var(--r-sm);
-  transition: background .15s;
-  border: 1px solid transparent;
-}
-.unit-header:hover { background: rgba(255,255,255,.04); }
-.unit-header.active {
-  background: var(--primary-glow); border-color: rgba(88,101,242,.25);
-}
-.unit-drag-handle {
-  color: var(--muted); font-size: .7rem; cursor: grab; flex-shrink: 0;
-}
-.unit-num {
-  width: 22px; height: 22px; border-radius: 6px;
-  background: var(--card2); border: 1px solid var(--border2);
-  display: flex; align-items: center; justify-content: center;
-  font-size: .67rem; font-weight: 700; color: var(--soft); flex-shrink: 0;
-}
-.unit-header.active .unit-num { background: var(--primary); border-color: var(--primary); color: #fff; }
-.unit-name { font-size: .82rem; font-weight: 600; flex: 1; text-align: left; }
-.unit-lesson-cnt {
-  font-size: .68rem; color: var(--muted); flex-shrink: 0;
-  font-family: var(--bn);
-}
-.unit-chevron {
-  font-size: .68rem; color: var(--muted); flex-shrink: 0;
-  transition: transform .2s;
-}
-.unit-header.open .unit-chevron { transform: rotate(90deg); }
-.unit-actions { display: flex; gap: 3px; flex-shrink: 0; }
-.unit-act-btn {
-  width: 24px; height: 24px; border-radius: 5px;
-  display: flex; align-items: center; justify-content: center;
-  font-size: .65rem; transition: background .15s;
-  background: transparent; color: var(--muted);
-}
-.unit-act-btn:hover.edit { background: var(--amber-dim); color: var(--amber); }
-.unit-act-btn:hover.del { background: var(--rose-dim); color: var(--rose); }
-
-/* lesson list (nested) */
-.lesson-sublist {
-  overflow: hidden; max-height: 0;
-  transition: max-height .28s ease;
-  padding: 0 .5rem;
-}
-.lesson-sublist.open { max-height: 1000px; }
-.lesson-row {
-  display: flex; align-items: center; gap: .55rem;
-  padding: .48rem .65rem; margin: 2px 0;
-  border-radius: 7px; font-size: .8rem;
-  transition: background .15s; cursor: default;
-  background: transparent;
-}
-.lesson-row:hover { background: rgba(255,255,255,.04); }
-.lesson-type-icon {
-  width: 22px; height: 22px; border-radius: 5px; flex-shrink: 0;
-  display: flex; align-items: center; justify-content: center;
-  font-size: .65rem;
-}
-.lesson-type-icon.video   { background: rgba(88,101,242,.15); color: var(--primary); }
-.lesson-type-icon.quiz    { background: var(--green-dim);     color: var(--green); }
-.lesson-type-icon.article { background: var(--amber-dim);     color: var(--amber); }
-.lesson-type-icon.preview { background: var(--cyan-dim);      color: var(--cyan); }
-.lesson-name { flex: 1; font-size: .79rem; color: var(--soft); }
-.lesson-dur { font-size: .68rem; color: var(--muted); white-space: nowrap; }
-.lesson-act { display: flex; gap: 3px; flex-shrink: 0; }
-.lesson-act-btn {
-  width: 22px; height: 22px; border-radius: 5px;
-  display: flex; align-items: center; justify-content: center;
-  font-size: .62rem; background: transparent; color: var(--muted);
-  transition: background .15s, color .15s;
-}
-.lesson-act-btn:hover { background: rgba(255,255,255,.07); color: var(--ink); }
-.lesson-act-btn.del:hover { background: var(--rose-dim); color: var(--rose); }
-.lesson-act-btn.edit:hover { background: var(--amber-dim); color: var(--amber); }
-.preview-badge {
-  padding: .12rem .38rem; border-radius: 4px; font-size: .6rem; font-weight: 700;
-  background: var(--cyan-dim); color: var(--cyan); border: 1px solid rgba(0,188,212,.2);
-  flex-shrink: 0;
-}
-.add-lesson-row {
-  display: flex; align-items: center; gap: .5rem;
-  padding: .5rem .65rem; margin: 3px 0;
-  border-radius: 7px; border: 1px dashed var(--border2);
-  cursor: pointer; transition: background .15s, border-color .15s;
-  font-size: .78rem; color: var(--muted);
-}
-.add-lesson-row:hover { background: rgba(255,255,255,.04); border-color: var(--primary); color: var(--primary); }
-.add-unit-btn {
-  display: flex; align-items: center; gap: .5rem;
-  width: calc(100% - 1rem); margin: .5rem;
-  padding: .6rem .8rem; border-radius: var(--r-sm);
-  border: 1px dashed var(--border2); cursor: pointer;
-  font-size: .8rem; color: var(--muted); background: transparent;
-  transition: all .15s; justify-content: center; font-family: var(--font);
-}
-.add-unit-btn:hover { border-color: var(--primary); color: var(--primary); background: var(--primary-glow); }
-
-/* ═══════════════════════════════════════
-   LESSON DETAIL PANEL
-═══════════════════════════════════════ */
-.lesson-panel {
-  background: var(--card); border: 1px solid var(--border);
-  border-radius: var(--r); padding: 1.2rem;
-}
-.lp-empty {
-  display: flex; flex-direction: column; align-items: center;
-  justify-content: center; min-height: 320px; gap: .7rem;
-  color: var(--muted);
-}
-.lp-empty i { font-size: 2.5rem; opacity: .25; }
-.lp-empty p { font-family: var(--bn); font-size: .85rem; }
-.lp-header {
-  display: flex; align-items: center; gap: .7rem; margin-bottom: 1.2rem;
-  padding-bottom: .9rem; border-bottom: 1px solid var(--border);
-}
-.lp-back {
-  width: 30px; height: 30px; border-radius: 7px; background: rgba(255,255,255,.06);
-  display: flex; align-items: center; justify-content: center;
-  font-size: .8rem; color: var(--soft); cursor: pointer;
-  transition: background .15s; border: 1px solid var(--border2);
-}
-.lp-back:hover { background: rgba(255,255,255,.1); }
-.lp-hd-text h3 { font-size: .95rem; font-weight: 700; }
-.lp-hd-text span { font-size: .73rem; color: var(--muted); font-family: var(--bn); }
-.lp-form-grid {
-  display: grid; grid-template-columns: 1fr 1fr; gap: .8rem;
-}
-@media (max-width: 600px) { .lp-form-grid { grid-template-columns: 1fr; } }
-
-/* ═══════════════════════════════════════
-   PREVIEW VIDEO SECTION
-═══════════════════════════════════════ */
-.preview-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
-  gap: .9rem;
-}
-.preview-card {
-  background: var(--card); border: 1px solid var(--border);
-  border-radius: var(--r); overflow: hidden;
-  transition: border-color .2s, transform .2s;
-}
-.preview-card:hover { border-color: var(--border2); transform: translateY(-2px); }
-.pv-thumb {
-  width: 100%; height: 130px; background: var(--card2);
-  display: flex; align-items: center; justify-content: center;
-  position: relative; overflow: hidden; cursor: pointer;
-}
-.pv-thumb::before {
-  content: ''; position: absolute; inset: 0;
-  background: linear-gradient(135deg, rgba(88,101,242,.15), rgba(0,188,212,.1));
-}
-.pv-play {
-  width: 40px; height: 40px; border-radius: 50%;
-  background: rgba(255,255,255,.9);
-  display: flex; align-items: center; justify-content: center;
-  font-size: .85rem; color: var(--primary); position: relative; z-index: 1;
-  transition: transform .2s, box-shadow .2s;
-  padding-left: 3px;
-}
-.pv-thumb:hover .pv-play { transform: scale(1.1); box-shadow: 0 4px 20px rgba(88,101,242,.4); }
-.pv-free-badge {
-  position: absolute; top: 8px; left: 8px; z-index: 2;
-  padding: .18rem .5rem; border-radius: 5px; font-size: .62rem; font-weight: 700;
-  background: var(--cyan-dim); color: var(--cyan); border: 1px solid rgba(0,188,212,.25);
-}
-.pv-body { padding: .75rem .9rem .9rem; }
-.pv-lesson-label { font-size: .67rem; color: var(--muted); margin-bottom: .2rem; font-family: var(--bn); }
-.pv-title { font-size: .85rem; font-weight: 700; margin-bottom: .35rem; line-height: 1.35; }
-.pv-meta { font-size: .72rem; color: var(--muted); display: flex; align-items: center; gap: .5rem; margin-bottom: .65rem; }
-.pv-actions { display: flex; gap: .4rem; }
-
-/* ═══════════════════════════════════════
-   LEVEL & DURATION
-═══════════════════════════════════════ */
-.level-table-wrap { overflow-x: auto; }
-table { width: 100%; border-collapse: collapse; }
-thead th {
-  font-size: .72rem; font-weight: 700; text-transform: uppercase;
-  letter-spacing: .08em; color: var(--muted); text-align: left;
-  padding: .65rem .9rem; border-bottom: 1px solid var(--border);
-  white-space: nowrap;
-}
-tbody tr { border-bottom: 1px solid var(--border); transition: background .1s; }
-tbody tr:hover { background: rgba(255,255,255,.025); }
-tbody td { padding: .7rem .9rem; font-size: .83rem; vertical-align: middle; }
-tbody tr:last-child { border-bottom: none; }
-.level-badge {
-  display: inline-flex; align-items: center; gap: .35rem;
-  padding: .22rem .65rem; border-radius: 20px; font-size: .72rem; font-weight: 700;
-}
-.level-badge.beginner { background: var(--green-dim); color: var(--green); border: 1px solid rgba(35,209,139,.2); }
-.level-badge.intermediate { background: var(--amber-dim); color: var(--amber); border: 1px solid rgba(240,165,0,.2); }
-.level-badge.advanced { background: var(--rose-dim); color: var(--rose); border: 1px solid rgba(240,71,71,.2); }
-.level-badge.all { background: var(--violet-dim); color: var(--violet); border: 1px solid rgba(168,85,247,.2); }
-.dur-tag {
-  display: inline-flex; align-items: center; gap: .3rem;
-  background: var(--card2); border: 1px solid var(--border2);
-  padding: .18rem .55rem; border-radius: 6px; font-size: .75rem; color: var(--soft);
-}
-
-/* ═══════════════════════════════════════
-   MODAL
-═══════════════════════════════════════ */
-.modal-bg {
-  display: none; position: fixed; inset: 0; z-index: 900;
-  background: rgba(0,0,0,.65); backdrop-filter: blur(6px);
-  align-items: center; justify-content: center; padding: 1rem;
-}
-.modal-bg.open { display: flex; }
-.modal {
-  background: var(--surface); border: 1px solid var(--border2);
-  border-radius: 16px; width: 100%; max-width: 520px;
-  max-height: 90vh; overflow-y: auto;
-  box-shadow: 0 20px 60px rgba(0,0,0,.5);
-  animation: modalIn .22s ease;
-}
-.modal.wide { max-width: 680px; }
-@keyframes modalIn {
-  from { opacity: 0; transform: scale(.95) translateY(10px); }
-  to   { opacity: 1; transform: scale(1) translateY(0); }
-}
-.modal-head {
-  display: flex; align-items: center; justify-content: space-between;
-  padding: 1.1rem 1.3rem; border-bottom: 1px solid var(--border);
-  position: sticky; top: 0; background: var(--surface); z-index: 1;
-}
-.modal-head h2 { font-size: 1rem; font-weight: 700; }
-.modal-close {
-  width: 28px; height: 28px; border-radius: 7px;
-  background: rgba(255,255,255,.07); color: var(--soft);
-  display: flex; align-items: center; justify-content: center;
-  font-size: .8rem; transition: background .15s, color .15s;
-}
-.modal-close:hover { background: rgba(240,71,71,.15); color: var(--rose); }
-.modal-body { padding: 1.2rem 1.3rem; }
-.modal-foot {
-  padding: .9rem 1.3rem; border-top: 1px solid var(--border);
-  display: flex; justify-content: flex-end; gap: .6rem;
-  position: sticky; bottom: 0; background: var(--surface);
-}
-
-/* ═══════════════════════════════════════
-   TOAST
-═══════════════════════════════════════ */
-#toast {
-  position: fixed; bottom: 1.5rem; right: 1.5rem; z-index: 9999;
-  padding: .7rem 1.1rem; border-radius: 10px; font-size: .83rem; font-weight: 600;
-  display: flex; align-items: center; gap: .5rem;
-  background: var(--card); border: 1px solid var(--border2);
-  transform: translateY(80px); opacity: 0;
-  transition: transform .3s, opacity .3s;
-  box-shadow: 0 8px 30px rgba(0,0,0,.4);
-  max-width: 340px;
-}
-#toast.show { transform: translateY(0); opacity: 1; }
-#toast.ok  { border-color: rgba(35,209,139,.35); color: var(--green); }
-#toast.err { border-color: rgba(240,71,71,.35);  color: var(--rose); }
-#toast.info { border-color: rgba(88,101,242,.35); color: #818CF8; }
-
-/* ═══════════════════════════════════════
-   EMPTY STATE
-═══════════════════════════════════════ */
-.empty-state {
-  display: flex; flex-direction: column; align-items: center;
-  justify-content: center; padding: 3.5rem 1rem; gap: .8rem;
-  color: var(--muted);
-}
-.empty-state i { font-size: 2.8rem; opacity: .2; }
-.empty-state h3 { font-size: 1rem; font-weight: 700; color: var(--soft); }
-.empty-state p { font-family: var(--bn); font-size: .83rem; text-align: center; max-width: 280px; }
-
-/* ═══════════════════════════════════════
-   SECTION DIVIDER
-═══════════════════════════════════════ */
-.section-divider {
-  display: flex; align-items: center; gap: .8rem; margin: 1.5rem 0;
-}
-.section-divider span {
-  font-size: .7rem; font-weight: 700; text-transform: uppercase;
-  letter-spacing: .1em; color: var(--muted); white-space: nowrap;
-}
-.section-divider::before, .section-divider::after {
-  content: ''; flex: 1; height: 1px; background: var(--border);
-}
-
-/* ═══════════════════════════════════════
-   TAB BAR
-═══════════════════════════════════════ */
-.tab-bar {
-  display: flex; gap: 2px; background: var(--card);
-  border: 1px solid var(--border); border-radius: 10px;
-  padding: 3px; margin-bottom: 1.4rem;
-}
-.tab-btn {
-  flex: 1; padding: .5rem .7rem; border-radius: 8px;
-  font-size: .8rem; font-weight: 600; color: var(--muted);
-  transition: all .15s; text-align: center; background: transparent;
-  display: flex; align-items: center; justify-content: center; gap: .4rem;
-  white-space: nowrap;
-}
-.tab-btn.active { background: var(--primary); color: #fff; box-shadow: 0 2px 8px rgba(88,101,242,.3); }
-.tab-btn:not(.active):hover { background: rgba(255,255,255,.05); color: var(--soft); }
-
-/* ═══════════════════════════════════════
-   MSG
-═══════════════════════════════════════ */
-.msg {
-  padding: .55rem .9rem; border-radius: 8px; font-size: .8rem; font-weight: 500;
-  margin-top: .7rem; display: none;
-}
-.msg.ok  { display: block; background: var(--green-dim); color: var(--green); border: 1px solid rgba(35,209,139,.2); }
-.msg.err { display: block; background: var(--rose-dim);  color: var(--rose);  border: 1px solid rgba(240,71,71,.2); }
-
-/* ═══════════════════════════════════════
-   RESPONSIVE
-═══════════════════════════════════════ */
-@media (max-width: 640px) {
-  .content { padding: 1rem; }
-  .course-grid { grid-template-columns: 1fr; }
-  .preview-grid { grid-template-columns: 1fr; }
-}
+@media(max-width:420px){ .course-grid{grid-template-columns:1fr;} }
 </style>
 </head>
 <body>
 
-<!-- ══════════════════════════
-     SIDEBAR
-══════════════════════════ -->
-<div class="sb-overlay" id="sbOverlay" onclick="closeSidebar()"></div>
-<aside class="sidebar" id="sidebar">
-  <div class="sb-top">
-    <div class="sb-logo"><i class="fa-solid fa-graduation-cap"></i></div>
-    <span class="sb-app-name">EduAdmin</span>
-    <span class="sb-admin-tag">Admin</span>
-  </div>
-  <nav class="sb-nav">
-    <div class="sb-group-label">প্রধান মেনু</div>
-    <button class="sb-btn" data-p="dashboard" onclick="go('dashboard')">
-      <i class="fa-solid fa-gauge sb-ico"></i> ড্যাশবোর্ড
-    </button>
-    <button class="sb-btn active" data-p="courses" onclick="go('courses')">
-      <i class="fa-solid fa-book-open sb-ico"></i> কোর্স ম্যানেজমেন্ট
-    </button>
-    <button class="sb-btn" data-p="students" onclick="go('students')">
-      <i class="fa-solid fa-users sb-ico"></i> শিক্ষার্থী
-    </button>
-    <button class="sb-btn" data-p="payments" onclick="go('payments')">
-      <i class="fa-solid fa-credit-card sb-ico"></i> Payments
-    </button>
-
-    <div class="sb-group-label">কনটেন্ট</div>
-    <button class="sb-btn" data-p="notices" onclick="go('notices')">
-      <i class="fa-solid fa-bell sb-ico"></i> নোটিশ বোর্ড
-    </button>
-    <button class="sb-btn" data-p="reviews" onclick="go('reviews')">
-      <i class="fa-solid fa-star sb-ico"></i> Reviews
-    </button>
-    <button class="sb-btn" data-p="certs" onclick="go('certs')">
-      <i class="fa-solid fa-certificate sb-ico"></i> Certificates
-    </button>
-
-    <div class="sb-group-label">সিস্টেম</div>
-    <button class="sb-btn" data-p="settings" onclick="go('settings')">
-      <i class="fa-solid fa-gear sb-ico"></i> সেটিংস
-    </button>
-  </nav>
-  <div class="sb-footer">
-    <div class="sb-user-card">
-      <div class="sb-avatar">A</div>
-      <div>
-        <div class="sb-uname">Admin User</div>
-        <div class="sb-urole">Super Admin</div>
-      </div>
-    </div>
-    <button class="sb-logout"><i class="fa-solid fa-right-from-bracket"></i> Logout</button>
-  </div>
-</aside>
-
-<!-- ══════════════════════════
-     TOPBAR
-══════════════════════════ -->
-<div class="topbar">
-  <div class="topbar-left">
-    <button class="hamburger" onclick="toggleSidebar()">
-      <i class="fa-solid fa-bars"></i>
-    </button>
-    <span class="topbar-title" id="topbarTitle">কোর্স ম্যানেজমেন্ট</span>
-  </div>
-  <div class="topbar-right">
-    <span class="tb-badge"><i class="fa-solid fa-circle" style="font-size:.45rem;color:var(--green)"></i> Live</span>
-    <button class="tb-icon-btn" title="Notifications"><i class="fa-regular fa-bell"></i></button>
-    <button class="tb-icon-btn" title="Search"><i class="fa-solid fa-magnifying-glass"></i></button>
-  </div>
-</div>
-
-<!-- ══════════════════════════
-     MAIN CONTENT
-══════════════════════════ -->
-<main class="main">
-<div class="content">
-
-<!-- ════════════════════════════
-  PAGE: COURSES
-════════════════════════════ -->
-<div class="page active" id="page-courses">
-
-  <div class="ph">
-    <div class="ph-left">
-      <h1><i class="fa-solid fa-book-open" style="color:var(--primary)"></i> কোর্স ম্যানেজমেন্ট</h1>
-      <p>কোর্স তৈরি করুন, ইউনিট ও লেসন সাজান, প্রিভিউ ভিডিও ও লেভেল ম্যানেজ করুন</p>
-    </div>
-    <div class="ph-right">
-      <button class="btn btn-ghost btn-sm" onclick="openModal('levelManager')">
-        <i class="fa-solid fa-layer-group"></i> লেভেল ম্যানেজ
-      </button>
-      <button class="btn btn-primary" onclick="openModal('addCourse')">
-        <i class="fa-solid fa-plus"></i> নতুন কোর্স
-      </button>
-    </div>
-  </div>
-
-  <!-- Stats -->
-  <div class="stats-row" id="statsRow">
-    <div class="stat-pill blue"><i class="fa-solid fa-book-open"></i> <span id="sc-total">0</span> মোট কোর্স</div>
-    <div class="stat-pill green"><i class="fa-solid fa-circle-check"></i> <span id="sc-pub">0</span> Published</div>
-    <div class="stat-pill amber"><i class="fa-regular fa-clock"></i> <span id="sc-draft">0</span> Draft</div>
-    <div class="stat-pill cyan"><i class="fa-regular fa-eye"></i> <span id="sc-prev">0</span> Preview ভিডিও</div>
-  </div>
-
-  <!-- Tab Bar -->
-  <div class="tab-bar">
-    <button class="tab-btn active" id="tab-all" onclick="switchTab('all')">
-      <i class="fa-solid fa-grid-2"></i> সব কোর্স
-    </button>
-    <button class="tab-btn" id="tab-builder" onclick="switchTab('builder')">
-      <i class="fa-solid fa-layer-group"></i> Unit &amp; Lesson Builder
-    </button>
-    <button class="tab-btn" id="tab-preview" onclick="switchTab('preview')">
-      <i class="fa-solid fa-play-circle"></i> Preview ভিডিও
-    </button>
-    <button class="tab-btn" id="tab-levels" onclick="switchTab('levels')">
-      <i class="fa-solid fa-signal"></i> লেভেল &amp; সময়
-    </button>
-  </div>
-
-  <!-- ── TAB: ALL COURSES ── -->
-  <div id="tab-content-all">
-    <div class="course-grid" id="courseGrid">
-      <!-- injected by JS -->
-    </div>
-  </div>
-
-  <!-- ── TAB: UNIT & LESSON BUILDER ── -->
-  <div id="tab-content-builder" style="display:none">
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem;flex-wrap:wrap;gap:.6rem;">
-      <div style="font-size:.83rem;color:var(--muted);font-family:var(--bn)">
-        কোর্স বেছে নিন: &nbsp;
-        <select class="sel" id="builderCourseSelect" style="width:220px;display:inline-block" onchange="loadBuilder()">
-          <option value="">— কোর্স সিলেক্ট করুন —</option>
-        </select>
-      </div>
-      <button class="btn btn-primary btn-sm" id="addUnitBtnTop" style="display:none" onclick="openModal('addUnit')">
-        <i class="fa-solid fa-plus"></i> নতুন ইউনিট
-      </button>
-    </div>
-
-    <div class="builder-wrap" id="builderWrap" style="display:none">
-      <!-- Units Panel -->
-      <div class="units-panel">
-        <div class="units-panel-hd">
-          <h3><i class="fa-solid fa-list" style="color:var(--primary)"></i> ইউনিট তালিকা</h3>
-          <span id="unitCount" style="font-size:.73rem;color:var(--muted);font-family:var(--bn)">0 টি ইউনিট</span>
-        </div>
-        <div class="unit-list" id="unitList"></div>
-        <button class="add-unit-btn" onclick="openModal('addUnit')">
-          <i class="fa-solid fa-plus"></i> ইউনিট যোগ করুন
-        </button>
-      </div>
-
-      <!-- Lesson Detail Panel -->
-      <div class="lesson-panel" id="lessonPanel">
-        <div class="lp-empty" id="lpEmpty">
-          <i class="fa-regular fa-folder-open"></i>
-          <p>বাম দিক থেকে একটি ইউনিট সিলেক্ট করুন অথবা ক্লিক করুন</p>
-        </div>
-        <div id="lpContent" style="display:none">
-          <div class="lp-header">
-            <button class="lp-back" onclick="closeLessonPanel()"><i class="fa-solid fa-arrow-left"></i></button>
-            <div class="lp-hd-text">
-              <h3 id="lpUnitName">ইউনিটের নাম</h3>
-              <span id="lpUnitMeta">০ টি লেসন</span>
-            </div>
-            <div style="margin-left:auto;display:flex;gap:.5rem">
-              <button class="btn btn-amber btn-sm" id="lpEditUnitBtn">
-                <i class="fa-solid fa-pen"></i> ইউনিট এডিট
-              </button>
-              <button class="btn btn-rose btn-sm" id="lpDelUnitBtn">
-                <i class="fa-solid fa-trash"></i>
-              </button>
-            </div>
-          </div>
-          <!-- Lessons list in panel -->
-          <div id="lpLessonList"></div>
-          <button class="btn btn-primary btn-sm" style="margin-top:.8rem" onclick="openAddLessonModal()">
-            <i class="fa-solid fa-plus"></i> লেসন যোগ করুন
-          </button>
-        </div>
-      </div>
-    </div>
-
-    <div id="builderEmpty" class="empty-state" style="display:none">
-      <i class="fa-solid fa-book-open"></i>
-      <h3>কোর্স সিলেক্ট করুন</h3>
-      <p>উপরের ড্রপডাউন থেকে একটি কোর্স বেছে নিন</p>
-    </div>
-  </div>
-
-  <!-- ── TAB: PREVIEW VIDEOS ── -->
-  <div id="tab-content-preview" style="display:none">
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1.2rem;flex-wrap:wrap;gap:.6rem;">
-      <div>
-        <h3 style="font-size:.95rem;font-weight:700;margin-bottom:.2rem">
-          <i class="fa-solid fa-play-circle" style="color:var(--cyan)"></i> ফ্রি প্রিভিউ ভিডিও
-        </h3>
-        <p style="font-size:.78rem;color:var(--muted);font-family:var(--bn)">যেসব ভিডিও লগইন ছাড়া দেখা যাবে</p>
-      </div>
-      <button class="btn btn-cyan btn-sm" onclick="openModal('addPreview')">
-        <i class="fa-solid fa-plus"></i> প্রিভিউ যোগ করুন
-      </button>
-    </div>
-    <div class="preview-grid" id="previewGrid"></div>
-  </div>
-
-  <!-- ── TAB: LEVELS & DURATION ── -->
-  <div id="tab-content-levels" style="display:none">
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:1.2rem" id="levelTabGrid">
-
-      <!-- Levels -->
-      <div class="card">
-        <div class="card-title">
-          <i class="fa-solid fa-signal"></i> লেভেল ম্যানেজমেন্ট
-          <button class="btn btn-primary btn-xs" style="margin-left:auto" onclick="openModal('addLevel')">
-            <i class="fa-solid fa-plus"></i> লেভেল যোগ
-          </button>
-        </div>
-        <div class="level-table-wrap">
-          <table>
-            <thead>
-              <tr>
-                <th>লেভেল নাম</th>
-                <th>বাংলা</th>
-                <th>Color</th>
-                <th>Action</th>
-              </tr>
-            </thead>
-            <tbody id="levelTableBody"></tbody>
-          </table>
-        </div>
-      </div>
-
-      <!-- Durations -->
-      <div class="card">
-        <div class="card-title">
-          <i class="fa-regular fa-clock"></i> কোর্স সময়সীমা
-          <button class="btn btn-green btn-xs" style="margin-left:auto" onclick="openModal('addDuration')">
-            <i class="fa-solid fa-plus"></i> সময় যোগ
-          </button>
-        </div>
-        <div class="level-table-wrap">
-          <table>
-            <thead>
-              <tr>
-                <th>সময়</th>
-                <th>লেবেল</th>
-                <th>ব্যবহার</th>
-                <th>Action</th>
-              </tr>
-            </thead>
-            <tbody id="durationTableBody"></tbody>
-          </table>
-        </div>
-      </div>
-
-    </div>
-
-    <!-- Course Level Assignment -->
-    <div class="card" style="margin-top:1.2rem">
-      <div class="card-title">
-        <i class="fa-solid fa-tags"></i> কোর্স-লেভেল ও সময় নির্ধারণ
-      </div>
-      <div style="overflow-x:auto">
-        <table>
-          <thead>
-            <tr>
-              <th>কোর্সের নাম</th>
-              <th>লেভেল</th>
-              <th>মোট সময়</th>
-              <th>Status</th>
-              <th>Action</th>
-            </tr>
-          </thead>
-          <tbody id="courseLevelTable"></tbody>
-        </table>
-      </div>
-    </div>
-  </div>
-
-</div>
-<!-- END PAGE COURSES -->
-
-
-<!-- ════════════
-  OTHER PAGES (placeholder)
-════════════ -->
-<div class="page" id="page-dashboard">
-  <div class="ph"><div class="ph-left"><h1>ড্যাশবোর্ড</h1><p>শীঘ্রই আসছে</p></div></div>
-  <div class="empty-state"><i class="fa-solid fa-gauge"></i><h3>ড্যাশবোর্ড</h3><p>এই পেজটি শীঘ্রই যোগ হবে</p></div>
-</div>
-<div class="page" id="page-students">
-  <div class="ph"><div class="ph-left"><h1>শিক্ষার্থী</h1></div></div>
-  <div class="empty-state"><i class="fa-solid fa-users"></i><h3>শিক্ষার্থী তালিকা</h3><p>এই পেজটি শীঘ্রই যোগ হবে</p></div>
-</div>
-<div class="page" id="page-payments"><div class="empty-state" style="margin-top:4rem"><i class="fa-solid fa-credit-card"></i><h3>Payments</h3></div></div>
-<div class="page" id="page-notices"><div class="empty-state" style="margin-top:4rem"><i class="fa-solid fa-bell"></i><h3>নোটিশ বোর্ড</h3></div></div>
-<div class="page" id="page-reviews"><div class="empty-state" style="margin-top:4rem"><i class="fa-solid fa-star"></i><h3>Reviews</h3></div></div>
-<div class="page" id="page-certs"><div class="empty-state" style="margin-top:4rem"><i class="fa-solid fa-certificate"></i><h3>Certificates</h3></div></div>
-<div class="page" id="page-settings"><div class="empty-state" style="margin-top:4rem"><i class="fa-solid fa-gear"></i><h3>সেটিংস</h3></div></div>
-
-</div><!-- .content -->
-</main>
-
-<!-- ════════════════════════════════════════
-  MODALS
-════════════════════════════════════════ -->
-
-<!-- ── ADD / EDIT COURSE ── -->
-<div class="modal-bg" id="modal-addCourse">
-  <div class="modal wide">
-    <div class="modal-head">
-      <h2 id="courseModalTitle"><i class="fa-solid fa-plus" style="color:var(--primary)"></i> নতুন কোর্স যোগ করুন</h2>
-      <button class="modal-close" onclick="closeModal('addCourse')"><i class="fa-solid fa-xmark"></i></button>
-    </div>
-    <div class="modal-body">
-      <input type="hidden" id="editCourseId"/>
-      <div class="inp-row">
-        <div class="field">
-          <label>কোর্সের নাম <span class="req">*</span></label>
-          <input class="inp" id="cTitle" placeholder="যেমন: Web Development Masterclass"/>
-        </div>
-        <div class="field">
-          <label>লেভেল <span class="req">*</span></label>
-          <select class="sel" id="cLevel"><option value="">— বেছে নিন —</option></select>
-        </div>
-      </div>
-      <div class="inp-row">
-        <div class="field">
-          <label>মূল্য (৳) <span class="req">*</span></label>
-          <input class="inp" id="cPrice" type="number" placeholder="0"/>
-        </div>
-        <div class="field">
-          <label>কোর্সের সময়</label>
-          <select class="sel" id="cDuration"><option value="">— বেছে নিন —</option></select>
-        </div>
-      </div>
-      <div class="inp-row">
-        <div class="field">
-          <label>Thumbnail URL</label>
-          <input class="inp" id="cThumb" placeholder="https://..."/>
-        </div>
-        <div class="field">
-          <label>Status</label>
-          <select class="sel" id="cStatus">
-            <option value="draft">Draft</option>
-            <option value="published">Published</option>
-          </select>
-        </div>
-      </div>
-      <div class="field">
-        <label>সংক্ষিপ্ত বিবরণ</label>
-        <textarea class="texta" id="cDesc" placeholder="কোর্সটি সম্পর্কে লিখুন..."></textarea>
-      </div>
-      <div class="field">
-        <label>ইন্সট্রাক্টর</label>
-        <input class="inp" id="cInstructor" placeholder="যেমন: মোঃ রফিকুল ইসলাম"/>
-      </div>
-      <div id="addCourseMsg" class="msg"></div>
-    </div>
-    <div class="modal-foot">
-      <button class="btn btn-ghost" onclick="closeModal('addCourse')">বাতিল</button>
-      <button class="btn btn-primary" onclick="saveCourse()" id="btnSaveCourse">
-        <i class="fa-solid fa-floppy-disk"></i> কোর্স সেভ করুন
-      </button>
-    </div>
-  </div>
-</div>
-
-<!-- ── ADD / EDIT UNIT ── -->
-<div class="modal-bg" id="modal-addUnit">
-  <div class="modal">
-    <div class="modal-head">
-      <h2 id="unitModalTitle"><i class="fa-solid fa-layer-group" style="color:var(--primary)"></i> নতুন ইউনিট যোগ করুন</h2>
-      <button class="modal-close" onclick="closeModal('addUnit')"><i class="fa-solid fa-xmark"></i></button>
-    </div>
-    <div class="modal-body">
-      <input type="hidden" id="editUnitId"/>
-      <div class="field">
-        <label>ইউনিটের নাম <span class="req">*</span></label>
-        <input class="inp" id="uName" placeholder="যেমন: Unit 1 — HTML পরিচিতি"/>
-      </div>
-      <div class="field">
-        <label>ইউনিটের বিবরণ</label>
-        <textarea class="texta" id="uDesc" placeholder="এই ইউনিটে কী শেখানো হবে..." style="min-height:70px"></textarea>
-      </div>
-      <div class="field">
-        <label>ক্রম নম্বর</label>
-        <input class="inp" id="uOrder" type="number" placeholder="1" min="1"/>
-      </div>
-      <div id="addUnitMsg" class="msg"></div>
-    </div>
-    <div class="modal-foot">
-      <button class="btn btn-ghost" onclick="closeModal('addUnit')">বাতিল</button>
-      <button class="btn btn-primary" onclick="saveUnit()" id="btnSaveUnit">
-        <i class="fa-solid fa-floppy-disk"></i> ইউনিট সেভ করুন
-      </button>
-    </div>
-  </div>
-</div>
-
-<!-- ── ADD / EDIT LESSON ── -->
-<div class="modal-bg" id="modal-addLesson">
-  <div class="modal wide">
-    <div class="modal-head">
-      <h2 id="lessonModalTitle"><i class="fa-solid fa-video" style="color:var(--primary)"></i> লেসন যোগ করুন</h2>
-      <button class="modal-close" onclick="closeModal('addLesson')"><i class="fa-solid fa-xmark"></i></button>
-    </div>
-    <div class="modal-body">
-      <input type="hidden" id="editLessonId"/>
-      <input type="hidden" id="lessonUnitId"/>
-      <div class="inp-row">
-        <div class="field">
-          <label>লেসনের নাম <span class="req">*</span></label>
-          <input class="inp" id="lName" placeholder="যেমন: HTML কী এবং কেন শিখবেন?"/>
-        </div>
-        <div class="field">
-          <label>লেসন টাইপ</label>
-          <select class="sel" id="lType" onchange="toggleLessonFields()">
-            <option value="video">🎬 Video</option>
-            <option value="quiz">📝 Quiz</option>
-            <option value="article">📄 Article</option>
-          </select>
-        </div>
-      </div>
-      <div class="field" id="videoUrlField">
-        <label>ভিডিও URL</label>
-        <input class="inp" id="lVideoUrl" placeholder="https://youtube.com/watch?v=... অথবা Vimeo"/>
-      </div>
-      <div class="inp-row">
-        <div class="field">
-          <label>সময়কাল</label>
-          <input class="inp" id="lDuration" placeholder="যেমন: 12:30"/>
-        </div>
-        <div class="field">
-          <label>ক্রম নম্বর</label>
-          <input class="inp" id="lOrder" type="number" placeholder="1" min="1"/>
-        </div>
-      </div>
-      <div class="field">
-        <div class="toggle-wrap">
-          <label class="toggle">
-            <input type="checkbox" id="lIsPreview"/>
-            <span class="toggle-slider"></span>
-          </label>
-          <span class="toggle-label"><i class="fa-regular fa-eye" style="color:var(--cyan)"></i> ফ্রি প্রিভিউ — লগইন ছাড়াই দেখা যাবে</span>
-        </div>
-      </div>
-      <div class="field">
-        <label>নোট / বিবরণ</label>
-        <textarea class="texta" id="lNote" placeholder="এই লেসনে কী শেখানো হবে..." style="min-height:65px"></textarea>
-      </div>
-      <div id="addLessonMsg" class="msg"></div>
-    </div>
-    <div class="modal-foot">
-      <button class="btn btn-ghost" onclick="closeModal('addLesson')">বাতিল</button>
-      <button class="btn btn-primary" onclick="saveLesson()" id="btnAddLesson">
-        <i class="fa-solid fa-floppy-disk"></i> লেসন সেভ করুন
-      </button>
-    </div>
-  </div>
-</div>
-
-<!-- ── ADD PREVIEW VIDEO ── -->
-<div class="modal-bg" id="modal-addPreview">
-  <div class="modal">
-    <div class="modal-head">
-      <h2 id="prevModalTitle"><i class="fa-solid fa-play-circle" style="color:var(--cyan)"></i> প্রিভিউ ভিডিও যোগ করুন</h2>
-      <button class="modal-close" onclick="closeModal('addPreview')"><i class="fa-solid fa-xmark"></i></button>
-    </div>
-    <div class="modal-body">
-      <input type="hidden" id="editPrevId"/>
-      <div class="field">
-        <label>শিরোনাম <span class="req">*</span></label>
-        <input class="inp" id="pvTitle" placeholder="প্রিভিউ ভিডিওর শিরোনাম"/>
-      </div>
-      <div class="field">
-        <label>সংশ্লিষ্ট কোর্স</label>
-        <select class="sel" id="pvCourse"><option value="">— কোর্স বেছে নিন —</option></select>
-      </div>
-      <div class="field">
-        <label>ভিডিও URL <span class="req">*</span></label>
-        <input class="inp" id="pvUrl" placeholder="https://youtube.com/watch?v=..."/>
-      </div>
-      <div class="inp-row">
-        <div class="field">
-          <label>সময়কাল</label>
-          <input class="inp" id="pvDuration" placeholder="যেমন: 08:45"/>
-        </div>
-        <div class="field">
-          <label>Thumbnail URL</label>
-          <input class="inp" id="pvThumb" placeholder="https://..."/>
-        </div>
-      </div>
-      <div class="field">
-        <label>বিবরণ</label>
-        <textarea class="texta" id="pvDesc" placeholder="এই ভিডিওতে কী শেখানো হয়েছে..." style="min-height:65px"></textarea>
-      </div>
-      <div id="addPreviewMsg" class="msg"></div>
-    </div>
-    <div class="modal-foot">
-      <button class="btn btn-ghost" onclick="closeModal('addPreview')">বাতিল</button>
-      <button class="btn btn-cyan" onclick="savePreview()" id="btnSavePreview">
-        <i class="fa-solid fa-floppy-disk"></i> প্রিভিউ সেভ করুন
-      </button>
-    </div>
-  </div>
-</div>
-
-<!-- ── ADD / EDIT LEVEL ── -->
-<div class="modal-bg" id="modal-addLevel">
-  <div class="modal">
-    <div class="modal-head">
-      <h2 id="levelModalTitle"><i class="fa-solid fa-signal" style="color:var(--green)"></i> নতুন লেভেল যোগ করুন</h2>
-      <button class="modal-close" onclick="closeModal('addLevel')"><i class="fa-solid fa-xmark"></i></button>
-    </div>
-    <div class="modal-body">
-      <input type="hidden" id="editLevelId"/>
-      <div class="inp-row">
-        <div class="field">
-          <label>লেভেল নাম (English) <span class="req">*</span></label>
-          <input class="inp" id="lvName" placeholder="যেমন: Beginner"/>
-        </div>
-        <div class="field">
-          <label>লেভেল নাম (বাংলা)</label>
-          <input class="inp" id="lvNameBn" placeholder="যেমন: শিক্ষানবিশ"/>
-        </div>
-      </div>
-      <div class="field">
-        <label>Color থিম</label>
-        <select class="sel" id="lvColor">
-          <option value="beginner">🟢 Green (Beginner)</option>
-          <option value="intermediate">🟡 Amber (Intermediate)</option>
-          <option value="advanced">🔴 Rose (Advanced)</option>
-          <option value="all">🟣 Violet (All Level)</option>
-        </select>
-      </div>
-      <div class="field">
-        <label>বিবরণ</label>
-        <input class="inp" id="lvDesc" placeholder="যেমন: একদম নতুনদের জন্য"/>
-      </div>
-      <div id="addLevelMsg" class="msg"></div>
-    </div>
-    <div class="modal-foot">
-      <button class="btn btn-ghost" onclick="closeModal('addLevel')">বাতিল</button>
-      <button class="btn btn-green" onclick="saveLevel()" id="btnSaveLevel">
-        <i class="fa-solid fa-floppy-disk"></i> লেভেল সেভ করুন
-      </button>
-    </div>
-  </div>
-</div>
-
-<!-- ── ADD / EDIT DURATION ── -->
-<div class="modal-bg" id="modal-addDuration">
-  <div class="modal">
-    <div class="modal-head">
-      <h2 id="durModalTitle"><i class="fa-regular fa-clock" style="color:var(--amber)"></i> সময় যোগ করুন</h2>
-      <button class="modal-close" onclick="closeModal('addDuration')"><i class="fa-solid fa-xmark"></i></button>
-    </div>
-    <div class="modal-body">
-      <input type="hidden" id="editDurId"/>
-      <div class="inp-row">
-        <div class="field">
-          <label>সময় <span class="req">*</span></label>
-          <input class="inp" id="durValue" placeholder="যেমন: 30"/>
-        </div>
-        <div class="field">
-          <label>একক</label>
-          <select class="sel" id="durUnit">
-            <option value="ঘণ্টা">ঘণ্টা</option>
-            <option value="দিন">দিন</option>
-            <option value="সপ্তাহ">সপ্তাহ</option>
-            <option value="মাস">মাস</option>
-            <option value="ঘণ্টার ভিডিও">ঘণ্টার ভিডিও</option>
-          </select>
-        </div>
-      </div>
-      <div class="field">
-        <label>ডিসপ্লে লেবেল</label>
-        <input class="inp" id="durLabel" placeholder="যেমন: ৩০+ ঘণ্টার ভিডিও কনটেন্ট"/>
-      </div>
-      <div id="addDurMsg" class="msg"></div>
-    </div>
-    <div class="modal-foot">
-      <button class="btn btn-ghost" onclick="closeModal('addDuration')">বাতিল</button>
-      <button class="btn btn-amber" onclick="saveDuration()" id="btnSaveDur">
-        <i class="fa-solid fa-floppy-disk"></i> সময় সেভ করুন
-      </button>
-    </div>
-  </div>
-</div>
-
-<!-- ── LEVEL QUICK MANAGER ── -->
-<div class="modal-bg" id="modal-levelManager">
-  <div class="modal wide">
-    <div class="modal-head">
-      <h2><i class="fa-solid fa-layer-group" style="color:var(--violet)"></i> লেভেল ও সময় ম্যানেজার</h2>
-      <button class="modal-close" onclick="closeModal('levelManager')"><i class="fa-solid fa-xmark"></i></button>
-    </div>
-    <div class="modal-body">
-      <p style="font-size:.82rem;color:var(--muted);font-family:var(--bn);margin-bottom:1rem">
-        লেভেল ও সময়সীমা যোগ/সম্পাদনা করুন। কোর্সে এগুলো ব্যবহার করা হবে।
-      </p>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem">
-        <div>
-          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.7rem">
-            <span style="font-size:.82rem;font-weight:700">লেভেল সমূহ</span>
-            <button class="btn btn-green btn-xs" onclick="closeModal('levelManager');openModal('addLevel')">+ যোগ</button>
-          </div>
-          <div id="quickLevelList"></div>
-        </div>
-        <div>
-          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.7rem">
-            <span style="font-size:.82rem;font-weight:700">সময়সীমা সমূহ</span>
-            <button class="btn btn-amber btn-xs" onclick="closeModal('levelManager');openModal('addDuration')">+ যোগ</button>
-          </div>
-          <div id="quickDurList"></div>
-        </div>
-      </div>
-    </div>
-    <div class="modal-foot">
-      <button class="btn btn-ghost" onclick="closeModal('levelManager')">বন্ধ করুন</button>
-    </div>
-  </div>
-</div>
-
-<!-- ── CONFIRM DELETE ── -->
-<div class="modal-bg" id="modal-confirm">
-  <div class="modal" style="max-width:400px">
-    <div class="modal-head">
-      <h2><i class="fa-solid fa-triangle-exclamation" style="color:var(--rose)"></i> নিশ্চিত করুন</h2>
-      <button class="modal-close" onclick="closeModal('confirm')"><i class="fa-solid fa-xmark"></i></button>
-    </div>
-    <div class="modal-body">
-      <p id="confirmMsg" style="font-family:var(--bn);font-size:.88rem;color:var(--soft);line-height:1.6"></p>
-    </div>
-    <div class="modal-foot">
-      <button class="btn btn-ghost" onclick="closeModal('confirm')">বাতিল</button>
-      <button class="btn btn-rose" id="btnConfirmOk" onclick="confirmAction()">
-        <i class="fa-solid fa-trash"></i> হ্যাঁ, মুছুন
-      </button>
-    </div>
-  </div>
-</div>
-
-<!-- TOAST -->
+<div id="loader"><div class="ld-ring"></div></div>
 <div id="toast"></div>
 
-<!-- ════════════════════════════════════════
-  JAVASCRIPT — Full State Management
-════════════════════════════════════════ -->
+<nav class="topnav">
+  <div class="tn-left">
+    <button class="back-btn" onclick="window.location.href='admin.html'"><i class="fa-solid fa-arrow-left"></i> Admin</button>
+  </div>
+  <span class="nav-title"><i class="fa-solid fa-book-open"></i> কোর্স ম্যানেজমেন্ট</span>
+</nav>
+
+<div class="content">
+  <div class="page-head">
+    <div>
+      <h1><i class="fa-solid fa-graduation-cap"></i> কোর্স ম্যানেজমেন্ট</h1>
+      <p>কোর্স, ইউনিট ও লেসন যোগ করুন এবং পরিচালনা করুন</p>
+    </div>
+    <button class="btn btn-primary" onclick="openAddCourse()"><i class="fa-solid fa-plus"></i> নতুন কোর্স</button>
+  </div>
+
+  <div class="course-grid" id="courseGrid">
+    <div class="skel"></div><div class="skel"></div><div class="skel"></div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════
+     COURSE INFO MODAL
+══════════════════════════════════ -->
+<div class="modal-bg" id="modal-course">
+  <div class="modal wide">
+    <div class="modal-header">
+      <h3 id="courseModalTitle"><i class="fa-solid fa-book"></i> নতুন কোর্স</h3>
+      <button class="modal-close" onclick="closeModal('course')"><i class="fa-solid fa-xmark"></i></button>
+    </div>
+    <input type="hidden" id="editCourseId"/>
+
+    <div class="fg-row">
+      <div class="fg"><label>কোর্সের নাম *</label><input id="cTitle" placeholder="যেমন: Python Fundamentals"/></div>
+      <div class="fg"><label>ক্যাটাগরি</label><input id="cCat" placeholder="যেমন: Programming"/></div>
+    </div>
+    <div class="fg"><label>বিবরণ</label><textarea id="cDesc" placeholder="কোর্স সম্পর্কে সংক্ষেপে লিখুন..."></textarea></div>
+    <div class="fg-row">
+      <div class="fg"><label>শিক্ষকের নাম</label><input id="cInstructor" placeholder="যেমন: Mr. Rahim"/></div>
+      <div class="fg"><label>কোর্স ফি (৳)</label><input type="number" id="cPrice" placeholder="0" min="0" value="0"/></div>
+    </div>
+
+    <div class="fg">
+      <label>Course Thumbnail</label>
+      <div class="thumb-wrap">
+        <div class="thumb-preview" id="thumbPreview" style="display:none">
+          <img id="thumbPreviewImg" src="" alt=""/>
+          <button type="button" class="thumb-remove" onclick="removeThumbnail()"><i class="fa-solid fa-xmark"></i></button>
+        </div>
+        <div class="thumb-dz" id="thumbDz" onclick="document.getElementById('thumbFile').click()"
+             ondragover="event.preventDefault();this.classList.add('drag')"
+             ondragleave="this.classList.remove('drag')"
+             ondrop="handleThumbDrop(event)">
+          <i class="fa-solid fa-image"></i>
+          <div class="thumb-dz-text">ছবি drag করুন বা <span>browse</span> করুন</div>
+          <div class="thumb-dz-hint">JPG, PNG, WEBP — সর্বোচ্চ 5MB</div>
+        </div>
+        <input type="file" id="thumbFile" accept="image/*" style="display:none" onchange="handleThumbFile(this.files[0])"/>
+        <div class="thumb-progress" id="thumbProgress" style="display:none">
+          <div class="thumb-progress-bar"><div class="thumb-progress-fill" id="thumbProgressFill"></div></div>
+          <span id="thumbProgressText" style="font-size:.78rem;color:var(--muted)">0%</span>
+        </div>
+        <input type="hidden" id="cThumbnailUrl"/>
+        <input type="hidden" id="cThumbnailId"/>
+      </div>
+    </div>
+
+    <div class="fg">
+      <label>Publish করবেন?</label>
+      <select id="cPublished">
+        <option value="true">✅ হ্যাঁ — সবাই দেখতে পাবে</option>
+        <option value="false">📝 না — Draft রাখুন</option>
+      </select>
+    </div>
+
+    <div class="section-divider">
+      <h4><i class="fa-solid fa-circle-info" style="color:var(--primary)"></i> কোর্সের তথ্য (Course Overview)</h4>
+      <div class="fg-row3">
+        <div class="fg"><label>লেভেল</label><input id="cLevel" placeholder="যেমন: Beginner"/></div>
+        <div class="fg"><label>মোট সময়</label><input id="cDuration" placeholder="যেমন: ১০ ঘণ্টা"/></div>
+        <div class="fg"><label>পুরস্কার (Prize)</label><input id="cPrize" placeholder="ঐচ্ছিক"/></div>
+      </div>
+      <div class="fg">
+        <label>প্রয়োজনীয়তা / যোগ্যতা (Requirements)</label>
+        <div id="reqList"></div>
+        <button type="button" class="btn btn-ghost btn-sm" onclick="addReqRow()"><i class="fa-solid fa-plus"></i> আরেকটা যুক্ত করুন</button>
+      </div>
+    </div>
+
+    <div class="section-divider">
+      <h4><i class="fa-solid fa-award" style="color:var(--amber)"></i> সার্টিফিকেট</h4>
+      <div class="fg">
+        <select id="cCertificate" onchange="toggleSigField()">
+          <option value="false">❌ না — এই কোর্সে সার্টিফিকেট নেই</option>
+          <option value="true">✅ হ্যাঁ — সম্পন্ন করলে সার্টিফিকেট পাবে</option>
+        </select>
+      </div>
+      <div class="fg" id="sigFieldWrap" style="display:none">
+        <label>Signature Image URL (এই কোর্সের জন্য, ঐচ্ছিক)</label>
+        <input id="cSignatureUrl" placeholder="https://... (transparent PNG)"/>
+        <div class="fg-hint">খালি রাখলে Settings এর ডিফল্ট signature নেবে।</div>
+      </div>
+    </div>
+
+    <div class="msg" id="courseMsg"></div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('course')">বাতিল</button>
+      <button class="btn btn-primary" id="btnSaveCourse" onclick="saveCourse()">কোর্স সেভ করুন</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════
+     UNITS & LESSONS MODAL
+══════════════════════════════════ -->
+<div class="modal-bg" id="modal-units">
+  <div class="modal wide">
+    <div class="modal-header">
+      <h3><i class="fa-solid fa-layer-group"></i> ইউনিট ও লেসন — <span id="unitsCourseTitle">—</span></h3>
+      <button class="modal-close" onclick="closeModal('units')"><i class="fa-solid fa-xmark"></i></button>
+    </div>
+    <input type="hidden" id="unitsCourseId"/>
+
+    <div class="unit-add-row">
+      <input id="newUnitName" placeholder="নতুন ইউনিটের নাম, যেমন: Module 1: Basics"/>
+      <button class="btn btn-primary btn-sm" onclick="addUnit()"><i class="fa-solid fa-plus"></i> ইউনিট যুক্ত করুন</button>
+    </div>
+
+    <div id="unitsContainer"></div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════
+     LESSON MODAL
+══════════════════════════════════ -->
+<div class="modal-bg" id="modal-lesson">
+  <div class="modal">
+    <div class="modal-header">
+      <h3 id="lessonModalTitle"><i class="fa-solid fa-video"></i> লেসন যোগ করুন</h3>
+      <button class="modal-close" onclick="closeModal('lesson')"><i class="fa-solid fa-xmark"></i></button>
+    </div>
+    <input type="hidden" id="lessonCourseId"/>
+    <input type="hidden" id="editLessonId"/>
+
+    <div class="fg">
+      <label>ইউনিট</label>
+      <select id="lUnit"></select>
+    </div>
+    <div class="fg"><label>লেসনের শিরোনাম *</label><input id="lTitle" placeholder="যেমন: Variables ও Data Types"/></div>
+    <div class="fg">
+      <label>YouTube Unlisted Link *</label>
+      <input id="lYoutube" placeholder="https://www.youtube.com/watch?v=..."/>
+      <div class="fg-hint">Unlisted ভিডিওর পুরো URL দিন।</div>
+    </div>
+    <div class="fg">
+      <label>Google Drive PDF Link (ঐচ্ছিক)</label>
+      <input id="lPdf" placeholder="https://drive.google.com/file/d/.../view"/>
+    </div>
+    <div class="fg-row">
+      <div class="fg"><label>লেসন নম্বর (Order)</label><input type="number" id="lOrder" placeholder="1" min="1"/></div>
+      <div class="fg">
+        <label>প্রিভিউ অ্যাকসেস</label>
+        <label class="checkbox-row" style="margin-top:0">
+          <input type="checkbox" id="lIsFree"/>
+          <span><i class="fa-solid fa-unlock" style="color:var(--green)"></i> ফ্রি/ডেমো — এনরোল ছাড়াই দেখা যাবে</span>
+        </label>
+      </div>
+    </div>
+
+    <div class="section-divider">
+      <div class="quiz-section-head">
+        <h4><i class="fa-solid fa-pen-to-square"></i> Quiz (ঐচ্ছিক)</h4>
+        <button type="button" class="btn btn-ghost btn-sm" onclick="addQuizQuestion()"><i class="fa-solid fa-plus"></i> প্রশ্ন যোগ করুন</button>
+      </div>
+      <div id="quizQuestionsContainer"></div>
+    </div>
+
+    <div class="msg" id="lessonMsg"></div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('lesson')">বাতিল</button>
+      <button class="btn btn-primary" id="btnSaveLesson" onclick="saveLesson()">লেসন সেভ করুন</button>
+    </div>
+  </div>
+</div>
+
 <script>
-/* ═══════════════════════════════════════
-   STATE
-═══════════════════════════════════════ */
-let state = {
-  courses: [],
-  units: {},    // courseId -> [{id, name, desc, order, lessons:[]}]
-  previews: [], // [{id, title, course, url, duration, thumb, desc}]
-  levels: [],   // [{id, name, nameBn, color, desc}]
-  durations: [],// [{id, value, unit, label}]
+firebase.initializeApp(LMS_CONFIG.firebase);
+const auth=firebase.auth(), db=firebase.firestore();
 
-  selectedCourse: null,
-  selectedUnit: null,
-  activeTab: 'all',
-  pendingDelete: null,
-  pendingDeleteType: null,
-};
+let allCourses=[];
+let quizQuestionIdx=0;
 
-/* ═══════════════════════════════════════
-   INIT — seed demo data
-═══════════════════════════════════════ */
-function init() {
-  state.levels = [
-    { id: 'l1', name: 'Beginner',     nameBn: 'শিক্ষানবিশ', color: 'beginner',     desc: 'একদম নতুনদের জন্য' },
-    { id: 'l2', name: 'Intermediate', nameBn: 'মধ্যবর্তী',  color: 'intermediate', desc: 'কিছুটা জানেন যারা' },
-    { id: 'l3', name: 'Advanced',     nameBn: 'অ্যাডভান্সড', color: 'advanced',    desc: 'অভিজ্ঞদের জন্য' },
-    { id: 'l4', name: 'All Level',    nameBn: 'সবার জন্য',  color: 'all',          desc: 'যেকোনো স্তরের শিক্ষার্থী' },
-  ];
-  state.durations = [
-    { id: 'd1', value: '30', unit: 'ঘণ্টা', label: '৩০+ ঘণ্টার ভিডিও' },
-    { id: 'd2', value: '15', unit: 'ঘণ্টা', label: '১৫ ঘণ্টার কনটেন্ট' },
-    { id: 'd3', value: '3',  unit: 'মাস',   label: '৩ মাস মেয়াদ' },
-    { id: 'd4', value: '6',  unit: 'সপ্তাহ', label: '৬ সপ্তাহ কোর্স' },
-  ];
-  state.courses = [
-    { id: 'c1', title: 'Web Development Masterclass', level: 'l1', price: 2500, duration: 'd1', thumb: '', status: 'published', desc: 'HTML, CSS, JavaScript শিখুন শূন্য থেকে', instructor: 'আরিফ হোসেন' },
-    { id: 'c2', title: 'Python for Data Science',     level: 'l2', price: 3200, duration: 'd2', thumb: '', status: 'published', desc: 'Python দিয়ে ডেটা সায়েন্স শিখুন', instructor: 'তানভীর আহমেদ' },
-    { id: 'c3', title: 'UI/UX Design Bootcamp',       level: 'l1', price: 1800, duration: 'd4', thumb: '', status: 'draft',     desc: 'Figma দিয়ে প্রফেশনাল ডিজাইন', instructor: 'সুমাইয়া ইসলাম' },
-  ];
-  state.units = {
-    c1: [
-      { id: 'u1', name: 'Unit 1 — HTML ফান্ডামেন্টালস', desc: '', order: 1, lessons: [
-        { id: 'ls1', name: 'HTML কী এবং কেন শিখবেন?', type: 'video', url: '', duration: '12:30', order: 1, isPreview: true, note: '' },
-        { id: 'ls2', name: 'HTML ডকুমেন্ট স্ট্রাকচার',  type: 'video', url: '', duration: '18:45', order: 2, isPreview: false, note: '' },
-        { id: 'ls3', name: 'HTML ট্যাগ পরিচিতি Quiz',   type: 'quiz',  url: '', duration: '',     order: 3, isPreview: false, note: '' },
-      ]},
-      { id: 'u2', name: 'Unit 2 — CSS স্টাইলিং', desc: '', order: 2, lessons: [
-        { id: 'ls4', name: 'CSS Selectors', type: 'video', url: '', duration: '22:10', order: 1, isPreview: true, note: '' },
-        { id: 'ls5', name: 'Flexbox দিয়ে লেআউট', type: 'video', url: '', duration: '30:00', order: 2, isPreview: false, note: '' },
-      ]},
-    ],
-    c2: [
-      { id: 'u3', name: 'Unit 1 — Python Basics', desc: '', order: 1, lessons: [
-        { id: 'ls6', name: 'Python ইনস্টলেশন', type: 'video', url: '', duration: '10:00', order: 1, isPreview: true, note: '' },
-      ]},
-    ],
-    c3: [],
-  };
-  state.previews = [
-    { id: 'pv1', title: 'Web Dev কোর্সে কী কী শিখবেন?', course: 'c1', url: 'https://youtube.com', duration: '05:30', thumb: '', desc: 'কোর্সের পরিচিতি' },
-    { id: 'pv2', title: 'Python ফ্রি ইন্ট্রো ক্লাস', course: 'c2', url: 'https://youtube.com', duration: '12:00', thumb: '', desc: 'ডেটা সায়েন্স কী?' },
-  ];
+/* ── Auth gate (admin only) ── */
+auth.onAuthStateChanged(async user=>{
+  if(!user){ location.href='index.html'; return; }
+  const snap=await db.collection('users').doc(user.uid).get();
+  const data=snap.exists?snap.data():{};
+  if(data.role!=='admin'){ location.href='dashboard.html'; return; }
 
-  renderAll();
+  await loadSiteSettings();
+  await loadCourses();
+  document.getElementById('loader').classList.add('gone');
+});
+
+async function loadSiteSettings(){
+  try{
+    const snap=await db.collection('siteSettings').doc('main').get();
+    if(!snap.exists) return;
+    const s=snap.data();
+    if(s.faviconUrl) document.getElementById('favicon').href=s.faviconUrl;
+    if(s.primaryColor) document.documentElement.style.setProperty('--primary',s.primaryColor);
+  }catch(e){}
 }
 
-/* ═══════════════════════════════════════
-   RENDER ALL
-═══════════════════════════════════════ */
-function renderAll() {
-  updateStats();
+/* ── Load Courses + Lessons ── */
+async function loadCourses(){
+  const cSnap=await db.collection('courses').orderBy('createdAt','desc').get();
+  allCourses=[];
+  for(const doc of cSnap.docs){
+    const c={id:doc.id,...doc.data()};
+    const lSnap=await db.collection('courses').doc(doc.id).collection('lessons').get();
+    c._lessons=[];
+    lSnap.forEach(ld=>c._lessons.push({id:ld.id,...ld.data()}));
+    c._lessons.sort((a,b)=>(a.order||0)-(b.order||0));
+    c.totalLessons=c._lessons.length;
+    c.units=c.units||[];
+    allCourses.push(c);
+  }
   renderCourseGrid();
-  populateCourseSelects();
-  renderBuilderSelect();
-  renderPreviewGrid();
-  renderLevelTable();
-  renderDurationTable();
-  renderCourseLevelTable();
-  renderQuickLists();
 }
 
-function updateStats() {
-  const total = state.courses.length;
-  const pub   = state.courses.filter(c => c.status === 'published').length;
-  const draft = total - pub;
-  const prev  = state.previews.length + state.courses.flatMap(c => (state.units[c.id] || []).flatMap(u => u.lessons.filter(l => l.isPreview))).length;
-  document.getElementById('sc-total').textContent = total;
-  document.getElementById('sc-pub').textContent   = pub;
-  document.getElementById('sc-draft').textContent = draft;
-  document.getElementById('sc-prev').textContent  = prev;
-}
-
-/* ═══════════════════════════════════════
-   COURSE GRID
-═══════════════════════════════════════ */
-const COURSE_ICONS = ['💻','🐍','🎨','📊','📱','🎯','🔒','🤖'];
-function renderCourseGrid() {
-  const grid = document.getElementById('courseGrid');
-  if (!state.courses.length) {
-    grid.innerHTML = `<div class="empty-state" style="grid-column:1/-1"><i class="fa-solid fa-book-open"></i><h3>কোনো কোর্স নেই</h3><p>উপরে "নতুন কোর্স" বাটনে ক্লিক করুন</p></div>`;
+function renderCourseGrid(){
+  const grid=document.getElementById('courseGrid');
+  if(!allCourses.length){
+    grid.outerHTML=`<div class="empty" id="courseGrid">
+      <i class="fa-solid fa-book-open"></i>
+      <h3>কোনো কোর্স নেই</h3>
+      <p>"নতুন কোর্স" বাটনে ক্লিক করে প্রথম কোর্স যুক্ত করুন</p>
+    </div>`;
     return;
   }
-  grid.innerHTML = state.courses.map((c, i) => {
-    const lvl = state.levels.find(l => l.id === c.level);
-    const dur = state.durations.find(d => d.id === c.duration);
-    const units = (state.units[c.id] || []).length;
-    const lessons = (state.units[c.id] || []).reduce((s, u) => s + u.lessons.length, 0);
+  grid.innerHTML=allCourses.map(c=>{
+    const freeCount=c._lessons.filter(l=>l.isFree).length;
     return `
-    <div class="course-card" id="cc-${c.id}">
+    <div class="course-card">
       <div class="cc-thumb">
-        ${c.thumb ? `<img src="${c.thumb}" onerror="this.style.display='none'">` : ''}
-        <span class="cc-thumb-icon">${COURSE_ICONS[i % COURSE_ICONS.length]}</span>
-        <span class="cc-badge ${c.status}">${c.status === 'published' ? 'Published' : 'Draft'}</span>
+        ${c.thumbnailUrl?`<img src="${c.thumbnailUrl}" alt=""/>`:'<i class="fa-solid fa-book"></i>'}
+        <div class="cc-badges">
+          <span class="badge ${c.published?'badge-pub':'badge-draft'}">${c.published?'Published':'Draft'}</span>
+          ${c.certificate?'<span class="badge badge-amber"><i class="fa-solid fa-award"></i></span>':''}
+        </div>
       </div>
       <div class="cc-body">
-        ${lvl ? `<div class="cc-level"><i class="fa-solid fa-signal"></i> ${lvl.name}</div>` : ''}
         <div class="cc-title">${c.title}</div>
-        <div class="cc-meta">
-          <span><i class="fa-solid fa-layer-group"></i> ${units} unit</span>
-          <span><i class="fa-solid fa-play-circle"></i> ${lessons} lesson</span>
-          ${dur ? `<span><i class="fa-regular fa-clock"></i> ${dur.label || dur.value+' '+dur.unit}</span>` : ''}
-          <span style="margin-left:auto;font-weight:700;color:var(--amber)">৳${Number(c.price).toLocaleString('bn-BD')}</span>
+        <div class="cc-meta-row">
+          <span class="badge badge-primary"><i class="fa-solid fa-video"></i> ${c.totalLessons} লেসন</span>
+          <span class="badge badge-primary"><i class="fa-solid fa-layer-group"></i> ${c.units.length} ইউনিট</span>
+          ${freeCount?`<span class="badge badge-pub"><i class="fa-solid fa-unlock"></i> ${freeCount} ফ্রি</span>`:''}
+          ${c.price>0?`<span class="badge badge-amber">৳${c.price}</span>`:`<span class="badge badge-pub">Free</span>`}
         </div>
         <div class="cc-actions">
-          <button class="btn btn-primary btn-xs" onclick="gotoBuilder('${c.id}')">
-            <i class="fa-solid fa-layer-group"></i> Units
-          </button>
-          <button class="btn btn-ghost btn-xs" onclick="editCourse('${c.id}')">
-            <i class="fa-solid fa-pen"></i>
-          </button>
-          <button class="btn btn-rose btn-xs" onclick="askDelete('course','${c.id}','${c.title.replace(/'/g,"\\'")}')">
-            <i class="fa-solid fa-trash"></i>
-          </button>
-          <button class="btn btn-${c.status==='published'?'amber':'green'} btn-xs" onclick="toggleStatus('${c.id}')">
-            <i class="fa-solid fa-${c.status==='published'?'eye-slash':'circle-check'}"></i>
-          </button>
+          <button class="btn btn-ghost btn-sm" onclick="openEditCourse('${c.id}')"><i class="fa-solid fa-pen"></i> Edit</button>
+          <button class="btn btn-ghost btn-sm" onclick="openUnitsModal('${c.id}')"><i class="fa-solid fa-layer-group"></i> ইউনিট/লেসন</button>
+          <button class="btn btn-rose btn-sm" onclick="deleteCourse('${c.id}')"><i class="fa-solid fa-trash"></i></button>
         </div>
       </div>
     </div>`;
   }).join('');
 }
 
-function toggleStatus(cid) {
-  const c = state.courses.find(x => x.id === cid);
-  if (!c) return;
-  c.status = c.status === 'published' ? 'draft' : 'published';
-  renderCourseGrid(); updateStats();
-  toast(`✅ "${c.title}" এখন ${c.status === 'published' ? 'Published' : 'Draft'}`, 'ok');
+/* ══════════════════════════════════
+   COURSE FORM
+══════════════════════════════════ */
+function openAddCourse(){
+  document.getElementById('editCourseId').value='';
+  document.getElementById('courseModalTitle').innerHTML='<i class="fa-solid fa-book"></i> নতুন কোর্স যোগ করুন';
+  document.getElementById('btnSaveCourse').textContent='কোর্স সেভ করুন';
+  ['cTitle','cDesc','cCat','cInstructor','cLevel','cDuration','cPrize','cSignatureUrl'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('cPrice').value=0;
+  document.getElementById('cPublished').value='true';
+  document.getElementById('cCertificate').value='false';
+  document.getElementById('sigFieldWrap').style.display='none';
+  document.getElementById('reqList').innerHTML='';
+  resetThumb();
+  openModal('course');
 }
 
-function gotoBuilder(cid) {
-  switchTab('builder');
-  document.getElementById('builderCourseSelect').value = cid;
-  loadBuilder();
-}
+function openEditCourse(id){
+  const c=allCourses.find(x=>x.id===id);
+  if(!c) return;
+  document.getElementById('editCourseId').value=id;
+  document.getElementById('courseModalTitle').innerHTML='<i class="fa-solid fa-pen"></i> কোর্স সম্পাদনা';
+  document.getElementById('btnSaveCourse').textContent='আপডেট করুন';
 
-/* ═══════════════════════════════════════
-   SELECTS
-═══════════════════════════════════════ */
-function populateCourseSelects() {
-  ['pvCourse','builderCourseSelect'].forEach(id => {
-    const el = document.getElementById(id);
-    if (!el) return;
-    const prev = el.value;
-    el.innerHTML = '<option value="">— কোর্স বেছে নিন —</option>' +
-      state.courses.map(c => `<option value="${c.id}">${c.title}</option>`).join('');
-    if (prev) el.value = prev;
-  });
-  ['cLevel'].forEach(id => {
-    const el = document.getElementById(id);
-    if (!el) return;
-    el.innerHTML = '<option value="">— লেভেল বেছে নিন —</option>' +
-      state.levels.map(l => `<option value="${l.id}">${l.name}${l.nameBn ? ' ('+l.nameBn+')' : ''}</option>`).join('');
-  });
-  ['cDuration'].forEach(id => {
-    const el = document.getElementById(id);
-    if (!el) return;
-    el.innerHTML = '<option value="">— সময় বেছে নিন —</option>' +
-      state.durations.map(d => `<option value="${d.id}">${d.label || d.value+' '+d.unit}</option>`).join('');
-  });
-}
+  document.getElementById('cTitle').value=c.title||'';
+  document.getElementById('cDesc').value=c.description||'';
+  document.getElementById('cCat').value=c.category||'';
+  document.getElementById('cInstructor').value=c.instructor||'';
+  document.getElementById('cPrice').value=c.price||0;
+  document.getElementById('cPublished').value=c.published?'true':'false';
+  document.getElementById('cLevel').value=c.level||'';
+  document.getElementById('cDuration').value=c.duration||'';
+  document.getElementById('cPrize').value=c.prize||'';
+  document.getElementById('cCertificate').value=c.certificate?'true':'false';
+  document.getElementById('cSignatureUrl').value=c.signatureUrl||'';
+  document.getElementById('sigFieldWrap').style.display=c.certificate?'block':'none';
 
-/* ═══════════════════════════════════════
-   BUILDER
-═══════════════════════════════════════ */
-function renderBuilderSelect() {
-  populateCourseSelects();
-}
+  document.getElementById('reqList').innerHTML='';
+  (c.requirements||[]).forEach(r=>addReqRow(r));
 
-function loadBuilder() {
-  const cid = document.getElementById('builderCourseSelect').value;
-  const addBtn = document.getElementById('addUnitBtnTop');
-  if (!cid) {
-    document.getElementById('builderWrap').style.display = 'none';
-    document.getElementById('builderEmpty').style.display = 'flex';
-    if (addBtn) addBtn.style.display = 'none';
-    return;
+  resetThumb();
+  if(c.thumbnailUrl){
+    document.getElementById('cThumbnailUrl').value=c.thumbnailUrl;
+    document.getElementById('cThumbnailId').value=c.thumbnailId||'';
+    document.getElementById('thumbPreviewImg').src=c.thumbnailUrl;
+    document.getElementById('thumbPreview').style.display='block';
+    document.getElementById('thumbDz').style.display='none';
   }
-  state.selectedCourse = cid;
-  if (!state.units[cid]) state.units[cid] = [];
-  document.getElementById('builderWrap').style.display = 'grid';
-  document.getElementById('builderEmpty').style.display = 'none';
-  if (addBtn) addBtn.style.display = '';
-  renderUnitList(cid);
+  openModal('course');
 }
 
-function renderUnitList(cid) {
-  const units = state.units[cid] || [];
-  document.getElementById('unitCount').textContent = `${units.length} টি ইউনিট`;
-  const ul = document.getElementById('unitList');
+function toggleSigField(){
+  document.getElementById('sigFieldWrap').style.display=document.getElementById('cCertificate').value==='true'?'block':'none';
+}
 
-  if (!units.length) {
-    ul.innerHTML = `<div style="padding:1.2rem;text-align:center;color:var(--muted);font-size:.8rem;font-family:var(--bn)">কোনো ইউনিট নেই। নিচে যোগ করুন।</div>`;
-    return;
+function addReqRow(val){
+  const wrap=document.getElementById('reqList');
+  const row=document.createElement('div');
+  row.className='req-row';
+  row.innerHTML=`<input value="${(val||'').replace(/"/g,'&quot;')}" placeholder="যেমন: বেসিক কম্পিউটার জ্ঞান"/>
+    <button type="button" class="req-del" onclick="this.parentElement.remove()"><i class="fa-solid fa-xmark"></i></button>`;
+  wrap.appendChild(row);
+}
+
+async function saveCourse(){
+  const editId=document.getElementById('editCourseId').value.trim();
+  const title=document.getElementById('cTitle').value.trim();
+  const msg=document.getElementById('courseMsg');
+  const btn=document.getElementById('btnSaveCourse');
+  if(!title){ showMsg(msg,'err','কোর্সের নাম দিন'); return; }
+
+  const requirements=[...document.querySelectorAll('#reqList input')].map(i=>i.value.trim()).filter(Boolean);
+
+  const payload={
+    title,
+    description: document.getElementById('cDesc').value.trim(),
+    category:    document.getElementById('cCat').value.trim()||'General',
+    instructor:  document.getElementById('cInstructor').value.trim(),
+    thumbnailUrl:document.getElementById('cThumbnailUrl').value.trim(),
+    thumbnailId: document.getElementById('cThumbnailId').value.trim(),
+    published:   document.getElementById('cPublished').value==='true',
+    price:       parseFloat(document.getElementById('cPrice').value)||0,
+    certificate: document.getElementById('cCertificate').value==='true',
+    signatureUrl:document.getElementById('cSignatureUrl').value.trim(),
+    level:       document.getElementById('cLevel').value.trim(),
+    duration:    document.getElementById('cDuration').value.trim(),
+    prize:       document.getElementById('cPrize').value.trim(),
+    requirements,
+  };
+
+  btn.disabled=true; btn.textContent='সেভ হচ্ছে...';
+  try{
+    if(editId){
+      await db.collection('courses').doc(editId).update(payload);
+      toast('✅ কোর্স আপডেট হয়েছে!','ok');
+    } else {
+      payload.units=[];
+      payload.totalLessons=0;
+      payload.createdAt=firebase.firestore.FieldValue.serverTimestamp();
+      await db.collection('courses').add(payload);
+      toast('✅ কোর্স সেভ হয়েছে!','ok');
+    }
+    closeModal('course');
+    await loadCourses();
+  }catch(e){ showMsg(msg,'err','❌ '+e.message); }
+  btn.disabled=false; btn.textContent=editId?'আপডেট করুন':'কোর্স সেভ করুন';
+}
+
+async function deleteCourse(id){
+  if(!confirm('কোর্সটি ও সব লেসন মুছবেন? এটা undo করা যাবে না।')) return;
+  const lSnap=await db.collection('courses').doc(id).collection('lessons').get();
+  const batch=db.batch();
+  lSnap.forEach(d=>batch.delete(d.ref));
+  batch.delete(db.collection('courses').doc(id));
+  await batch.commit();
+  toast('🗑 কোর্স মুছে গেছে','ok');
+  await loadCourses();
+}
+
+/* ══════════════════════════════════
+   THUMBNAIL UPLOAD (Cloudinary)
+══════════════════════════════════ */
+const CLOUDINARY={ cloudName:'dbdkxzx7z', uploadPreset:'ribd-img' };
+
+function resetThumb(){
+  document.getElementById('cThumbnailUrl').value='';
+  document.getElementById('cThumbnailId').value='';
+  document.getElementById('thumbPreview').style.display='none';
+  document.getElementById('thumbDz').style.display='block';
+  document.getElementById('thumbProgress').style.display='none';
+}
+function removeThumbnail(){ resetThumb(); }
+function handleThumbDrop(e){
+  e.preventDefault(); e.currentTarget.classList.remove('drag');
+  const file=e.dataTransfer.files[0];
+  if(file) handleThumbFile(file);
+}
+async function handleThumbFile(file){
+  if(!file) return;
+  if(file.size>5*1024*1024){ toast('❌ ফাইল 5MB এর বেশি','err'); return; }
+  document.getElementById('thumbDz').style.display='none';
+  document.getElementById('thumbProgress').style.display='flex';
+  document.getElementById('thumbProgressFill').style.width='0%';
+  try{
+    const result=await uploadToCloudinary(file);
+    document.getElementById('cThumbnailUrl').value=result.secure_url;
+    document.getElementById('cThumbnailId').value=result.public_id;
+    document.getElementById('thumbPreviewImg').src=result.secure_url;
+    document.getElementById('thumbPreview').style.display='block';
+    document.getElementById('thumbProgress').style.display='none';
+    toast('✅ Thumbnail upload হয়েছে!','ok');
+  }catch(e){
+    document.getElementById('thumbDz').style.display='block';
+    document.getElementById('thumbProgress').style.display='none';
+    toast('❌ Upload ব্যর্থ: '+e.message,'err');
   }
+}
+function uploadToCloudinary(file){
+  const fd=new FormData();
+  fd.append('file',file);
+  fd.append('upload_preset',CLOUDINARY.uploadPreset);
+  fd.append('folder','lms/courses');
+  return new Promise((resolve,reject)=>{
+    const xhr=new XMLHttpRequest();
+    xhr.open('POST',`https://api.cloudinary.com/v1_1/${CLOUDINARY.cloudName}/image/upload`);
+    xhr.upload.onprogress=e=>{
+      if(e.lengthComputable){
+        const pct=Math.round((e.loaded/e.total)*100);
+        document.getElementById('thumbProgressFill').style.width=pct+'%';
+        document.getElementById('thumbProgressText').textContent=pct+'%';
+      }
+    };
+    xhr.onload=()=>{ xhr.status===200?resolve(JSON.parse(xhr.responseText)):reject(new Error('Upload failed: '+xhr.status)); };
+    xhr.onerror=()=>reject(new Error('Network error'));
+    xhr.send(fd);
+  });
+}
 
-  ul.innerHTML = units.sort((a,b) => a.order-b.order).map(u => {
-    const lessonCnt = u.lessons.length;
-    const isOpen = state.selectedUnit === u.id;
-    return `
-    <div class="unit-item" id="ui-${u.id}">
-      <button class="unit-header ${isOpen?'active open':''}" onclick="selectUnit('${u.id}','${cid}',this)">
-        <span class="unit-drag-handle"><i class="fa-solid fa-grip-vertical"></i></span>
-        <span class="unit-num">${u.order}</span>
-        <span class="unit-name">${u.name}</span>
-        <span class="unit-lesson-cnt">${lessonCnt} lesson</span>
-        <div class="unit-actions" onclick="event.stopPropagation()">
-          <button class="unit-act-btn edit" onclick="editUnit('${u.id}','${cid}')" title="সম্পাদনা">
-            <i class="fa-solid fa-pen"></i>
-          </button>
-          <button class="unit-act-btn del" onclick="askDelete('unit','${u.id}','${u.name.replace(/'/g,"\\'")}','${cid}')" title="মুছুন">
-            <i class="fa-solid fa-trash"></i>
-          </button>
+/* ══════════════════════════════════
+   UNITS & LESSONS
+══════════════════════════════════ */
+function openUnitsModal(courseId){
+  const c=allCourses.find(x=>x.id===courseId);
+  if(!c) return;
+  document.getElementById('unitsCourseId').value=courseId;
+  document.getElementById('unitsCourseTitle').textContent=c.title;
+  document.getElementById('newUnitName').value='';
+  renderUnits(c);
+  openModal('units');
+}
+
+function renderUnits(c){
+  const wrap=document.getElementById('unitsContainer');
+  const units=c.units||[];
+  const grouped={};
+  c._lessons.forEach(l=>{
+    const key=l.section&&units.includes(l.section)?l.section:'__none__';
+    if(!grouped[key]) grouped[key]=[];
+    grouped[key].push(l);
+  });
+
+  let html='';
+  units.forEach(u=>{
+    const lessons=(grouped[u]||[]).sort((a,b)=>(a.order||0)-(b.order||0));
+    html+=`
+    <div class="unit-block">
+      <div class="unit-head">
+        <i class="fa-solid fa-grip-vertical drag"></i>
+        <input class="unit-name-input" value="${u.replace(/"/g,'&quot;')}" onchange="renameUnit('${c.id}','${escapeJs(u)}',this.value)"/>
+        <span class="unit-count">${lessons.length} লেসন</span>
+        <div class="unit-actions">
+          <button class="icon-btn" onclick="openAddLessonForUnit('${c.id}','${escapeJs(u)}')" title="লেসন যুক্ত করুন"><i class="fa-solid fa-plus"></i></button>
+          <button class="icon-btn danger" onclick="removeUnit('${c.id}','${escapeJs(u)}')" title="ইউনিট মুছুন"><i class="fa-solid fa-trash"></i></button>
         </div>
-        <span class="unit-chevron"><i class="fa-solid fa-chevron-right"></i></span>
-      </button>
-      <div class="lesson-sublist ${isOpen?'open':''}" id="ls-${u.id}">
-        ${renderLessonSubList(u)}
+      </div>
+      <div class="unit-lessons">
+        ${lessons.length?lessons.map(l=>lessonRowHtml(c.id,l)).join(''):'<div class="unit-empty">এই ইউনিটে কোনো লেসন নেই।</div>'}
       </div>
     </div>`;
-  }).join('');
-}
+  });
 
-function renderLessonSubList(u) {
-  if (!u.lessons.length) {
-    return `<div class="add-lesson-row" onclick="openAddLessonModal('${u.id}')">
-      <i class="fa-solid fa-plus" style="font-size:.65rem"></i> লেসন যোগ করুন
+  const noUnit=(grouped['__none__']||[]).sort((a,b)=>(a.order||0)-(b.order||0));
+  if(noUnit.length || !units.length){
+    html+=`
+    <div class="unit-block">
+      <div class="unit-head">
+        <i class="fa-solid fa-inbox" style="color:var(--muted)"></i>
+        <span style="flex:1;font-size:.86rem;font-weight:700;color:var(--soft)">সাধারণ (কোনো ইউনিট নেই)</span>
+        <span class="unit-count">${noUnit.length} লেসন</span>
+        <div class="unit-actions">
+          <button class="icon-btn" onclick="openAddLessonForUnit('${c.id}','')" title="লেসন যুক্ত করুন"><i class="fa-solid fa-plus"></i></button>
+        </div>
+      </div>
+      <div class="unit-lessons">
+        ${noUnit.length?noUnit.map(l=>lessonRowHtml(c.id,l)).join(''):'<div class="unit-empty">এখানে কোনো লেসন নেই।</div>'}
+      </div>
     </div>`;
   }
-  const rows = u.lessons.sort((a,b) => a.order-b.order).map(l => {
-    const typeMap = {video:'video', quiz:'quiz', article:'article'};
-    const iconMap = {video:'fa-play', quiz:'fa-pen-to-square', article:'fa-file-lines'};
-    return `
-    <div class="lesson-row" id="lr-${l.id}">
-      <span class="lesson-type-icon ${l.isPreview?'preview':typeMap[l.type]||'video'}">
-        <i class="fa-solid ${l.isPreview?'fa-eye':iconMap[l.type]||'fa-play'}"></i>
-      </span>
-      <span class="lesson-name">${l.name}</span>
-      ${l.isPreview ? '<span class="preview-badge">FREE</span>' : ''}
-      ${l.duration ? `<span class="lesson-dur"><i class="fa-regular fa-clock" style="font-size:.6rem"></i> ${l.duration}</span>` : ''}
-      <div class="lesson-act">
-        <button class="lesson-act-btn edit" onclick="editLesson('${l.id}','${u.id}')" title="সম্পাদনা"><i class="fa-solid fa-pen"></i></button>
-        <button class="lesson-act-btn del" onclick="askDelete('lesson','${l.id}','${l.name.replace(/'/g,"\\'")}','${u.id}')" title="মুছুন"><i class="fa-solid fa-trash"></i></button>
-      </div>
-    </div>`;
-  }).join('');
-  return rows + `<div class="add-lesson-row" onclick="openAddLessonModal('${u.id}')">
-    <i class="fa-solid fa-plus" style="font-size:.65rem"></i> আরো লেসন যোগ করুন
+
+  wrap.innerHTML=html||'<div class="no-unit-note">এখনো কোনো ইউনিট নেই। উপরে নাম লিখে একটা ইউনিট যুক্ত করুন।</div>';
+}
+
+function escapeJs(s){ return (s||'').replace(/\\/g,'\\\\').replace(/'/g,"\\'"); }
+
+function lessonRowHtml(courseId,l){
+  const hasQuiz=l.quiz?.questions?.length>0;
+  return `
+  <div class="lesson-row">
+    <div class="lr-order">${l.order||'?'}</div>
+    <div class="lr-title">${l.title}</div>
+    <div class="lr-badges">
+      ${l.isFree?'<span class="lr-badge lr-free"><i class="fa-solid fa-unlock"></i> ফ্রি</span>':''}
+      ${l.youtubeUrl?'<span class="lr-badge lr-yt"><i class="fa-solid fa-video"></i></span>':''}
+      ${l.pdfUrl?'<span class="lr-badge lr-pdf"><i class="fa-solid fa-file-pdf"></i></span>':''}
+      ${hasQuiz?'<span class="lr-badge lr-quiz"><i class="fa-solid fa-pen-to-square"></i></span>':''}
+    </div>
+    <div class="lr-actions">
+      <button class="icon-btn" onclick="openEditLesson('${courseId}','${l.id}')" title="Edit"><i class="fa-solid fa-pen"></i></button>
+      <button class="icon-btn danger" onclick="deleteLesson('${courseId}','${l.id}')" title="Delete"><i class="fa-solid fa-trash"></i></button>
+    </div>
   </div>`;
 }
 
-function selectUnit(uid, cid, btn) {
-  // toggle open/close on sidebar + show right panel
-  const wasOpen = state.selectedUnit === uid;
-
-  // remove active from all unit headers
-  document.querySelectorAll('.unit-header').forEach(h => h.classList.remove('active','open'));
-  document.querySelectorAll('.lesson-sublist').forEach(s => s.classList.remove('open'));
-
-  if (wasOpen) {
-    state.selectedUnit = null;
-    closeLessonPanel();
-    return;
-  }
-
-  state.selectedUnit = uid;
-  btn.classList.add('active','open');
-  const sub = document.getElementById('ls-'+uid);
-  if (sub) sub.classList.add('open');
-
-  // update right panel
-  const u = findUnit(uid, cid);
-  if (!u) return;
-  const lpEmpty = document.getElementById('lpEmpty');
-  const lpContent = document.getElementById('lpContent');
-  lpEmpty.style.display = 'none';
-  lpContent.style.display = 'block';
-  document.getElementById('lpUnitName').textContent = u.name;
-  document.getElementById('lpUnitMeta').textContent = `${u.lessons.length} টি লেসন`;
-  document.getElementById('lpEditUnitBtn').onclick = () => editUnit(uid, cid);
-  document.getElementById('lpDelUnitBtn').onclick = () => askDelete('unit', uid, u.name, cid);
-  renderLpLessons(u, cid);
+async function addUnit(){
+  const courseId=document.getElementById('unitsCourseId').value;
+  const name=document.getElementById('newUnitName').value.trim();
+  if(!name){ toast('ইউনিটের নাম লিখুন','err'); return; }
+  const c=allCourses.find(x=>x.id===courseId);
+  if(c.units.includes(name)){ toast('এই নামের ইউনিট আগে থেকেই আছে','err'); return; }
+  c.units.push(name);
+  await db.collection('courses').doc(courseId).update({ units:c.units });
+  document.getElementById('newUnitName').value='';
+  renderUnits(c);
+  toast('✅ ইউনিট যুক্ত হয়েছে','ok');
 }
 
-function renderLpLessons(u, cid) {
-  const el = document.getElementById('lpLessonList');
-  if (!u.lessons.length) {
-    el.innerHTML = `<div class="empty-state" style="padding:1.5rem">
-      <i class="fa-solid fa-film" style="font-size:1.8rem;opacity:.2"></i>
-      <p style="font-family:var(--bn);font-size:.8rem">এই ইউনিটে কোনো লেসন নেই</p>
-    </div>`;
-    return;
-  }
-  const iconMap = {video:'fa-play',quiz:'fa-pen-to-square',article:'fa-file-lines'};
-  el.innerHTML = `<div class="card" style="padding:.5rem">` +
-    u.lessons.sort((a,b)=>a.order-b.order).map(l => `
-    <div class="lesson-row" style="border-radius:8px;margin:2px">
-      <span class="lesson-type-icon ${l.isPreview?'preview':l.type}">
-        <i class="fa-solid ${l.isPreview?'fa-eye':iconMap[l.type]||'fa-play'}"></i>
-      </span>
-      <span class="lesson-name">${l.order}. ${l.name}</span>
-      ${l.isPreview ? '<span class="preview-badge">FREE</span>' : ''}
-      ${l.duration ? `<span class="lesson-dur">${l.duration}</span>` : ''}
-      <div class="lesson-act">
-        <button class="lesson-act-btn edit" onclick="editLesson('${l.id}','${u.id}')" title="এডিট">
-          <i class="fa-solid fa-pen"></i>
-        </button>
-        <button class="lesson-act-btn del" onclick="askDelete('lesson','${l.id}','${l.name.replace(/'/g,"\\'")}','${u.id}')" title="মুছুন">
-          <i class="fa-solid fa-trash"></i>
-        </button>
-      </div>
-    </div>`).join('') + `</div>`;
+async function renameUnit(courseId,oldName,newName){
+  newName=newName.trim();
+  const c=allCourses.find(x=>x.id===courseId);
+  if(!newName || newName===oldName){ renderUnits(c); return; }
+  const idx=c.units.indexOf(oldName);
+  if(idx===-1) return;
+  c.units[idx]=newName;
+  const batch=db.batch();
+  batch.update(db.collection('courses').doc(courseId),{units:c.units});
+  c._lessons.filter(l=>l.section===oldName).forEach(l=>{
+    l.section=newName;
+    batch.update(db.collection('courses').doc(courseId).collection('lessons').doc(l.id),{section:newName});
+  });
+  await batch.commit();
+  renderUnits(c);
+  toast('✅ ইউনিটের নাম পরিবর্তন হয়েছে','ok');
 }
 
-function closeLessonPanel() {
-  document.getElementById('lpEmpty').style.display = 'flex';
-  document.getElementById('lpContent').style.display = 'none';
-  state.selectedUnit = null;
+async function removeUnit(courseId,name){
+  const c=allCourses.find(x=>x.id===courseId);
+  const lessonCount=c._lessons.filter(l=>l.section===name).length;
+  const confirmMsg=lessonCount
+    ? `"${name}" ইউনিটে ${lessonCount}টা লেসন আছে। ইউনিট মুছলে লেসনগুলো "সাধারণ"-এ চলে যাবে। ইউনিট মুছবেন?`
+    : `"${name}" ইউনিট মুছবেন?`;
+  if(!confirm(confirmMsg)) return;
+
+  c.units=c.units.filter(u=>u!==name);
+  const batch=db.batch();
+  batch.update(db.collection('courses').doc(courseId),{units:c.units});
+  c._lessons.filter(l=>l.section===name).forEach(l=>{
+    l.section='';
+    batch.update(db.collection('courses').doc(courseId).collection('lessons').doc(l.id),{section:''});
+  });
+  await batch.commit();
+  renderUnits(c);
+  renderCourseGrid();
+  toast('🗑 ইউনিট মুছে গেছে','ok');
 }
 
-/* ═══════════════════════════════════════
-   UNIT CRUD
-═══════════════════════════════════════ */
-function openAddLessonModal(uid) {
-  if (uid) document.getElementById('lessonUnitId').value = uid;
-  openModal('addLesson');
+/* ══════════════════════════════════
+   LESSON FORM
+══════════════════════════════════ */
+function fillUnitSelect(courseId, preselect){
+  const c=allCourses.find(x=>x.id===courseId);
+  const sel=document.getElementById('lUnit');
+  const opts=['<option value="">— কোনো ইউনিট না (সাধারণ) —</option>']
+    .concat((c.units||[]).map(u=>`<option value="${u.replace(/"/g,'&quot;')}">${u}</option>`));
+  sel.innerHTML=opts.join('');
+  sel.value=preselect||'';
 }
 
-function saveUnit() {
-  const cid  = state.selectedCourse;
-  const name = document.getElementById('uName').value.trim();
-  const desc = document.getElementById('uDesc').value.trim();
-  const ord  = parseInt(document.getElementById('uOrder').value) || (state.units[cid]||[]).length + 1;
-  const eid  = document.getElementById('editUnitId').value;
-  const msg  = document.getElementById('addUnitMsg');
-
-  if (!name) { showMsg(msg,'err','ইউনিটের নাম দিন'); return; }
-  if (!cid)  { showMsg(msg,'err','আগে একটি কোর্স সিলেক্ট করুন'); return; }
-
-  if (eid) {
-    // edit
-    const u = findUnit(eid, cid);
-    if (u) { u.name = name; u.desc = desc; u.order = ord; }
-    toast('✅ ইউনিট আপডেট হয়েছে', 'ok');
-  } else {
-    // add
-    if (!state.units[cid]) state.units[cid] = [];
-    state.units[cid].push({ id: 'u'+Date.now(), name, desc, order: ord, lessons: [] });
-    toast('✅ ইউনিট যোগ হয়েছে', 'ok');
-  }
-  closeModal('addUnit');
-  renderUnitList(cid);
-  updateStats();
+function openAddLessonForUnit(courseId,unitName){
+  document.getElementById('lessonCourseId').value=courseId;
+  document.getElementById('editLessonId').value='';
+  document.getElementById('lessonModalTitle').innerHTML='<i class="fa-solid fa-video"></i> লেসন যোগ করুন';
+  document.getElementById('btnSaveLesson').textContent='লেসন সেভ করুন';
+  ['lTitle','lYoutube','lPdf','lOrder'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('lIsFree').checked=false;
+  fillUnitSelect(courseId,unitName);
+  resetQuizForm();
+  openModal('lesson');
 }
 
-function editUnit(uid, cid) {
-  const u = findUnit(uid, cid);
-  if (!u) return;
-  document.getElementById('editUnitId').value = uid;
-  document.getElementById('uName').value  = u.name;
-  document.getElementById('uDesc').value  = u.desc || '';
-  document.getElementById('uOrder').value = u.order;
-  document.getElementById('unitModalTitle').innerHTML = '<i class="fa-solid fa-pen" style="color:var(--amber)"></i> ইউনিট সম্পাদনা করুন';
-  document.getElementById('btnSaveUnit').innerHTML = '<i class="fa-solid fa-floppy-disk"></i> আপডেট করুন';
-  openModal('addUnit');
-}
+function openEditLesson(courseId,lessonId){
+  const c=allCourses.find(x=>x.id===courseId);
+  const l=c._lessons.find(x=>x.id===lessonId);
+  if(!l) return;
+  document.getElementById('lessonCourseId').value=courseId;
+  document.getElementById('editLessonId').value=lessonId;
+  document.getElementById('lessonModalTitle').innerHTML='<i class="fa-solid fa-pen"></i> লেসন সম্পাদনা';
+  document.getElementById('btnSaveLesson').textContent='আপডেট করুন';
 
-/* ═══════════════════════════════════════
-   LESSON CRUD
-═══════════════════════════════════════ */
-function toggleLessonFields() {
-  const t = document.getElementById('lType').value;
-  document.getElementById('videoUrlField').style.display = t === 'video' ? 'block' : 'none';
-}
+  document.getElementById('lTitle').value=l.title||'';
+  document.getElementById('lYoutube').value=l.youtubeUrl||'';
+  document.getElementById('lPdf').value=l.pdfUrl||'';
+  document.getElementById('lOrder').value=l.order||'';
+  document.getElementById('lIsFree').checked=!!l.isFree;
+  fillUnitSelect(courseId,l.section||'');
 
-function saveLesson() {
-  const uid  = document.getElementById('lessonUnitId').value || state.selectedUnit;
-  const cid  = state.selectedCourse;
-  const name = document.getElementById('lName').value.trim();
-  const type = document.getElementById('lType').value;
-  const url  = document.getElementById('lVideoUrl').value.trim();
-  const dur  = document.getElementById('lDuration').value.trim();
-  const ord  = parseInt(document.getElementById('lOrder').value) || 1;
-  const prev = document.getElementById('lIsPreview').checked;
-  const note = document.getElementById('lNote').value.trim();
-  const eid  = document.getElementById('editLessonId').value;
-  const msg  = document.getElementById('addLessonMsg');
-
-  if (!name) { showMsg(msg,'err','লেসনের নাম দিন'); return; }
-  if (!uid || !cid) { showMsg(msg,'err','ইউনিট সিলেক্ট করা হয়নি'); return; }
-
-  const u = findUnit(uid, cid);
-  if (!u) return;
-
-  if (eid) {
-    const l = u.lessons.find(x => x.id === eid);
-    if (l) Object.assign(l, {name,type,url,duration:dur,order:ord,isPreview:prev,note});
-    toast('✅ লেসন আপডেট হয়েছে','ok');
-  } else {
-    u.lessons.push({id:'ls'+Date.now(), name, type, url, duration:dur, order:ord, isPreview:prev, note});
-    toast('✅ লেসন যোগ হয়েছে','ok');
-  }
-
-  closeModal('addLesson');
-  renderUnitList(cid);
-  if (state.selectedUnit === uid) {
-    const uFresh = findUnit(uid, cid);
-    document.getElementById('lpUnitMeta').textContent = `${uFresh.lessons.length} টি লেসন`;
-    renderLpLessons(uFresh, cid);
-  }
-  updateStats();
-}
-
-function editLesson(lid, uid) {
-  const cid = state.selectedCourse;
-  const u   = findUnit(uid, cid);
-  if (!u) return;
-  const l   = u.lessons.find(x => x.id === lid);
-  if (!l) return;
-  document.getElementById('editLessonId').value   = lid;
-  document.getElementById('lessonUnitId').value   = uid;
-  document.getElementById('lName').value          = l.name;
-  document.getElementById('lType').value          = l.type;
-  document.getElementById('lVideoUrl').value      = l.url || '';
-  document.getElementById('lDuration').value      = l.duration || '';
-  document.getElementById('lOrder').value         = l.order;
-  document.getElementById('lIsPreview').checked   = l.isPreview;
-  document.getElementById('lNote').value          = l.note || '';
-  toggleLessonFields();
-  document.getElementById('lessonModalTitle').innerHTML = '<i class="fa-solid fa-pen" style="color:var(--amber)"></i> লেসন সম্পাদনা করুন';
-  document.getElementById('btnAddLesson').innerHTML = '<i class="fa-solid fa-floppy-disk"></i> আপডেট করুন';
-  openModal('addLesson');
-}
-
-/* ═══════════════════════════════════════
-   COURSE CRUD
-═══════════════════════════════════════ */
-function saveCourse() {
-  const title      = document.getElementById('cTitle').value.trim();
-  const level      = document.getElementById('cLevel').value;
-  const price      = document.getElementById('cPrice').value;
-  const duration   = document.getElementById('cDuration').value;
-  const thumb      = document.getElementById('cThumb').value.trim();
-  const status     = document.getElementById('cStatus').value;
-  const desc       = document.getElementById('cDesc').value.trim();
-  const instructor = document.getElementById('cInstructor').value.trim();
-  const eid        = document.getElementById('editCourseId').value;
-  const msg        = document.getElementById('addCourseMsg');
-
-  if (!title) { showMsg(msg,'err','কোর্সের নাম দিন'); return; }
-  if (!price) { showMsg(msg,'err','মূল্য দিন'); return; }
-
-  if (eid) {
-    const c = state.courses.find(x => x.id === eid);
-    if (c) Object.assign(c, {title, level, price, duration, thumb, status, desc, instructor});
-    toast('✅ কোর্স আপডেট হয়েছে','ok');
-  } else {
-    const newId = 'c'+Date.now();
-    state.courses.push({id:newId, title, level, price, duration, thumb, status, desc, instructor});
-    state.units[newId] = [];
-    toast('✅ কোর্স যোগ হয়েছে','ok');
-  }
-  closeModal('addCourse');
-  renderAll();
-}
-
-function editCourse(cid) {
-  const c = state.courses.find(x => x.id === cid);
-  if (!c) return;
-  document.getElementById('editCourseId').value  = cid;
-  document.getElementById('cTitle').value        = c.title;
-  document.getElementById('cPrice').value        = c.price;
-  document.getElementById('cThumb').value        = c.thumb || '';
-  document.getElementById('cStatus').value       = c.status;
-  document.getElementById('cDesc').value         = c.desc || '';
-  document.getElementById('cInstructor').value   = c.instructor || '';
-  populateCourseSelects();
-  setTimeout(() => {
-    document.getElementById('cLevel').value    = c.level || '';
-    document.getElementById('cDuration').value = c.duration || '';
-  }, 50);
-  document.getElementById('courseModalTitle').innerHTML = '<i class="fa-solid fa-pen" style="color:var(--amber)"></i> কোর্স সম্পাদনা করুন';
-  document.getElementById('btnSaveCourse').innerHTML = '<i class="fa-solid fa-floppy-disk"></i> আপডেট করুন';
-  openModal('addCourse');
-}
-
-/* ═══════════════════════════════════════
-   PREVIEW VIDEOS
-═══════════════════════════════════════ */
-function renderPreviewGrid() {
-  const grid = document.getElementById('previewGrid');
-  const allPrev = [...state.previews];
-
-  // also include lessons marked as preview
-  state.courses.forEach(c => {
-    (state.units[c.id]||[]).forEach(u => {
-      u.lessons.filter(l => l.isPreview).forEach(l => {
-        allPrev.push({
-          id: 'inline-'+l.id,
-          title: l.name,
-          course: c.id,
-          courseTitle: c.title,
-          url: l.url,
-          duration: l.duration,
-          thumb: '',
-          desc: l.note,
-          fromLesson: true,
-          unitName: u.name
-        });
-      });
+  resetQuizForm();
+  if(l.quiz?.questions?.length){
+    l.quiz.questions.forEach(q=>{
+      addQuizQuestion();
+      const blocks=document.querySelectorAll('.quiz-question-block');
+      const block=blocks[blocks.length-1];
+      block.querySelector('.qq-text').value=q.question||'';
+      const opts=block.querySelectorAll('.qq-opt');
+      q.options?.forEach((o,i)=>{ if(opts[i]) opts[i].value=o; });
+      const radios=block.querySelectorAll('input[type=radio]');
+      if(radios[q.correctIndex]) radios[q.correctIndex].checked=true;
     });
-  });
-
-  if (!allPrev.length) {
-    grid.innerHTML = `<div class="empty-state" style="grid-column:1/-1">
-      <i class="fa-solid fa-play-circle"></i><h3>কোনো প্রিভিউ নেই</h3>
-      <p>লেসনে "ফ্রি প্রিভিউ" চালু করুন অথবা নতুন প্রিভিউ যোগ করুন</p>
-    </div>`;
-    return;
   }
-
-  grid.innerHTML = allPrev.map(pv => {
-    const course = state.courses.find(c => c.id === pv.course);
-    return `
-    <div class="preview-card">
-      <div class="pv-thumb" onclick="window.open('${pv.url||'#'}','_blank')">
-        ${pv.thumb ? `<img src="${pv.thumb}" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover" onerror="this.remove()">` : ''}
-        <div class="pv-play"><i class="fa-solid fa-play"></i></div>
-        <span class="pv-free-badge">FREE</span>
-      </div>
-      <div class="pv-body">
-        <div class="pv-lesson-label">
-          ${pv.fromLesson ? `<i class="fa-solid fa-layer-group"></i> ${pv.unitName||''} &bull; ` : ''}
-          ${course ? course.title : '—'}
-        </div>
-        <div class="pv-title">${pv.title}</div>
-        <div class="pv-meta">
-          ${pv.duration ? `<span><i class="fa-regular fa-clock"></i> ${pv.duration}</span>` : ''}
-          ${pv.fromLesson ? `<span class="preview-badge" style="font-size:.65rem">Lesson</span>` : ''}
-        </div>
-        <div class="pv-actions">
-          ${!pv.fromLesson ? `
-          <button class="btn btn-amber btn-xs" onclick="editPreview('${pv.id}')">
-            <i class="fa-solid fa-pen"></i> এডিট
-          </button>
-          <button class="btn btn-rose btn-xs" onclick="askDelete('preview','${pv.id}','${pv.title.replace(/'/g,"\\'")}')">
-            <i class="fa-solid fa-trash"></i>
-          </button>` : `<span style="font-size:.72rem;color:var(--muted);font-family:var(--bn)"><i class="fa-solid fa-info-circle"></i> Lesson থেকে</span>`}
-          ${pv.url ? `<a href="${pv.url}" target="_blank" class="btn btn-cyan btn-xs" style="margin-left:auto">
-            <i class="fa-solid fa-external-link"></i>
-          </a>` : ''}
-        </div>
-      </div>
-    </div>`;
-  }).join('');
+  openModal('lesson');
 }
 
-function savePreview() {
-  const title = document.getElementById('pvTitle').value.trim();
-  const url   = document.getElementById('pvUrl').value.trim();
-  const cid   = document.getElementById('pvCourse').value;
-  const dur   = document.getElementById('pvDuration').value.trim();
-  const thumb = document.getElementById('pvThumb').value.trim();
-  const desc  = document.getElementById('pvDesc').value.trim();
-  const eid   = document.getElementById('editPrevId').value;
-  const msg   = document.getElementById('addPreviewMsg');
+async function saveLesson(){
+  const courseId=document.getElementById('lessonCourseId').value;
+  const editId=document.getElementById('editLessonId').value;
+  const title=document.getElementById('lTitle').value.trim();
+  const youtube=document.getElementById('lYoutube').value.trim();
+  const pdf=document.getElementById('lPdf').value.trim();
+  const order=parseInt(document.getElementById('lOrder').value)||1;
+  const section=document.getElementById('lUnit').value;
+  const isFree=document.getElementById('lIsFree').checked;
+  const msg=document.getElementById('lessonMsg');
+  const btn=document.getElementById('btnSaveLesson');
 
-  if (!title) { showMsg(msg,'err','শিরোনাম দিন'); return; }
-  if (!url)   { showMsg(msg,'err','ভিডিও URL দিন'); return; }
+  if(!title){ showMsg(msg,'err','লেসনের শিরোনাম দিন'); return; }
+  if(!youtube){ showMsg(msg,'err','YouTube link দিন'); return; }
 
-  if (eid) {
-    const p = state.previews.find(x => x.id === eid);
-    if (p) Object.assign(p, {title,url,course:cid,duration:dur,thumb,desc});
-    toast('✅ প্রিভিউ আপডেট হয়েছে','ok');
-  } else {
-    state.previews.push({id:'pv'+Date.now(), title, url, course:cid, duration:dur, thumb, desc});
-    toast('✅ প্রিভিউ যোগ হয়েছে','ok');
-  }
-  closeModal('addPreview');
-  renderPreviewGrid();
-  updateStats();
-}
+  const quizData=collectQuizData(msg);
+  if(quizData===false) return;
 
-function editPreview(pid) {
-  const p = state.previews.find(x => x.id === pid);
-  if (!p) return;
-  document.getElementById('editPrevId').value   = pid;
-  document.getElementById('pvTitle').value      = p.title;
-  document.getElementById('pvUrl').value        = p.url;
-  document.getElementById('pvDuration').value   = p.duration || '';
-  document.getElementById('pvThumb').value      = p.thumb || '';
-  document.getElementById('pvDesc').value       = p.desc || '';
-  populateCourseSelects();
-  setTimeout(() => { document.getElementById('pvCourse').value = p.course || ''; }, 50);
-  document.getElementById('prevModalTitle').innerHTML = '<i class="fa-solid fa-pen" style="color:var(--amber)"></i> প্রিভিউ সম্পাদনা করুন';
-  openModal('addPreview');
-}
+  const payload={ title, youtubeUrl:youtube, pdfUrl:pdf||'', order, section, isFree };
+  if(quizData){ payload.quiz=quizData; payload.quizMandatory=true; }
+  else if(editId){ payload.quiz=firebase.firestore.FieldValue.delete(); payload.quizMandatory=false; }
 
-/* ═══════════════════════════════════════
-   LEVEL CRUD
-═══════════════════════════════════════ */
-function renderLevelTable() {
-  const tbody = document.getElementById('levelTableBody');
-  if (!tbody) return;
-  if (!state.levels.length) {
-    tbody.innerHTML = `<tr><td colspan="4" style="text-align:center;padding:1.5rem;color:var(--muted)">কোনো লেভেল নেই</td></tr>`;
-    return;
-  }
-  tbody.innerHTML = state.levels.map(l => `
-  <tr>
-    <td><span class="level-badge ${l.color}">${l.name}</span></td>
-    <td style="font-family:var(--bn);font-size:.8rem;color:var(--soft)">${l.nameBn || '—'}</td>
-    <td><span class="level-badge ${l.color}" style="font-size:.67rem">${l.color}</span></td>
-    <td>
-      <div style="display:flex;gap:.35rem">
-        <button class="btn btn-amber btn-xs" onclick="editLevel('${l.id}')"><i class="fa-solid fa-pen"></i></button>
-        <button class="btn btn-rose btn-xs" onclick="askDelete('level','${l.id}','${l.name}')"><i class="fa-solid fa-trash"></i></button>
-      </div>
-    </td>
-  </tr>`).join('');
-}
-
-function saveLevel() {
-  const name   = document.getElementById('lvName').value.trim();
-  const nameBn = document.getElementById('lvNameBn').value.trim();
-  const color  = document.getElementById('lvColor').value;
-  const desc   = document.getElementById('lvDesc').value.trim();
-  const eid    = document.getElementById('editLevelId').value;
-  const msg    = document.getElementById('addLevelMsg');
-
-  if (!name) { showMsg(msg,'err','লেভেল নাম দিন'); return; }
-
-  if (eid) {
-    const l = state.levels.find(x => x.id === eid);
-    if (l) Object.assign(l, {name, nameBn, color, desc});
-    toast('✅ লেভেল আপডেট হয়েছে','ok');
-  } else {
-    state.levels.push({id:'l'+Date.now(), name, nameBn, color, desc});
-    toast('✅ লেভেল যোগ হয়েছে','ok');
-  }
-  closeModal('addLevel');
-  renderLevelTable();
-  renderQuickLists();
-  populateCourseSelects();
-}
-
-function editLevel(lid) {
-  const l = state.levels.find(x => x.id === lid);
-  if (!l) return;
-  document.getElementById('editLevelId').value = lid;
-  document.getElementById('lvName').value      = l.name;
-  document.getElementById('lvNameBn').value    = l.nameBn || '';
-  document.getElementById('lvColor').value     = l.color;
-  document.getElementById('lvDesc').value      = l.desc || '';
-  document.getElementById('levelModalTitle').innerHTML = '<i class="fa-solid fa-pen" style="color:var(--amber)"></i> লেভেল সম্পাদনা করুন';
-  openModal('addLevel');
-}
-
-/* ═══════════════════════════════════════
-   DURATION CRUD
-═══════════════════════════════════════ */
-function renderDurationTable() {
-  const tbody = document.getElementById('durationTableBody');
-  if (!tbody) return;
-  tbody.innerHTML = state.durations.map(d => {
-    const usedBy = state.courses.filter(c => c.duration === d.id).length;
-    return `
-    <tr>
-      <td><span class="dur-tag"><i class="fa-regular fa-clock"></i> ${d.value} ${d.unit}</span></td>
-      <td style="font-family:var(--bn);font-size:.8rem;color:var(--soft)">${d.label || '—'}</td>
-      <td><span style="color:var(--muted);font-size:.78rem">${usedBy} কোর্সে</span></td>
-      <td>
-        <div style="display:flex;gap:.35rem">
-          <button class="btn btn-amber btn-xs" onclick="editDuration('${d.id}')"><i class="fa-solid fa-pen"></i></button>
-          <button class="btn btn-rose btn-xs" onclick="askDelete('duration','${d.id}','${d.label||d.value+' '+d.unit}')"><i class="fa-solid fa-trash"></i></button>
-        </div>
-      </td>
-    </tr>`;
-  }).join('') || `<tr><td colspan="4" style="text-align:center;padding:1.5rem;color:var(--muted)">কোনো সময়সীমা নেই</td></tr>`;
-}
-
-function saveDuration() {
-  const value = document.getElementById('durValue').value.trim();
-  const unit  = document.getElementById('durUnit').value;
-  const label = document.getElementById('durLabel').value.trim();
-  const eid   = document.getElementById('editDurId').value;
-  const msg   = document.getElementById('addDurMsg');
-
-  if (!value) { showMsg(msg,'err','সময় দিন'); return; }
-
-  if (eid) {
-    const d = state.durations.find(x => x.id === eid);
-    if (d) Object.assign(d, {value, unit, label});
-    toast('✅ সময় আপডেট হয়েছে','ok');
-  } else {
-    state.durations.push({id:'d'+Date.now(), value, unit, label});
-    toast('✅ সময় যোগ হয়েছে','ok');
-  }
-  closeModal('addDuration');
-  renderDurationTable();
-  renderQuickLists();
-  populateCourseSelects();
-}
-
-function editDuration(did) {
-  const d = state.durations.find(x => x.id === did);
-  if (!d) return;
-  document.getElementById('editDurId').value   = did;
-  document.getElementById('durValue').value    = d.value;
-  document.getElementById('durUnit').value     = d.unit;
-  document.getElementById('durLabel').value    = d.label || '';
-  document.getElementById('durModalTitle').innerHTML = '<i class="fa-regular fa-clock" style="color:var(--amber)"></i> সময় সম্পাদনা করুন';
-  openModal('addDuration');
-}
-
-/* ═══════════════════════════════════════
-   COURSE LEVEL TABLE
-═══════════════════════════════════════ */
-function renderCourseLevelTable() {
-  const tbody = document.getElementById('courseLevelTable');
-  if (!tbody) return;
-  tbody.innerHTML = state.courses.map(c => {
-    const lvl = state.levels.find(l => l.id === c.level);
-    const dur = state.durations.find(d => d.id === c.duration);
-    return `
-    <tr>
-      <td style="font-weight:600;font-size:.84rem">${c.title}</td>
-      <td>${lvl ? `<span class="level-badge ${lvl.color}">${lvl.name}</span>` : '<span style="color:var(--muted)">—</span>'}</td>
-      <td>${dur ? `<span class="dur-tag"><i class="fa-regular fa-clock"></i> ${dur.label||dur.value+' '+dur.unit}</span>` : '<span style="color:var(--muted)">—</span>'}</td>
-      <td><span class="level-badge ${c.status==='published'?'beginner':'intermediate'}">${c.status==='published'?'Published':'Draft'}</span></td>
-      <td>
-        <button class="btn btn-ghost btn-xs" onclick="editCourse('${c.id}');switchTab('all')">
-          <i class="fa-solid fa-pen"></i> সম্পাদনা
-        </button>
-      </td>
-    </tr>`;
-  }).join('') || `<tr><td colspan="5" style="text-align:center;padding:1.5rem;color:var(--muted)">কোনো কোর্স নেই</td></tr>`;
-}
-
-/* ═══════════════════════════════════════
-   QUICK LISTS (level manager modal)
-═══════════════════════════════════════ */
-function renderQuickLists() {
-  const lvlEl = document.getElementById('quickLevelList');
-  const durEl = document.getElementById('quickDurList');
-  if (lvlEl) {
-    lvlEl.innerHTML = state.levels.map(l => `
-    <div style="display:flex;align-items:center;gap:.5rem;padding:.45rem .7rem;border-radius:7px;border:1px solid var(--border);margin-bottom:4px">
-      <span class="level-badge ${l.color}" style="font-size:.7rem">${l.name}</span>
-      <span style="font-size:.75rem;color:var(--muted);font-family:var(--bn);flex:1">${l.nameBn||''}</span>
-      <button class="btn btn-amber btn-xs" onclick="editLevel('${l.id}')"><i class="fa-solid fa-pen"></i></button>
-      <button class="btn btn-rose btn-xs" onclick="askDelete('level','${l.id}','${l.name}')"><i class="fa-solid fa-trash"></i></button>
-    </div>`).join('') || '<div style="color:var(--muted);font-size:.8rem;padding:.5rem">কোনো লেভেল নেই</div>';
-  }
-  if (durEl) {
-    durEl.innerHTML = state.durations.map(d => `
-    <div style="display:flex;align-items:center;gap:.5rem;padding:.45rem .7rem;border-radius:7px;border:1px solid var(--border);margin-bottom:4px">
-      <span class="dur-tag" style="font-size:.7rem"><i class="fa-regular fa-clock"></i> ${d.value} ${d.unit}</span>
-      <span style="font-size:.73rem;color:var(--muted);flex:1;font-family:var(--bn)">${d.label||''}</span>
-      <button class="btn btn-amber btn-xs" onclick="editDuration('${d.id}')"><i class="fa-solid fa-pen"></i></button>
-      <button class="btn btn-rose btn-xs" onclick="askDelete('duration','${d.id}','${(d.label||d.value+' '+d.unit).replace(/'/g,"\\'")}')"><i class="fa-solid fa-trash"></i></button>
-    </div>`).join('') || '<div style="color:var(--muted);font-size:.8rem;padding:.5rem">কোনো সময়সীমা নেই</div>';
-  }
-}
-
-/* ═══════════════════════════════════════
-   DELETE CONFIRM
-═══════════════════════════════════════ */
-let pendingDelete = null;
-function askDelete(type, id, name, extra) {
-  pendingDelete = { type, id, name, extra };
-  const msgs = {
-    course:   `"${name}" কোর্সটি মুছলে সব ইউনিট ও লেসনও মুছে যাবে। নিশ্চিত?`,
-    unit:     `"${name}" ইউনিটটি মুছলে এর সব লেসনও মুছে যাবে। নিশ্চিত?`,
-    lesson:   `"${name}" লেসনটি মুছতে চান?`,
-    preview:  `"${name}" প্রিভিউ ভিডিওটি মুছতে চান?`,
-    level:    `"${name}" লেভেলটি মুছতে চান?`,
-    duration: `"${name}" সময়সীমাটি মুছতে চান?`,
-  };
-  document.getElementById('confirmMsg').textContent = msgs[type] || 'মুছতে চান?';
-  openModal('confirm');
-}
-
-function confirmAction() {
-  if (!pendingDelete) return;
-  const {type, id, extra} = pendingDelete;
-  if (type === 'course') {
-    state.courses = state.courses.filter(c => c.id !== id);
-    delete state.units[id];
-    renderAll();
-  } else if (type === 'unit') {
-    const cid = extra || state.selectedCourse;
-    if (cid && state.units[cid]) {
-      state.units[cid] = state.units[cid].filter(u => u.id !== id);
-      renderUnitList(cid);
-      if (state.selectedUnit === id) closeLessonPanel();
+  btn.disabled=true; btn.textContent=editId?'আপডেট হচ্ছে...':'সেভ হচ্ছে...';
+  try{
+    if(editId){
+      await db.collection('courses').doc(courseId).collection('lessons').doc(editId).update(payload);
+      toast('✅ লেসন আপডেট হয়েছে!','ok');
+    } else {
+      payload.createdAt=firebase.firestore.FieldValue.serverTimestamp();
+      await db.collection('courses').doc(courseId).collection('lessons').add(payload);
+      await db.collection('courses').doc(courseId).update({ totalLessons: firebase.firestore.FieldValue.increment(1) });
+      toast('✅ লেসন সেভ হয়েছে!','ok');
     }
-    updateStats();
-  } else if (type === 'lesson') {
-    const uid = extra;
-    const cid = state.selectedCourse;
-    const u = findUnit(uid, cid);
-    if (u) {
-      u.lessons = u.lessons.filter(l => l.id !== id);
-      renderUnitList(cid);
-      if (state.selectedUnit === uid) renderLpLessons(u, cid);
-    }
-    updateStats();
-  } else if (type === 'preview') {
-    state.previews = state.previews.filter(p => p.id !== id);
-    renderPreviewGrid(); updateStats();
-  } else if (type === 'level') {
-    state.levels = state.levels.filter(l => l.id !== id);
-    renderLevelTable(); renderQuickLists(); populateCourseSelects(); renderCourseLevelTable();
-  } else if (type === 'duration') {
-    state.durations = state.durations.filter(d => d.id !== id);
-    renderDurationTable(); renderQuickLists(); populateCourseSelects(); renderCourseLevelTable();
+    closeModal('lesson');
+    await loadCourses();
+    /* keep units modal open & refreshed */
+    const c=allCourses.find(x=>x.id===courseId);
+    document.getElementById('unitsCourseId').value=courseId;
+    renderUnits(c);
+    openModal('units');
+  }catch(e){ showMsg(msg,'err','❌ '+e.message); }
+  btn.disabled=false; btn.textContent=editId?'আপডেট করুন':'লেসন সেভ করুন';
+}
+
+async function deleteLesson(courseId,lessonId){
+  if(!confirm('লেসনটি মুছবেন?')) return;
+  await db.collection('courses').doc(courseId).collection('lessons').doc(lessonId).delete();
+  await db.collection('courses').doc(courseId).update({ totalLessons: firebase.firestore.FieldValue.increment(-1) });
+  toast('🗑 লেসন মুছে গেছে','ok');
+  await loadCourses();
+  const c=allCourses.find(x=>x.id===courseId);
+  document.getElementById('unitsCourseId').value=courseId;
+  renderUnits(c);
+  openModal('units');
+}
+
+/* ── Quiz Builder ── */
+function resetQuizForm(){ document.getElementById('quizQuestionsContainer').innerHTML=''; quizQuestionIdx=0; }
+function addQuizQuestion(data){
+  const idx=quizQuestionIdx++;
+  const container=document.getElementById('quizQuestionsContainer');
+  const block=document.createElement('div');
+  block.className='quiz-question-block';
+  block.dataset.idx=idx;
+  const opts=data?.options||['','','',''];
+  const correct=data?.correctIndex??0;
+  block.innerHTML=`
+    <div class="quiz-q-head">
+      <span>প্রশ্ন ${container.children.length+1}</span>
+      <button type="button" class="btn btn-rose btn-sm" onclick="removeQuizQuestion(this)"><i class="fa-solid fa-trash"></i></button>
+    </div>
+    <div class="fg" style="margin-bottom:.6rem">
+      <input type="text" class="qq-text" placeholder="প্রশ্ন লিখুন..." value="${(data?.question||'').replace(/"/g,'&quot;')}"/>
+    </div>
+    ${[0,1,2,3].map(i=>`
+    <div class="quiz-opt-row">
+      <input type="radio" name="qq-correct-${idx}" value="${i}" ${correct===i?'checked':''}/>
+      <input type="text" class="qq-opt" placeholder="অপশন ${String.fromCharCode(65+i)}" value="${(opts[i]||'').replace(/"/g,'&quot;')}"/>
+    </div>`).join('')}`;
+  container.appendChild(block);
+}
+function removeQuizQuestion(btn){
+  btn.closest('.quiz-question-block')?.remove();
+  document.querySelectorAll('.quiz-question-block .quiz-q-head span').forEach((el,i)=>el.textContent='প্রশ্ন '+(i+1));
+}
+function collectQuizData(msgEl){
+  const blocks=document.querySelectorAll('.quiz-question-block');
+  if(!blocks.length) return null;
+  const questions=[];
+  for(let i=0;i<blocks.length;i++){
+    const block=blocks[i];
+    const question=block.querySelector('.qq-text')?.value?.trim()||'';
+    const options=[...block.querySelectorAll('.qq-opt')].map(inp=>inp.value.trim());
+    const correctRadio=block.querySelector('input[type=radio]:checked');
+    if(!question){ showMsg(msgEl,'err',`প্রশ্ন ${i+1}: প্রশ্নের টেক্সট দিন`); return false; }
+    if(options.some(o=>!o)){ showMsg(msgEl,'err',`প্রশ্ন ${i+1}: সব ৪টি অপশন পূরণ করুন`); return false; }
+    if(!correctRadio){ showMsg(msgEl,'err',`প্রশ্ন ${i+1}: সঠিক উত্তর সিলেক্ট করুন`); return false; }
+    questions.push({ question, options, correctIndex:parseInt(correctRadio.value,10) });
   }
-  toast('🗑️ মুছে ফেলা হয়েছে','err');
-  closeModal('confirm');
-  pendingDelete = null;
+  return { questions };
 }
 
-/* ═══════════════════════════════════════
-   HELPERS
-═══════════════════════════════════════ */
-function findUnit(uid, cid) {
-  if (!cid) {
-    for (const c of state.courses) {
-      const u = (state.units[c.id]||[]).find(x => x.id === uid);
-      if (u) return u;
-    }
-    return null;
-  }
-  return (state.units[cid]||[]).find(x => x.id === uid) || null;
+/* ── Modal / Toast helpers ── */
+function openModal(id){ document.getElementById('modal-'+id).classList.add('open'); }
+function closeModal(id){
+  document.getElementById('modal-'+id).classList.remove('open');
+  const msg=document.getElementById(id==='course'?'courseMsg':id==='lesson'?'lessonMsg':null);
+  if(msg){ msg.className='msg'; msg.textContent=''; }
 }
+document.querySelectorAll('.modal-bg').forEach(bg=>bg.addEventListener('click',e=>{ if(e.target===bg) bg.classList.remove('open'); }));
 
-/* ═══════════════════════════════════════
-   TAB SWITCH
-═══════════════════════════════════════ */
-function switchTab(tab) {
-  state.activeTab = tab;
-  ['all','builder','preview','levels'].forEach(t => {
-    document.getElementById('tab-content-'+t).style.display = t === tab ? 'block' : 'none';
-    document.getElementById('tab-'+t).classList.toggle('active', t === tab);
-  });
-  if (tab === 'builder') {
-    loadBuilder();
-  }
-  if (tab === 'preview') renderPreviewGrid();
-  if (tab === 'levels') { renderLevelTable(); renderDurationTable(); renderCourseLevelTable(); }
+function showMsg(el,type,text){ el.className='msg '+type; el.textContent=text; }
+function toast(msg,type='ok'){
+  const el=document.getElementById('toast');
+  el.textContent=msg; el.className='show '+type;
+  clearTimeout(el._t); el._t=setTimeout(()=>el.classList.remove('show'),3000);
 }
-
-/* ═══════════════════════════════════════
-   PAGE NAV
-═══════════════════════════════════════ */
-const pageTitles = {
-  courses:'কোর্স ম্যানেজমেন্ট', dashboard:'ড্যাশবোর্ড',
-  students:'শিক্ষার্থী', payments:'Payments',
-  notices:'নোটিশ বোর্ড', reviews:'Reviews',
-  certs:'Certificates', settings:'সেটিংস'
-};
-function go(name) {
-  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
-  const pg = document.getElementById('page-'+name);
-  if (pg) pg.classList.add('active');
-  document.querySelectorAll('.sb-btn[data-p]').forEach(b => b.classList.toggle('active', b.dataset.p===name));
-  document.getElementById('topbarTitle').textContent = pageTitles[name] || name;
-  closeSidebar();
-  window.scrollTo({top:0,behavior:'smooth'});
-}
-
-/* ═══════════════════════════════════════
-   SIDEBAR
-═══════════════════════════════════════ */
-function toggleSidebar() {
-  document.getElementById('sidebar').classList.toggle('open');
-  document.getElementById('sbOverlay').classList.toggle('show');
-}
-function closeSidebar() {
-  document.getElementById('sidebar').classList.remove('open');
-  document.getElementById('sbOverlay').classList.remove('show');
-}
-
-/* ═══════════════════════════════════════
-   MODAL
-═══════════════════════════════════════ */
-function openModal(id) {
-  const m = document.getElementById('modal-'+id);
-  if (m) m.classList.add('open');
-}
-function closeModal(id) {
-  const m = document.getElementById('modal-'+id);
-  if (!m) return;
-  m.classList.remove('open');
-  // reset forms
-  const resets = {
-    addCourse: ['cTitle','cPrice','cThumb','cDesc','cInstructor','editCourseId'],
-    addUnit:   ['uName','uDesc','uOrder','editUnitId'],
-    addLesson: ['lName','lVideoUrl','lDuration','lOrder','lNote','editLessonId','lessonUnitId'],
-    addPreview:['pvTitle','pvUrl','pvDuration','pvThumb','pvDesc','editPrevId'],
-    addLevel:  ['lvName','lvNameBn','lvDesc','editLevelId'],
-    addDuration:['durValue','durLabel','editDurId'],
-  };
-  if (resets[id]) {
-    resets[id].forEach(fid => {
-      const el = document.getElementById(fid);
-      if (el) el.value = '';
-    });
-    const chk = document.getElementById('lIsPreview');
-    if (chk && id === 'addLesson') chk.checked = false;
-  }
-  // reset modal titles
-  const defaultTitles = {
-    addCourse: '<i class="fa-solid fa-plus" style="color:var(--primary)"></i> নতুন কোর্স যোগ করুন',
-    addUnit: '<i class="fa-solid fa-layer-group" style="color:var(--primary)"></i> নতুন ইউনিট যোগ করুন',
-    addLesson: '<i class="fa-solid fa-video" style="color:var(--primary)"></i> লেসন যোগ করুন',
-    addLevel: '<i class="fa-solid fa-signal" style="color:var(--green)"></i> নতুন লেভেল যোগ করুন',
-    addDuration: '<i class="fa-regular fa-clock" style="color:var(--amber)"></i> সময় যোগ করুন',
-  };
-  const titleEl = { addCourse:'courseModalTitle', addUnit:'unitModalTitle', addLesson:'lessonModalTitle', addLevel:'levelModalTitle', addDuration:'durModalTitle' };
-  if (titleEl[id] && defaultTitles[id]) {
-    const el = document.getElementById(titleEl[id]);
-    if (el) el.innerHTML = defaultTitles[id];
-  }
-  // reset save btns
-  const saveBtns = {
-    addCourse: ['btnSaveCourse','<i class="fa-solid fa-floppy-disk"></i> কোর্স সেভ করুন'],
-    addUnit:   ['btnSaveUnit',  '<i class="fa-solid fa-floppy-disk"></i> ইউনিট সেভ করুন'],
-    addLesson: ['btnAddLesson', '<i class="fa-solid fa-floppy-disk"></i> লেসন সেভ করুন'],
-    addLevel:  ['btnSaveLevel', '<i class="fa-solid fa-floppy-disk"></i> লেভেল সেভ করুন'],
-    addDuration:['btnSaveDur', '<i class="fa-solid fa-floppy-disk"></i> সময় সেভ করুন'],
-  };
-  if (saveBtns[id]) {
-    const btn = document.getElementById(saveBtns[id][0]);
-    if (btn) btn.innerHTML = saveBtns[id][1];
-  }
-  // hide msgs
-  ['addCourseMsg','addUnitMsg','addLessonMsg','addPreviewMsg','addLevelMsg','addDurMsg'].forEach(mid => {
-    const el = document.getElementById(mid);
-    if (el) el.className = 'msg';
-  });
-  if (id === 'addLesson') toggleLessonFields();
-}
-
-// close on backdrop
-document.querySelectorAll('.modal-bg').forEach(bg =>
-  bg.addEventListener('click', e => { if (e.target === bg) bg.classList.remove('open'); })
-);
-
-/* ═══════════════════════════════════════
-   TOAST
-═══════════════════════════════════════ */
-let toastTimer = null;
-function toast(msg, type='ok') {
-  const el = document.getElementById('toast');
-  el.innerHTML = `<i class="fa-solid fa-${type==='ok'?'circle-check':type==='err'?'circle-xmark':'circle-info'}"></i> ${msg}`;
-  el.className = 'show ' + type;
-  if (toastTimer) clearTimeout(toastTimer);
-  toastTimer = setTimeout(() => el.classList.remove('show'), 3200);
-}
-
-/* ═══════════════════════════════════════
-   MSG
-═══════════════════════════════════════ */
-function showMsg(el, type, text) {
-  el.className = 'msg ' + type; el.textContent = text;
-}
-
-/* ═══════════════════════════════════════
-   RESPONSIVE LEVELS TABLE
-═══════════════════════════════════════ */
-function handleLevelTabGrid() {
-  const grid = document.getElementById('levelTabGrid');
-  if (!grid) return;
-  grid.style.gridTemplateColumns = window.innerWidth < 700 ? '1fr' : '1fr 1fr';
-}
-window.addEventListener('resize', handleLevelTabGrid);
-handleLevelTabGrid();
-
-/* ═══════════════════════════════════════
-   BOOT
-═══════════════════════════════════════ */
-init();
-go('courses');
-switchTab('all');
 </script>
 </body>
 </html>
