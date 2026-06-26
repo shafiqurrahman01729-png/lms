@@ -1,0 +1,992 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0"/>
+<title>সকল কোর্স</title>
+<link rel="icon" id="favicon" href=""/>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=Hind+Siliguri:wght@400;500;600;700&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet"/>
+
+<script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore-compat.js"></script>
+<script src="config.js"></script>
+
+<style>
+/* ── TOKENS ───────────────────────────── */
+:root {
+  --bg:      #0D0F14;
+  --surface: #13161E;
+  --card:    #181C27;
+  --card2:   #1E2335;
+  --border:  rgba(255,255,255,.07);
+  --border2: rgba(255,255,255,.13);
+  --ink:     #ECEEF5;
+  --muted:   #6B7280;
+  --soft:    #9CA3AF;
+  --primary: #4361EE;
+  --cyan:    #06D6A0;
+  --amber:   #FFB703;
+  --rose:    #FB5607;
+  --bn: 'Hind Siliguri', sans-serif;
+  --en: 'Inter', sans-serif;
+  --r: 16px;
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; }
+body {
+  font-family: var(--bn);
+  background: var(--bg);
+  color: var(--ink);
+  min-height: 100vh;
+  max-width: 480px;
+  margin: 0 auto;
+  padding-bottom: 7rem;
+  -webkit-font-smoothing: antialiased;
+}
+a { text-decoration: none; color: inherit; }
+button { font-family: var(--bn); cursor: pointer; border: none; background: none; }
+
+/* ── LOADER ───────────────────────────── */
+#pageLoader {
+  position: fixed; inset: 0; z-index: 9999;
+  background: var(--bg);
+  display: flex; align-items: center; justify-content: center;
+  flex-direction: column; gap: 1rem;
+  transition: opacity .4s, visibility .4s;
+}
+#pageLoader.gone { opacity: 0; visibility: hidden; pointer-events: none; }
+.ld-logo {
+  width: 50px; height: 50px; border-radius: 14px;
+  background: var(--primary);
+  display: flex; align-items: center; justify-content: center;
+  font-family: var(--en); font-size: 1.4rem; font-weight: 800; color: #fff;
+  animation: ldPulse 1.4s ease-in-out infinite;
+}
+@keyframes ldPulse { 0%,100%{transform:scale(1)} 50%{transform:scale(.9);opacity:.7} }
+.ld-bar { width: 110px; height: 3px; background: var(--border2); border-radius: 10px; overflow: hidden; }
+.ld-fill { height: 100%; width: 40%; background: var(--primary); border-radius: 10px; animation: ldSlide 1.2s ease-in-out infinite; }
+@keyframes ldSlide { 0%{transform:translateX(-100%)} 100%{transform:translateX(350%)} }
+
+/* ── TOP BAR ──────────────────────────── */
+.topbar {
+  position: sticky; top: 0; z-index: 100;
+  background: rgba(13,15,20,.92);
+  backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+  border-bottom: 1px solid var(--border);
+  height: 58px;
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 0 1.1rem;
+}
+.topbar-left { display: flex; align-items: center; gap: .75rem; }
+.back-btn {
+  width: 36px; height: 36px; border-radius: 10px;
+  background: var(--card); border: 1px solid var(--border2);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 1rem; text-decoration: none; color: var(--ink);
+  transition: background .18s, border-color .18s;
+}
+.back-btn:hover { background: var(--card2); border-color: var(--primary); }
+.topbar-title { font-family: var(--en); font-size: 1rem; font-weight: 700; }
+.course-count-badge {
+  background: rgba(67,97,238,.18); border: 1px solid rgba(67,97,238,.3);
+  color: #818CF8; font-family: var(--en); font-size: .68rem; font-weight: 700;
+  padding: .18rem .55rem; border-radius: 20px; display: none;
+}
+.course-count-badge.show { display: inline-block; }
+
+/* ── BODY ─────────────────────────────── */
+.scroll-body { padding: 1.1rem 1.1rem 0; }
+
+/* ── SEARCH ───────────────────────────── */
+.search-wrap {
+  position: relative; margin-bottom: 1rem;
+  animation: fadeUp .3s ease both;
+}
+.search-icon {
+  position: absolute; left: .9rem; top: 50%; transform: translateY(-50%);
+  font-size: .95rem; pointer-events: none; color: var(--muted);
+}
+.search-input {
+  width: 100%; padding: .72rem 2.8rem .72rem 2.55rem;
+  background: var(--card); border: 1.5px solid var(--border2);
+  border-radius: 12px; color: var(--ink);
+  font-family: var(--bn); font-size: .88rem;
+  outline: none; transition: border-color .2s;
+}
+.search-input:focus { border-color: var(--primary); }
+.search-input::placeholder { color: var(--muted); }
+.search-clear {
+  position: absolute; right: .8rem; top: 50%; transform: translateY(-50%);
+  width: 22px; height: 22px; border-radius: 50%;
+  background: var(--border2); color: var(--muted);
+  font-size: .7rem; display: none;
+  align-items: center; justify-content: center; cursor: pointer;
+}
+.search-clear.show { display: flex; }
+
+/* ── CATEGORY TABS ────────────────────── */
+.cat-tabs {
+  display: flex; gap: .45rem; margin-bottom: 1.1rem;
+  overflow-x: auto; padding-bottom: .15rem;
+  scrollbar-width: none; animation: fadeUp .3s ease .05s both;
+}
+.cat-tabs::-webkit-scrollbar { display: none; }
+.cat-btn {
+  padding: .38rem .9rem; border-radius: 20px; flex-shrink: 0;
+  font-size: .75rem; font-weight: 600; font-family: var(--en);
+  background: var(--card); border: 1px solid var(--border2);
+  color: var(--soft); cursor: pointer;
+  transition: background .18s, border-color .18s, color .18s;
+  white-space: nowrap;
+}
+.cat-btn.active {
+  background: rgba(67,97,238,.18); border-color: rgba(67,97,238,.35); color: #818CF8;
+}
+
+/* ── SORT ROW ─────────────────────────── */
+.sort-row {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: .9rem; animation: fadeUp .3s ease .08s both;
+}
+.sort-count { font-size: .78rem; color: var(--muted); }
+.sort-select {
+  background: var(--card); border: 1px solid var(--border2);
+  color: var(--soft); font-size: .72rem; font-family: var(--en);
+  padding: .3rem .65rem; border-radius: 8px; cursor: pointer;
+  outline: none;
+}
+.sort-select:focus { border-color: var(--primary); }
+
+/* ── COURSE GRID ──────────────────────── */
+.course-grid { display: flex; flex-direction: column; gap: .85rem; }
+
+/* ── COURSE CARD ──────────────────────── */
+.course-card {
+  background: var(--card); border: 1px solid var(--border);
+  border-radius: var(--r); overflow: hidden;
+  transition: border-color .2s, transform .2s, box-shadow .2s;
+  animation: fadeUp .4s ease both;
+}
+.course-card:hover {
+  border-color: rgba(67,97,238,.35);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 28px rgba(0,0,0,.35);
+}
+.course-card:nth-child(2){animation-delay:.05s}
+.course-card:nth-child(3){animation-delay:.1s}
+.course-card:nth-child(4){animation-delay:.15s}
+.course-card:nth-child(5){animation-delay:.2s}
+
+/* thumbnail */
+.course-thumb {
+  width: 100%; height: 155px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 3.5rem; position: relative; overflow: hidden;
+}
+.course-thumb::after {
+  content:''; position:absolute; inset:0;
+  background: linear-gradient(to bottom, transparent 40%, rgba(13,15,20,.65));
+  pointer-events: none;
+}
+.course-thumb.g1{background:linear-gradient(135deg,#1a1f35,#2d3561)}
+.course-thumb.g2{background:linear-gradient(135deg,#0d2137,#0a4769)}
+.course-thumb.g3{background:linear-gradient(135deg,#1a0d24,#3d1a52)}
+.course-thumb.g4{background:linear-gradient(135deg,#0d1f1a,#0d4032)}
+.course-thumb.g5{background:linear-gradient(135deg,#241a0d,#52380d)}
+.course-thumb.g6{background:linear-gradient(135deg,#1f0d0d,#521a1a)}
+.course-thumb img {
+  position:absolute; inset:0; width:100%; height:100%;
+  object-fit:cover; transition: transform .4s;
+}
+.course-card:hover .course-thumb img { transform: scale(1.04); }
+
+.thumb-badges {
+  position: absolute; bottom: .65rem; left: .7rem; right: .7rem; z-index: 2;
+  display: flex; justify-content: space-between; align-items: flex-end;
+}
+.cat-badge {
+  background: rgba(13,15,20,.75); backdrop-filter: blur(6px);
+  color: #818CF8; font-size: .62rem; font-weight: 700;
+  padding: .17rem .6rem; border-radius: 20px;
+  border: 1px solid rgba(67,97,238,.3);
+  text-transform: uppercase; letter-spacing: .05em;
+  font-family: var(--en);
+}
+.enrolled-chip {
+  background: rgba(6,214,160,.15); border: 1px solid rgba(6,214,160,.3);
+  color: var(--cyan); font-size: .62rem; font-weight: 700;
+  padding: .17rem .6rem; border-radius: 20px;
+  font-family: var(--en);
+}
+.pending-chip {
+  background: rgba(255,183,3,.12); border: 1px solid rgba(255,183,3,.25);
+  color: var(--amber); font-size: .62rem; font-weight: 700;
+  padding: .17rem .6rem; border-radius: 20px; font-family: var(--en);
+}
+
+/* body */
+.course-body { padding: .95rem 1.1rem; }
+
+.price-badge {
+  display: inline-flex; align-items: center; gap: .25rem;
+  font-size: .65rem; font-weight: 700;
+  padding: .17rem .6rem; border-radius: 20px;
+  margin-bottom: .55rem; font-family: var(--en);
+}
+.price-free { background: rgba(6,214,160,.1); color: var(--cyan); border: 1px solid rgba(6,214,160,.2); }
+.price-paid { background: rgba(255,183,3,.12); color: var(--amber); border: 1px solid rgba(255,183,3,.25); }
+
+.course-title {
+  font-family: var(--en); font-size: .97rem; font-weight: 700;
+  line-height: 1.4; margin-bottom: .3rem;
+  display: -webkit-box; -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical; overflow: hidden;
+}
+.course-desc {
+  font-size: .78rem; color: var(--muted); line-height: 1.5;
+  margin-bottom: .55rem;
+  display: -webkit-box; -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical; overflow: hidden;
+}
+.course-meta-row {
+  display: flex; flex-wrap: wrap; gap: .4rem .7rem;
+  font-size: .73rem; color: var(--muted); margin-bottom: .7rem;
+}
+
+/* rating */
+.rating-row { display: flex; align-items: center; gap: .35rem; margin-bottom: .75rem; }
+.stars-display { display: flex; gap: 1px; }
+.star-f { color: var(--amber); font-size: .8rem; }
+.star-e { color: rgba(255,255,255,.12); font-size: .8rem; }
+.rating-count { font-size: .7rem; color: var(--muted); font-family: var(--en); }
+
+/* progress (enrolled) */
+.progress-wrap { margin-bottom: .8rem; }
+.progress-top { display: flex; justify-content: space-between; font-size: .72rem; margin-bottom: .35rem; }
+.progress-top .prog-label { color: var(--muted); }
+.progress-top .prog-pct { color: var(--cyan); font-family: var(--en); font-weight: 700; }
+.progress-bar { height: 5px; background: var(--border2); border-radius: 10px; overflow: hidden; }
+.progress-fill {
+  height: 100%; border-radius: 10px;
+  background: linear-gradient(90deg, var(--primary), var(--cyan));
+  transition: width .6s cubic-bezier(.4,0,.2,1);
+}
+.progress-fill.done { background: linear-gradient(90deg, var(--cyan), #00b38a); }
+
+/* action button */
+.btn-action {
+  width: 100%; padding: .68rem;
+  border-radius: 10px; font-size: .84rem; font-weight: 700;
+  transition: all .18s; text-align: center; font-family: var(--bn);
+  display: block;
+}
+.btn-enroll {
+  background: var(--primary); color: #fff;
+  box-shadow: 0 4px 16px rgba(67,97,238,.3);
+}
+.btn-enroll:hover { background: #3251d4; transform: translateY(-1px); box-shadow: 0 8px 24px rgba(67,97,238,.4); }
+.btn-paid {
+  background: linear-gradient(135deg, #e6c87a, #C8A96E); color: #0D0F14;
+  font-weight: 800;
+}
+.btn-paid:hover { filter: brightness(1.08); transform: translateY(-1px); }
+.btn-continue {
+  background: rgba(67,97,238,.14); color: #818CF8;
+  border: 1px solid rgba(67,97,238,.25);
+}
+.btn-continue:hover { background: var(--primary); color: #fff; }
+.btn-done {
+  background: rgba(6,214,160,.1); color: var(--cyan);
+  border: 1px solid rgba(6,214,160,.2); cursor: default;
+}
+.btn-pending {
+  background: rgba(255,183,3,.1); color: var(--amber);
+  border: 1px solid rgba(255,183,3,.2); cursor: default;
+}
+.btn-action:disabled { opacity: .55; cursor: not-allowed; transform: none !important; }
+
+/* ── SKELETON ─────────────────────────── */
+.sk-card {
+  background: var(--card); border: 1px solid var(--border);
+  border-radius: var(--r); overflow: hidden;
+}
+.sk-line {
+  height: 11px; border-radius: 6px;
+  background: linear-gradient(90deg, var(--card) 25%, rgba(255,255,255,.04) 50%, var(--card) 75%);
+  background-size: 200% 100%;
+  animation: skShim 1.3s ease-in-out infinite;
+}
+.sk-line.full { width: 100%; height: 155px; border-radius: 0; }
+.sk-line.w85 { width: 85%; }
+.sk-line.w65 { width: 65%; }
+.sk-line.w45 { width: 45%; height: 8px; }
+.sk-body { padding: .95rem 1.1rem; display: flex; flex-direction: column; gap: .55rem; }
+@keyframes skShim { 0%{background-position:200% 0} 100%{background-position:-200% 0} }
+
+/* ── EMPTY STATE ──────────────────────── */
+.empty-state {
+  text-align: center; padding: 4rem 2rem;
+  background: var(--card); border: 1px dashed var(--border2);
+  border-radius: var(--r);
+}
+.empty-icon { font-size: 2.8rem; margin-bottom: .8rem; }
+.empty-title { font-family: var(--en); font-size: .95rem; font-weight: 700; margin-bottom: .3rem; }
+.empty-desc { font-size: .8rem; color: var(--muted); }
+
+/* ── BOTTOM NAV ───────────────────────── */
+.bnav {
+  position: fixed; bottom: .9rem; left: 50%; transform: translateX(-50%);
+  z-index: 200; width: calc(100% - 2rem); max-width: 444px; height: 58px;
+  background: rgba(18,22,36,.75);
+  backdrop-filter: blur(28px) saturate(1.8); -webkit-backdrop-filter: blur(28px) saturate(1.8);
+  border: 1px solid rgba(255,255,255,.09); border-radius: 22px;
+  display: flex; align-items: center; padding: 0 .4rem;
+  box-shadow: 0 8px 32px rgba(0,0,0,.5), inset 0 1px 0 rgba(255,255,255,.06);
+}
+.bnav-item {
+  flex: 1; display: flex; flex-direction: column; align-items: center;
+  justify-content: center; gap: .15rem; cursor: pointer;
+  color: var(--muted); padding: .45rem .1rem; border-radius: 14px;
+  transition: color .18s, background .18s; text-decoration: none;
+  font-family: var(--bn); position: relative;
+}
+.bnav-item.active { color: var(--primary); }
+.bnav-item.active::before {
+  content:''; position:absolute; top:3px;
+  width:20px; height:3px; border-radius:2px;
+  background: var(--primary); box-shadow: 0 0 8px var(--primary);
+}
+.bnav-item:hover:not(.active) { color: var(--soft); background: rgba(255,255,255,.04); }
+.bnav-icon  { font-size: 1.2rem; line-height: 1; }
+.bnav-label { font-size: .58rem; font-weight: 600; letter-spacing: .02em; white-space: nowrap; }
+
+/* ══════════════════════════════════════
+   PAYMENT MODAL (bottom sheet)
+══════════════════════════════════════ */
+.modal-overlay {
+  display: none; position: fixed; inset: 0; z-index: 700;
+  background: rgba(0,0,0,.78); backdrop-filter: blur(10px);
+  align-items: flex-end; justify-content: center;
+}
+.modal-overlay.show { display: flex; animation: fadeOv .2s ease; }
+@keyframes fadeOv { from{opacity:0} to{opacity:1} }
+
+.modal-sheet {
+  background: var(--surface); border: 1px solid var(--border2);
+  border-radius: 24px 24px 0 0; width: 100%; max-width: 480px;
+  padding: 1.5rem 1.4rem 2.2rem; position: relative;
+  box-shadow: 0 -16px 60px rgba(0,0,0,.5);
+  animation: slideUp .3s cubic-bezier(.34,1.3,.64,1) both;
+  max-height: 92vh; overflow-y: auto;
+}
+@keyframes slideUp { from{transform:translateY(100%)} to{transform:translateY(0)} }
+
+.sheet-handle {
+  width: 40px; height: 4px; background: var(--border2);
+  border-radius: 2px; margin: 0 auto .9rem;
+}
+.sheet-close {
+  position: absolute; top: 1rem; right: 1rem;
+  width: 30px; height: 30px; border-radius: 8px;
+  background: var(--card); border: 1px solid var(--border);
+  color: var(--muted); display: flex; align-items: center; justify-content: center;
+  font-size: .85rem; cursor: pointer; transition: background .2s;
+}
+.sheet-close:hover { background: var(--border2); color: var(--ink); }
+.sheet-title  { font-family: var(--en); font-size: 1.05rem; font-weight: 800; margin-bottom: .25rem; }
+.sheet-sub    { font-size: .82rem; color: var(--muted); margin-bottom: .9rem; }
+
+/* amount row */
+.pay-amount-row {
+  display: flex; align-items: center; justify-content: space-between;
+  background: var(--card); border: 1px solid var(--border2);
+  border-radius: 12px; padding: .8rem 1rem;
+  margin-bottom: 1.1rem;
+}
+.pay-amount-label { font-size: .8rem; color: var(--muted); }
+.pay-amount-val   { font-family: var(--en); font-size: 1.3rem; font-weight: 800; color: var(--amber); }
+
+/* method buttons */
+.pay-methods-label { font-size: .78rem; color: var(--soft); margin-bottom: .55rem; font-weight: 600; }
+.pay-methods { display: flex; gap: .55rem; margin-bottom: 1rem; flex-wrap: wrap; }
+.pay-method-btn {
+  display: flex; flex-direction: column; align-items: center; gap: .25rem;
+  background: var(--card); border: 1.5px solid var(--border2);
+  border-radius: 12px; padding: .7rem 1rem; cursor: pointer;
+  transition: border-color .18s, background .18s;
+  min-width: 72px;
+}
+.pay-method-btn:hover { border-color: var(--primary); }
+.pay-method-btn.selected { border-color: var(--primary); background: rgba(67,97,238,.1); }
+.pay-method-icon { font-size: 1.5rem; }
+.pay-method-name { font-size: .72rem; font-weight: 700; color: var(--soft); font-family: var(--en); }
+
+/* instruction box */
+.pay-instruction {
+  display: none; background: rgba(67,97,238,.07);
+  border: 1px solid rgba(67,97,238,.18);
+  border-radius: 12px; padding: .85rem 1rem;
+  margin-bottom: 1rem;
+}
+.pay-instruction.show { display: block; animation: fadeUp .25s ease; }
+.pay-inst-row { display: flex; align-items: center; gap: .55rem; margin-bottom: .45rem; }
+.pay-inst-label { font-size: .72rem; color: var(--muted); flex-shrink: 0; }
+.pay-number {
+  font-family: var(--en); font-size: .92rem; font-weight: 800; color: var(--ink);
+  flex: 1; word-break: break-all;
+}
+.pay-copy-btn {
+  background: rgba(67,97,238,.18); color: #818CF8;
+  border: 1px solid rgba(67,97,238,.25);
+  border-radius: 7px; font-size: .7rem; font-weight: 700;
+  padding: .25rem .65rem; flex-shrink: 0; cursor: pointer;
+  transition: background .18s;
+}
+.pay-copy-btn:hover { background: rgba(67,97,238,.3); }
+.pay-inst-note { font-size: .77rem; color: var(--soft); }
+
+/* input */
+.pay-input-label { font-size: .78rem; color: var(--soft); font-weight: 600; display: block; margin-bottom: .4rem; }
+.pay-input {
+  width: 100%; padding: .72rem 1rem;
+  background: var(--card); border: 1.5px solid var(--border2);
+  border-radius: 10px; color: var(--ink);
+  font-size: .88rem; font-family: var(--en);
+  outline: none; margin-bottom: 1rem; transition: border-color .2s;
+}
+.pay-input:focus { border-color: var(--primary); }
+.pay-input::placeholder { color: var(--muted); }
+
+/* submit */
+.btn-pay-submit {
+  width: 100%; padding: .78rem;
+  background: var(--primary); color: #fff;
+  border-radius: 11px; font-size: .9rem; font-weight: 700;
+  box-shadow: 0 4px 18px rgba(67,97,238,.35);
+  transition: background .18s, transform .15s;
+}
+.btn-pay-submit:hover { background: #3251d4; transform: translateY(-1px); }
+.btn-pay-submit:disabled { opacity: .5; cursor: not-allowed; transform: none; }
+
+/* msg */
+.sheet-msg {
+  margin-top: .75rem; padding: .55rem 1rem;
+  border-radius: 8px; font-size: .82rem; text-align: center; display: none;
+}
+.sheet-msg.ok  { background: rgba(6,214,160,.1);  color: var(--cyan);   border: 1px solid rgba(6,214,160,.2);  display: block; }
+.sheet-msg.err { background: rgba(251,86,7,.1);   color: #fb8c5a;       border: 1px solid rgba(251,86,7,.2);   display: block; }
+
+/* ── ANIMATIONS ───────────────────────── */
+@keyframes fadeUp { from{opacity:0;transform:translateY(10px)} to{opacity:1;transform:translateY(0)} }
+</style>
+</head>
+<body>
+
+<!-- LOADER -->
+<div id="pageLoader">
+  <div class="ld-logo" id="ldInitial">L</div>
+  <div class="ld-bar"><div class="ld-fill"></div></div>
+</div>
+
+<!-- TOP BAR -->
+<header class="topbar">
+  <div class="topbar-left">
+    <a class="back-btn" href="home.html">←</a>
+    <span class="topbar-title">📚 সকল কোর্স</span>
+    <span class="course-count-badge" id="countBadge"></span>
+  </div>
+</header>
+
+<!-- BODY -->
+<div class="scroll-body">
+
+  <!-- Search -->
+  <div class="search-wrap">
+    <span class="search-icon">🔍</span>
+    <input class="search-input" id="searchInput"
+           placeholder="কোর্স, ক্যাটাগরি বা instructor খুঁজুন..."
+           oninput="onSearch(this)"/>
+    <div class="search-clear" id="searchClear" onclick="clearSearch()">✕</div>
+  </div>
+
+  <!-- Category filter tabs -->
+  <div class="cat-tabs" id="catTabs">
+    <button class="cat-btn active" data-cat="all" onclick="setCat(this)">সব</button>
+    <!-- Dynamic categories injected by JS -->
+  </div>
+
+  <!-- Sort row -->
+  <div class="sort-row">
+    <span class="sort-count" id="sortCount">লোড হচ্ছে...</span>
+    <select class="sort-select" id="sortSelect" onchange="applySort()">
+      <option value="newest">নতুন আগে</option>
+      <option value="oldest">পুরনো আগে</option>
+      <option value="price-low">কম দাম</option>
+      <option value="price-high">বেশি দাম</option>
+      <option value="rating">সেরা রেটিং</option>
+      <option value="free">শুধু ফ্রি</option>
+    </select>
+  </div>
+
+  <!-- Course grid -->
+  <div class="course-grid" id="courseGrid">
+    <div class="sk-card"><div class="sk-line full"></div><div class="sk-body"><div class="sk-line w85"></div><div class="sk-line w65"></div><div class="sk-line w45"></div></div></div>
+    <div class="sk-card"><div class="sk-line full"></div><div class="sk-body"><div class="sk-line w85"></div><div class="sk-line w65"></div></div></div>
+    <div class="sk-card"><div class="sk-line full"></div><div class="sk-body"><div class="sk-line w85"></div><div class="sk-line w65"></div><div class="sk-line w45"></div></div></div>
+  </div>
+
+</div>
+
+<!-- BOTTOM NAV -->
+<nav class="bnav">
+  <a class="bnav-item" href="home.html">
+    <span class="bnav-icon">🏠</span>
+    <span class="bnav-label">হোম</span>
+  </a>
+  <a class="bnav-item active" href="allcourse.html">
+    <span class="bnav-icon">📚</span>
+    <span class="bnav-label">সকল কোর্স</span>
+  </a>
+  <a class="bnav-item" href="mycourse.html">
+    <span class="bnav-icon">🎓</span>
+    <span class="bnav-label">আমার কোর্স</span>
+  </a>
+  <a class="bnav-item" href="notish.html">
+    <span class="bnav-icon">📢</span>
+    <span class="bnav-label">নোটিশ</span>
+  </a>
+</nav>
+
+<!-- ══════════════════════════════════
+     PAYMENT MODAL (bottom sheet)
+══════════════════════════════════ -->
+<div class="modal-overlay" id="payOverlay" onclick="closePayModal(event)">
+  <div class="modal-sheet" id="paySheet">
+    <div class="sheet-handle"></div>
+    <button class="sheet-close" onclick="closePayModal(null,true)">✕</button>
+
+    <div class="sheet-title">💳 পেমেন্ট করুন</div>
+    <div class="sheet-sub" id="payCourseName">—</div>
+
+    <div class="pay-amount-row">
+      <span class="pay-amount-label">কোর্স ফি</span>
+      <span class="pay-amount-val" id="payAmountVal">৳0</span>
+    </div>
+
+    <div class="pay-methods-label">পেমেন্ট মেথড বেছে নিন</div>
+    <div class="pay-methods" id="payMethods"></div>
+
+    <div class="pay-instruction" id="payInstruction">
+      <div class="pay-inst-row">
+        <span class="pay-inst-label" id="payInstLabel">নম্বরে পাঠান</span>
+        <span class="pay-number" id="payNumber">—</span>
+        <button class="pay-copy-btn" onclick="copyNumber()">Copy</button>
+      </div>
+      <div class="pay-inst-note" id="payInstNote">উপরের নম্বরে Send Money করুন, তারপর TrxID দিন।</div>
+    </div>
+
+    <label class="pay-input-label">Transaction ID (TrxID)</label>
+    <input class="pay-input" id="payTrxInput" placeholder="যেমন: 8N3K2X1A9B"/>
+
+    <button class="btn-pay-submit" id="btnPaySubmit" onclick="submitPayment()">✅ পেমেন্ট নিশ্চিত করুন</button>
+    <div class="sheet-msg" id="payMsg"></div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════
+     FIREBASE LOGIC
+══════════════════════════════════ -->
+<script>
+firebase.initializeApp(LMS_CONFIG.firebase);
+const auth = firebase.auth();
+const db   = firebase.firestore();
+
+/* ── State ─────────────────────────── */
+let currentUser     = null;
+let userDoc         = null;
+let allCourses      = [];     // full list from Firestore
+let displayedCourses= [];     // after filter/sort
+let paymentMethods  = [];
+let activePayCourse = null;
+let pendingCourseIds= new Set();
+let activeCategory  = 'all';
+let activeSort      = 'newest';
+let searchQuery     = '';
+
+const GRADIENTS = ['g1','g2','g3','g4','g5','g6'];
+
+/* ── Auth ──────────────────────────── */
+auth.onAuthStateChanged(async user => {
+  if (!user) { window.location.href = 'index.html'; return; }
+  currentUser = user;
+
+  const snap = await db.collection('users').doc(user.uid).get();
+  userDoc = snap.exists ? snap.data() : { name: user.displayName||'Student', enrolledCourses:[] };
+
+  await loadSiteSettings();
+  await Promise.all([loadAllCourses(), loadPending()]);
+  document.getElementById('pageLoader').classList.add('gone');
+});
+
+/* ── Site Settings ─────────────────── */
+async function loadSiteSettings() {
+  try {
+    const snap = await db.collection('siteSettings').doc('main').get();
+    if (!snap.exists) return;
+    const s = snap.data();
+    document.getElementById('ldInitial').textContent = (s.appName||'L')[0].toUpperCase();
+    if (s.faviconUrl)    document.getElementById('favicon').href = s.faviconUrl;
+    if (s.primaryColor)  document.documentElement.style.setProperty('--primary', s.primaryColor);
+    if (s.paymentMethods && Array.isArray(s.paymentMethods)) paymentMethods = s.paymentMethods;
+  } catch(e) { console.warn('Settings:', e); }
+}
+
+/* ── Load Pending Payments ─────────── */
+async function loadPending() {
+  try {
+    const snap = await db.collection('payments')
+      .where('userId','==',currentUser.uid)
+      .where('status','==','pending').get();
+    snap.forEach(doc => pendingCourseIds.add(doc.data().courseId));
+  } catch(e) { console.warn('Pending:', e); }
+}
+
+/* ── Load All Courses ──────────────── */
+async function loadAllCourses() {
+  try {
+    const [coursesSnap, progressSnap] = await Promise.all([
+      db.collection('courses').where('published','==',true).orderBy('createdAt','desc').get(),
+      db.collection('userProgress').doc(currentUser.uid).collection('courses').get()
+    ]);
+
+    const progressMap = {};
+    progressSnap.forEach(d => { progressMap[d.id] = d.data().progress || 0; });
+
+    allCourses = [];
+    coursesSnap.forEach(doc => {
+      allCourses.push({ id: doc.id, ...doc.data(), _prog: progressMap[doc.id] || 0 });
+    });
+
+    /* count badge */
+    const badge = document.getElementById('countBadge');
+    badge.textContent = allCourses.length;
+    badge.classList.add('show');
+
+    /* build category tabs */
+    buildCatTabs();
+
+    applyFilterSort();
+  } catch(e) {
+    console.warn('Courses:', e);
+    document.getElementById('courseGrid').innerHTML =
+      `<div class="empty-state"><div class="empty-icon">⚠️</div><div class="empty-title">লোড হয়নি</div><div class="empty-desc">ইন্টারনেট চেক করুন।</div></div>`;
+  }
+}
+
+/* ── Build Category Tabs ───────────── */
+function buildCatTabs() {
+  const cats = [...new Set(allCourses.map(c => c.category).filter(Boolean))];
+  const tabsEl = document.getElementById('catTabs');
+  const extra = cats.map(c =>
+    `<button class="cat-btn" data-cat="${esc(c)}" onclick="setCat(this)">${esc(c)}</button>`
+  ).join('');
+  tabsEl.innerHTML =
+    `<button class="cat-btn active" data-cat="all" onclick="setCat(this)">সব</button>${extra}`;
+}
+
+/* ── Set Category ──────────────────── */
+function setCat(btn) {
+  document.querySelectorAll('.cat-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  activeCategory = btn.dataset.cat;
+  applyFilterSort();
+}
+
+/* ── Search ────────────────────────── */
+function onSearch(input) {
+  searchQuery = input.value.trim();
+  document.getElementById('searchClear').classList.toggle('show', searchQuery.length > 0);
+  applyFilterSort();
+}
+function clearSearch() {
+  document.getElementById('searchInput').value = '';
+  searchQuery = '';
+  document.getElementById('searchClear').classList.remove('show');
+  applyFilterSort();
+}
+
+/* ── Sort ──────────────────────────── */
+function applySort() {
+  activeSort = document.getElementById('sortSelect').value;
+  applyFilterSort();
+}
+
+/* ── Master filter + sort + render ─── */
+function applyFilterSort() {
+  const q = searchQuery.toLowerCase();
+  let list = allCourses.filter(c => {
+    const matchCat  = activeCategory === 'all' || (c.category||'') === activeCategory;
+    const matchQ    = !q ||
+      (c.title||'').toLowerCase().includes(q) ||
+      (c.category||'').toLowerCase().includes(q) ||
+      (c.instructor||'').toLowerCase().includes(q) ||
+      (c.description||'').toLowerCase().includes(q);
+    return matchCat && matchQ;
+  });
+
+  /* sort */
+  const sort = activeSort;
+  if (sort === 'newest')    list = [...list]; // already newest-first
+  else if (sort === 'oldest')   list = [...list].reverse();
+  else if (sort === 'price-low')  list = [...list].sort((a,b) => (a.price||0)-(b.price||0));
+  else if (sort === 'price-high') list = [...list].sort((a,b) => (b.price||0)-(a.price||0));
+  else if (sort === 'rating') list = [...list].sort((a,b) => (b.avgRating||0)-(a.avgRating||0));
+  else if (sort === 'free')   list = list.filter(c => !(c.price > 0));
+
+  displayedCourses = list;
+  document.getElementById('sortCount').textContent = `${list.length}টি কোর্স পাওয়া গেছে`;
+  renderCourses(list);
+}
+
+/* ── Render ────────────────────────── */
+function renderCourses(list) {
+  const el = document.getElementById('courseGrid');
+  if (!list.length) {
+    el.innerHTML = `<div class="empty-state">
+      <div class="empty-icon">📭</div>
+      <div class="empty-title">কোনো কোর্স পাওয়া যায়নি</div>
+      <div class="empty-desc">${searchQuery ? 'অনুসন্ধান পরিবর্তন করুন।' : 'এই ক্যাটাগরিতে কোনো কোর্স নেই।'}</div>
+    </div>`;
+    return;
+  }
+  el.innerHTML = list.map((c,i) => courseCardHTML(c,i)).join('');
+}
+
+/* ── Course Card HTML ──────────────── */
+function courseCardHTML(c, i) {
+  const enrolled = (userDoc.enrolledCourses||[]).includes(c.id);
+  const pending  = pendingCourseIds.has(c.id);
+  const isPaid   = (c.price||0) > 0;
+  const prog     = enrolled ? (c._prog||0) : 0;
+  const g        = GRADIENTS[i % GRADIENTS.length];
+  const lessons  = c.totalLessons || c.lessons || 0;
+  const avg      = c.avgRating ? parseFloat(c.avgRating).toFixed(1) : null;
+
+  /* thumb */
+  const thumbInner = c.thumbnailUrl
+    ? `<img src="${esc(c.thumbnailUrl)}" alt="${esc(c.title)}" loading="lazy"/>`
+    : `📚`;
+
+  /* chips on thumb */
+  const enrolledChip = enrolled ? `<span class="enrolled-chip">✅ এনরোল্ড</span>` : '';
+  const pendingChip  = pending  ? `<span class="pending-chip">⏳ যাচাই হচ্ছে</span>` : '';
+
+  /* price badge */
+  const priceBadge = isPaid
+    ? `<span class="price-badge price-paid">💰 ৳${c.price}</span>`
+    : `<span class="price-badge price-free">✦ Free</span>`;
+
+  /* rating */
+  const ratingHTML = avg ? `
+    <div class="rating-row">
+      <div class="stars-display">${starsHtml(parseFloat(avg))}</div>
+      <span class="rating-count">${avg} (${c.totalRatings||0})</span>
+    </div>` : '';
+
+  /* progress (only if enrolled) */
+  const progressHTML = enrolled ? `
+    <div class="progress-wrap">
+      <div class="progress-top">
+        <span class="prog-label">অগ্রগতি</span>
+        <span class="prog-pct">${prog}%</span>
+      </div>
+      <div class="progress-bar">
+        <div class="progress-fill ${prog>=100?'done':''}" style="width:${prog}%"></div>
+      </div>
+    </div>` : '';
+
+  /* action button */
+  let actionBtn = '';
+  if (enrolled) {
+    if (prog >= 100)
+      actionBtn = `<button class="btn-action btn-done">✓ সম্পন্ন হয়েছে</button>`;
+    else
+      actionBtn = `<button class="btn-action btn-continue" onclick="event.stopPropagation();window.location.href='course.html?id=${c.id}'">▶ চালিয়ে যান</button>`;
+  } else if (pending) {
+    actionBtn = `<button class="btn-action btn-pending">⏳ যাচাই হচ্ছে...</button>`;
+  } else if (isPaid) {
+    actionBtn = `<button class="btn-action btn-paid" onclick="event.stopPropagation();openPayModal('${c.id}')">💳 ৳${c.price} — ভর্তি হন</button>`;
+  } else {
+    actionBtn = `<button class="btn-action btn-enroll" id="eb-${c.id}" onclick="event.stopPropagation();enrollCourse('${c.id}')">✅ বিনামূল্যে এনরোল করুন</button>`;
+  }
+
+  return `
+  <div class="course-card" onclick="window.location.href='course.html?id=${c.id}'">
+    <div class="course-thumb ${c.thumbnailUrl?'':g}">
+      ${thumbInner}
+      <div class="thumb-badges">
+        <span class="cat-badge">${esc(c.category||'General')}</span>
+        <div>${enrolledChip}${pendingChip}</div>
+      </div>
+    </div>
+    <div class="course-body">
+      ${priceBadge}
+      <div class="course-title">${esc(c.title)}</div>
+      ${c.description ? `<div class="course-desc">${esc(c.description)}</div>` : ''}
+      <div class="course-meta-row">
+        <span>👨‍🏫 ${esc(c.instructor||'Admin')}</span>
+        <span>📹 ${lessons} লেসন</span>
+        ${c.duration ? `<span>⏱ ${esc(c.duration)}</span>` : ''}
+        ${c.level    ? `<span>📊 ${esc(c.level)}</span>`    : ''}
+      </div>
+      ${ratingHTML}
+      ${progressHTML}
+      ${actionBtn}
+    </div>
+  </div>`;
+}
+
+/* ── Stars HTML ────────────────────── */
+function starsHtml(avg) {
+  let html = '';
+  for (let i = 1; i <= 5; i++)
+    html += i <= Math.round(avg)
+      ? `<span class="star-f">★</span>`
+      : `<span class="star-e">★</span>`;
+  return html;
+}
+
+/* ── Free Enroll ───────────────────── */
+async function enrollCourse(courseId) {
+  const btn = document.getElementById('eb-' + courseId);
+  if (btn) { btn.disabled = true; btn.textContent = 'হচ্ছে...'; }
+  try {
+    await db.collection('users').doc(currentUser.uid).set({
+      enrolledCourses: firebase.firestore.FieldValue.arrayUnion(courseId)
+    }, { merge: true });
+    userDoc.enrolledCourses = [...(userDoc.enrolledCourses||[]), courseId];
+    applyFilterSort(); // re-render
+  } catch(e) {
+    alert('এনরোল করা যায়নি, আবার চেষ্টা করুন।');
+    if (btn) { btn.disabled = false; btn.textContent = '✅ বিনামূল্যে এনরোল করুন'; }
+  }
+}
+
+/* ══════════════════════════════════
+   PAYMENT MODAL
+══════════════════════════════════ */
+function openPayModal(courseId) {
+  const course = allCourses.find(c => c.id === courseId);
+  if (!course) return;
+  activePayCourse = course;
+
+  document.getElementById('payCourseName').textContent = course.title;
+  document.getElementById('payAmountVal').textContent  = '৳' + (course.price||0);
+  document.getElementById('payTrxInput').value = '';
+  document.getElementById('payInstruction').classList.remove('show');
+  document.getElementById('payMsg').className = 'sheet-msg';
+  document.getElementById('payMsg').textContent = '';
+
+  const methods = paymentMethods.length ? paymentMethods : [
+    { name:'bKash',  icon:'🟣', number:'01XXXXXXXXX', note:'Send Money করুন' },
+    { name:'Nagad',  icon:'🟠', number:'01XXXXXXXXX', note:'Send Money করুন' },
+    { name:'Rocket', icon:'🟤', number:'01XXXXXXXXX', note:'Send Money করুন' },
+  ];
+  document.getElementById('payMethods').innerHTML = methods.map((m,i) =>
+    `<button class="pay-method-btn" onclick="selectMethod(${i})" id="pm-${i}">
+      <span class="pay-method-icon">${m.icon||'💳'}</span>
+      <span class="pay-method-name">${m.name}</span>
+    </button>`
+  ).join('');
+
+  document.getElementById('payOverlay').classList.add('show');
+  document.body.style.overflow = 'hidden';
+}
+
+function closePayModal(event, force) {
+  if (!force && event && document.getElementById('paySheet').contains(event.target)) return;
+  document.getElementById('payOverlay').classList.remove('show');
+  document.body.style.overflow = '';
+  activePayCourse = null;
+}
+
+function selectMethod(idx) {
+  document.querySelectorAll('.pay-method-btn').forEach((b,i) =>
+    b.classList.toggle('selected', i === idx));
+  const methods = paymentMethods.length ? paymentMethods : [
+    { name:'bKash',  icon:'🟣', number:'01XXXXXXXXX', note:'Send Money করুন' },
+    { name:'Nagad',  icon:'🟠', number:'01XXXXXXXXX', note:'Send Money করুন' },
+    { name:'Rocket', icon:'🟤', number:'01XXXXXXXXX', note:'Send Money করুন' },
+  ];
+  const m = methods[idx];
+  document.getElementById('payInstLabel').textContent = m.name + ' নম্বর';
+  document.getElementById('payNumber').textContent    = m.number || '—';
+  document.getElementById('payInstNote').textContent  = m.note   || 'Send Money করুন, TrxID দিন।';
+  document.getElementById('payInstruction').classList.add('show');
+}
+
+function copyNumber() {
+  const num = document.getElementById('payNumber').textContent;
+  navigator.clipboard.writeText(num).then(() => {
+    const btn = document.querySelector('.pay-copy-btn');
+    btn.textContent = 'Copied!';
+    setTimeout(() => btn.textContent = 'Copy', 1800);
+  });
+}
+
+async function submitPayment() {
+  const trx = document.getElementById('payTrxInput').value.trim();
+  const btn = document.getElementById('btnPaySubmit');
+  if (!activePayCourse) return;
+  if (!trx) { showMsg('payMsg','err','❌ Transaction ID দিন'); return; }
+  const sel = document.querySelector('.pay-method-btn.selected');
+  if (!sel) { showMsg('payMsg','err','❌ পেমেন্ট মেথড বেছে নিন'); return; }
+  const methodName = sel.querySelector('.pay-method-name').textContent;
+
+  btn.disabled = true; btn.textContent = 'জমা হচ্ছে...';
+  try {
+    await db.collection('payments').add({
+      userId:        currentUser.uid,
+      userName:      userDoc.name || currentUser.displayName || '',
+      userPhone:     userDoc.phone || '',
+      courseId:      activePayCourse.id,
+      courseTitle:   activePayCourse.title,
+      amount:        activePayCourse.price || 0,
+      method:        methodName,
+      transactionId: trx,
+      status:        'pending',
+      submittedAt:   firebase.firestore.FieldValue.serverTimestamp(),
+    });
+    pendingCourseIds.add(activePayCourse.id);
+    showMsg('payMsg','ok','✅ পেমেন্ট জমা হয়েছে! Admin যাচাই করলে এনরোল হবে।');
+    btn.textContent = '✓ জমা হয়েছে';
+    setTimeout(() => {
+      applyFilterSort();
+      closePayModal(null,true);
+      btn.disabled = false; btn.textContent = '✅ পেমেন্ট নিশ্চিত করুন';
+    }, 1800);
+  } catch(e) {
+    console.error(e);
+    showMsg('payMsg','err','❌ সমস্যা হয়েছে, আবার চেষ্টা করুন');
+    btn.disabled = false; btn.textContent = '✅ পেমেন্ট নিশ্চিত করুন';
+  }
+}
+
+/* ── Helpers ───────────────────────── */
+function showMsg(id, type, text) {
+  const el = document.getElementById(id);
+  el.className = 'sheet-msg ' + type;
+  el.textContent = text;
+}
+function esc(s) {
+  return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') closePayModal(null,true);
+});
+</script>
+</body>
+</html>
