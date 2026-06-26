@@ -1,0 +1,2635 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Admin Panel</title>
+<link rel="icon" id="favicon" href=""/>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Hind+Siliguri:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+<script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore-compat.js"></script>
+<!-- ⚠️ CONFIG — শুধু এই ফাইলটি পরিবর্তন করুন নতুন client এর জন্য -->
+<script src="config.js"></script>
+<style>
+/* ═══════════════════════════════════════
+   DESIGN TOKENS
+═══════════════════════════════════════ */
+:root {
+  --bg:        #080B12;
+  --surface:   #0E1220;
+  --card:      #121829;
+  --card2:     #161D2E;
+  --border:    rgba(255,255,255,.07);
+  --border2:   rgba(255,255,255,.13);
+  --ink:       #E8ECF8;
+  --muted:     #5A6480;
+  --soft:      #8892B0;
+  --primary:   #5865F2;
+  --primary-h: #4752C4;
+  --green:     #23D18B;
+  --amber:     #F0A500;
+  --rose:      #F04747;
+  --cyan:      #00BCD4;
+  --sidebar-w: 240px;
+  --topbar-h:  60px;
+  --font:      'Outfit', sans-serif;
+  --bn:        'Hind Siliguri', sans-serif;
+  --r:         12px;
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; }
+body { font-family: var(--font); background: var(--bg); color: var(--ink); min-height: 100vh; overflow-x: hidden; }
+a { text-decoration: none; color: inherit; }
+button { font-family: var(--font); cursor: pointer; }
+
+/* ═══════════════════════════════════════
+   LOADER
+═══════════════════════════════════════ */
+#loader {
+  position: fixed; inset: 0; z-index: 9999;
+  background: var(--bg);
+  display: flex; align-items: center; justify-content: center;
+  flex-direction: column; gap: 1.2rem;
+  transition: opacity .4s, visibility .4s;
+}
+#loader.gone { opacity: 0; visibility: hidden; }
+.ld-ring {
+  width: 44px; height: 44px;
+  border: 3px solid rgba(88,101,242,.2);
+  border-top-color: var(--primary);
+  border-radius: 50%;
+  animation: spin .75s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+.ld-text { font-size: .82rem; color: var(--muted); font-weight: 500; }
+
+/* ═══════════════════════════════════════
+   LAYOUT
+═══════════════════════════════════════ */
+.shell { display: flex; min-height: 100vh; }
+
+/* ═══════════════════════════════════════
+   SIDEBAR
+═══════════════════════════════════════ */
+.sidebar {
+  width: var(--sidebar-w); height: 100vh;
+  position: fixed; top: 0; left: 0; z-index: 300;
+  background: var(--surface);
+  border-right: 1px solid var(--border);
+  display: flex; flex-direction: column;
+  transition: transform .28s cubic-bezier(.4,0,.2,1);
+}
+.sb-top {
+  display: flex; align-items: center; gap: .7rem;
+  padding: 1rem 1.1rem; min-height: var(--topbar-h);
+  border-bottom: 1px solid var(--border);
+}
+.sb-logo {
+  width: 32px; height: 32px; border-radius: 8px;
+  background: var(--primary); flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  font-weight: 800; font-size: .9rem;
+}
+.sb-logo img { width: 32px; height: 32px; border-radius: 8px; object-fit: cover; }
+.sb-app-name { font-size: .9rem; font-weight: 700; }
+.sb-admin-tag {
+  margin-left: auto;
+  background: rgba(88,101,242,.2); color: #818CF8;
+  font-size: .6rem; font-weight: 700; letter-spacing: .06em;
+  padding: .2rem .5rem; border-radius: 20px; text-transform: uppercase;
+}
+
+.sb-nav { flex: 1; padding: .8rem .7rem; overflow-y: auto; }
+.sb-group-label {
+  font-size: .65rem; font-weight: 700; letter-spacing: .1em;
+  text-transform: uppercase; color: var(--muted);
+  padding: .5rem .5rem .3rem; margin-top: .5rem;
+}
+.sb-btn {
+  display: flex; align-items: center; gap: .7rem;
+  width: 100%; padding: .6rem .8rem; border-radius: 9px;
+  background: none; border: none; color: var(--soft);
+  font-size: .85rem; font-weight: 500; text-align: left;
+  transition: all .15s; margin-bottom: 2px;
+}
+.sb-btn:hover { background: rgba(255,255,255,.05); color: var(--ink); }
+.sb-btn.active { background: rgba(88,101,242,.15); color: var(--primary); font-weight: 600; }
+.sb-btn .ico { font-size: .95rem; width: 18px; text-align: center; flex-shrink: 0; }
+.sb-count {
+  margin-left: auto; background: var(--rose);
+  color: #fff; font-size: .6rem; font-weight: 700;
+  padding: .15rem .42rem; border-radius: 20px;
+}
+
+.sb-footer {
+  padding: .8rem; border-top: 1px solid var(--border);
+}
+.sb-user-card {
+  display: flex; align-items: center; gap: .7rem;
+  padding: .7rem .9rem; background: var(--card);
+  border: 1px solid var(--border); border-radius: 10px;
+  margin-bottom: .5rem;
+}
+.sb-avatar {
+  width: 32px; height: 32px; border-radius: 50%;
+  background: linear-gradient(135deg,var(--primary),var(--cyan));
+  display: flex; align-items: center; justify-content: center;
+  font-weight: 800; font-size: .82rem; flex-shrink: 0;
+}
+.sb-uname { font-size: .8rem; font-weight: 600; }
+.sb-urole { font-size: .68rem; color: var(--muted); }
+.sb-logout {
+  width: 100%; padding: .52rem;
+  background: rgba(240,71,71,.08); border: 1px solid rgba(240,71,71,.18);
+  color: #F08080; border-radius: 9px; font-size: .78rem; font-weight: 600;
+  transition: background .2s;
+}
+.sb-logout:hover { background: rgba(240,71,71,.18); }
+
+/* overlay mobile */
+.sb-overlay {
+  display: none; position: fixed; inset: 0; z-index: 299;
+  background: rgba(0,0,0,.6); backdrop-filter: blur(3px);
+}
+.sb-overlay.show { display: block; }
+
+/* ═══════════════════════════════════════
+   TOPBAR
+═══════════════════════════════════════ */
+.topbar {
+  position: fixed; top: 0;
+  left: var(--sidebar-w); right: 0; z-index: 200;
+  height: var(--topbar-h);
+  background: rgba(8,11,18,.85); backdrop-filter: blur(18px);
+  border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 0 1.8rem;
+}
+.topbar-left { display: flex; align-items: center; gap: .8rem; }
+.hamburger {
+  display: none; background: none; border: none;
+  color: var(--ink); font-size: 1.25rem; padding: .25rem;
+}
+.topbar-title { font-size: 1rem; font-weight: 700; }
+.topbar-right { display: flex; align-items: center; gap: .6rem; }
+.tb-badge {
+  padding: .3rem .8rem; border-radius: 20px;
+  background: rgba(88,101,242,.15); color: #818CF8;
+  font-size: .72rem; font-weight: 700;
+  border: 1px solid rgba(88,101,242,.25);
+}
+
+/* ═══════════════════════════════════════
+   MAIN
+═══════════════════════════════════════ */
+.main {
+  margin-left: var(--sidebar-w);
+  padding-top: var(--topbar-h);
+  min-height: 100vh; flex: 1;
+}
+.content { padding: 1.8rem; max-width: 1300px; }
+
+/* pages */
+.page { display: none; animation: fadeUp .3s ease; }
+.page.active { display: block; }
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(10px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ═══════════════════════════════════════
+   PAGE HEADER
+═══════════════════════════════════════ */
+.ph {
+  display: flex; align-items: flex-start;
+  justify-content: space-between; flex-wrap: wrap;
+  gap: 1rem; margin-bottom: 1.8rem;
+}
+.ph-left h1 { font-size: 1.5rem; font-weight: 800; margin-bottom: .25rem; }
+.ph-left p { font-family: var(--bn); color: var(--muted); font-size: .85rem; }
+
+/* ═══════════════════════════════════════
+   STAT CARDS
+═══════════════════════════════════════ */
+.stat-row {
+  display: grid;
+  grid-template-columns: repeat(4,1fr);
+  gap: 1rem; margin-bottom: 1.8rem;
+}
+.sc {
+  background: var(--card); border: 1px solid var(--border);
+  border-radius: var(--r); padding: 1.25rem;
+  position: relative; overflow: hidden;
+  transition: border-color .2s, transform .18s;
+}
+.sc:hover { border-color: var(--border2); transform: translateY(-2px); }
+.sc::after {
+  content: attr(data-icon);
+  position: absolute; right: 1rem; bottom: .8rem;
+  font-size: 2.5rem; opacity: .08; pointer-events: none;
+}
+.sc-label { font-size: .7rem; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: .07em; margin-bottom: .5rem; }
+.sc-val { font-size: 2rem; font-weight: 800; line-height: 1; }
+.sc-sub { font-size: .72rem; color: var(--muted); margin-top: .3rem; font-family: var(--bn); }
+.sc.a .sc-val { color: var(--primary); }
+.sc.b .sc-val { color: var(--green); }
+.sc.c .sc-val { color: var(--amber); }
+.sc.d .sc-val { color: var(--cyan); }
+
+/* ═══════════════════════════════════════
+   TABLE
+═══════════════════════════════════════ */
+.table-wrap {
+  background: var(--card); border: 1px solid var(--border);
+  border-radius: var(--r); overflow: hidden; margin-bottom: 1.5rem;
+}
+table { width: 100%; border-collapse: collapse; }
+thead th {
+  padding: .75rem 1rem; text-align: left;
+  font-size: .7rem; font-weight: 700; letter-spacing: .06em;
+  text-transform: uppercase; color: var(--muted);
+  background: rgba(255,255,255,.02);
+  border-bottom: 1px solid var(--border);
+  white-space: nowrap;
+}
+tbody td {
+  padding: .8rem 1rem; font-size: .84rem;
+  border-bottom: 1px solid var(--border);
+  vertical-align: middle;
+}
+tbody tr:last-child td { border: none; }
+tbody tr:hover td { background: rgba(255,255,255,.02); }
+
+/* ═══════════════════════════════════════
+   BADGES
+═══════════════════════════════════════ */
+.badge {
+  display: inline-block; font-size: .68rem; font-weight: 700;
+  padding: .22rem .65rem; border-radius: 20px;
+}
+.badge-cyan   { background: rgba(0,188,212,.12);  color: var(--cyan);  border: 1px solid rgba(0,188,212,.2); }
+
+/* ═══════════════════════════════════════
+   PAYMENTS PAGE
+═══════════════════════════════════════ */
+.pay-filter-row {
+  display: flex; gap: .6rem; flex-wrap: wrap;
+  margin-bottom: 1.2rem;
+}
+.pay-filter-btn {
+  padding: .4rem 1rem; border-radius: 20px;
+  border: 1px solid var(--border2);
+  background: none; color: var(--soft);
+  font-size: .78rem; font-weight: 600;
+  font-family: var(--font); cursor: pointer;
+  transition: all .15s;
+}
+.pay-filter-btn:hover { border-color: var(--primary); color: var(--primary); }
+.pay-filter-btn.active { background: var(--primary); color: #fff; border-color: var(--primary); }
+
+.pay-stat-row {
+  display: grid; grid-template-columns: repeat(3,1fr);
+  gap: 1rem; margin-bottom: 1.5rem;
+}
+
+/* action buttons in payment table */
+.btn-verify {
+  background: rgba(35,209,139,.12); color: var(--green);
+  border: 1px solid rgba(35,209,139,.2);
+}
+.btn-verify:hover { background: var(--green); color: #0E1220; }
+.btn-reject {
+  background: rgba(240,71,71,.1); color: #F08080;
+  border: 1px solid rgba(240,71,71,.18);
+}
+.btn-reject:hover { background: rgba(240,71,71,.2); }
+
+/* ═══════════════════════════════════════
+   RATINGS
+═══════════════════════════════════════ */
+.rating-stars { display: flex; gap: 2px; }
+.rs-filled { color: var(--amber); font-size: .85rem; }
+.rs-empty  { color: var(--border2); font-size: .85rem; }
+.avg-badge {
+  display: inline-flex; align-items: center; gap: .3rem;
+  font-weight: 700; font-size: .82rem;
+  color: var(--amber);
+}
+.avg-count { font-size: .72rem; color: var(--muted); font-weight: 400; }
+
+.review-card {
+  background: var(--card2); border: 1px solid var(--border);
+  border-radius: 10px; padding: .9rem 1.1rem;
+  display: flex; justify-content: space-between; align-items: flex-start;
+  gap: 1rem;
+  animation: fadeIn .3s ease;
+}
+@keyframes fadeIn { from { opacity:0; transform:translateY(6px); } to { opacity:1; transform:translateY(0); } }
+.review-user { font-weight: 600; font-size: .88rem; margin-bottom: .2rem; }
+.review-text { font-size: .82rem; color: var(--soft); font-family: var(--bn); line-height: 1.5; }
+.review-date { font-size: .72rem; color: var(--muted); margin-top: .3rem; }
+
+/* ═══════════════════════════════════════
+   BUTTONS
+═══════════════════════════════════════ */
+.btn {
+  display: inline-flex; align-items: center; gap: .4rem;
+  padding: .55rem 1.2rem; border-radius: 9px; border: none;
+  font-size: .82rem; font-weight: 600; font-family: var(--font);
+  transition: all .18s; cursor: pointer;
+}
+.btn-primary { background: var(--primary); color: #fff; }
+.btn-primary:hover { background: var(--primary-h); transform: translateY(-1px); }
+.btn-green   { background: rgba(35,209,139,.15); color: var(--green); border: 1px solid rgba(35,209,139,.2); }
+.btn-green:hover { background: var(--green); color: #0E1220; }
+.btn-rose    { background: rgba(240,71,71,.1); color: #F08080; border: 1px solid rgba(240,71,71,.18); }
+.btn-rose:hover { background: rgba(240,71,71,.2); }
+.btn-ghost   { background: rgba(255,255,255,.06); color: var(--soft); border: 1px solid var(--border2); }
+.btn-ghost:hover { background: rgba(255,255,255,.1); color: var(--ink); }
+.btn-sm { padding: .35rem .75rem; font-size: .75rem; }
+.btn:disabled { opacity: .45; cursor: not-allowed; transform: none !important; }
+
+/* ═══════════════════════════════════════
+   COURSE ITEM (expanded rows)
+═══════════════════════════════════════ */
+.course-row-actions { display: flex; gap: .4rem; flex-wrap: wrap; }
+.course-expand-row {
+  background: var(--card2); display: none;
+}
+.course-expand-row.open { display: table-row; }
+.course-expand-inner {
+  padding: 1.2rem 1rem 1.4rem;
+}
+.lessons-header {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: .9rem;
+}
+.lessons-header h4 { font-size: .85rem; font-weight: 700; }
+.lesson-list { display: flex; flex-direction: column; gap: .5rem; }
+.lesson-item {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 9px; padding: .7rem 1rem;
+  display: flex; align-items: center; gap: .8rem;
+  transition: border-color .18s;
+}
+.lesson-item:hover { border-color: var(--border2); }
+.lesson-order {
+  width: 26px; height: 26px; border-radius: 50%;
+  background: rgba(88,101,242,.15); color: #818CF8;
+  display: flex; align-items: center; justify-content: center;
+  font-size: .72rem; font-weight: 800; flex-shrink: 0;
+}
+.lesson-title { font-size: .83rem; font-weight: 600; flex: 1; }
+.lesson-links { display: flex; gap: .4rem; margin-left: auto; }
+.lesson-link-badge {
+  display: inline-flex; align-items: center; gap: .25rem;
+  padding: .18rem .55rem; border-radius: 20px; font-size: .68rem; font-weight: 600;
+}
+.ll-yt  { background: rgba(255,0,0,.12); color: #FF6B6B; border: 1px solid rgba(255,0,0,.2); }
+.ll-pdf { background: rgba(35,209,139,.1); color: var(--green); border: 1px solid rgba(35,209,139,.2); }
+.lesson-del {
+  background: none; border: none; color: var(--muted);
+  cursor: pointer; font-size: .9rem; padding: .2rem;
+  transition: color .15s;
+}
+.lesson-del:hover { color: var(--rose); }
+
+/* ═══════════════════════════════════════
+   MODAL
+═══════════════════════════════════════ */
+.modal-bg {
+  position: fixed; inset: 0; z-index: 800;
+  background: rgba(0,0,0,.7); backdrop-filter: blur(6px);
+  display: none; align-items: center; justify-content: center;
+  padding: 1rem;
+}
+.modal-bg.open { display: flex; }
+.modal {
+  background: var(--card); border: 1px solid var(--border2);
+  border-radius: 18px; padding: 2rem; width: 100%;
+  max-width: 540px; max-height: 90vh; overflow-y: auto;
+  animation: popIn .25s cubic-bezier(.34,1.56,.64,1);
+}
+@keyframes popIn {
+  from { opacity: 0; transform: scale(.92); }
+  to   { opacity: 1; transform: scale(1); }
+}
+.modal-header {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 1.6rem;
+}
+.modal-header h3 { font-size: 1.1rem; font-weight: 800; }
+.modal-close {
+  background: none; border: none; color: var(--muted);
+  font-size: 1.3rem; cursor: pointer; transition: color .15s;
+  padding: .2rem; line-height: 1;
+}
+.modal-close:hover { color: var(--ink); }
+
+/* form */
+.fg { margin-bottom: 1.1rem; }
+.fg label {
+  display: block; font-size: .72rem; font-weight: 700;
+  color: var(--muted); margin-bottom: .4rem;
+  text-transform: uppercase; letter-spacing: .05em;
+}
+.fg input, .fg textarea, .fg select {
+  width: 100%; padding: .68rem .95rem;
+  background: var(--surface); border: 1.5px solid var(--border2);
+  border-radius: 9px; color: var(--ink);
+  font-size: .87rem; font-family: var(--font);
+  outline: none; transition: border-color .2s;
+}
+.fg input:focus, .fg textarea:focus, .fg select:focus { border-color: var(--primary); }
+.fg input::placeholder, .fg textarea::placeholder { color: var(--muted); }
+.fg textarea { resize: vertical; min-height: 80px; }
+.fg select option { background: var(--card); }
+.fg-row { display: grid; grid-template-columns: 1fr 1fr; gap: .8rem; }
+.fg-hint { font-size: .72rem; color: var(--muted); margin-top: .3rem; font-family: var(--bn); }
+.modal-footer { display: flex; gap: .7rem; justify-content: flex-end; margin-top: 1.5rem; }
+#modal-addCourse .modal { max-width: 580px; }
+#modal-addLesson .modal { max-width: 580px; }
+
+/* toggle switch */
+.edit-lesson-settings { margin-top: .5rem; padding-top: 1rem; border-top: 1px solid var(--border); }
+.edit-lesson-settings h4 { font-size: .85rem; font-weight: 700; margin-bottom: .8rem; font-family: var(--bn); }
+.edit-lesson-empty { font-size: .82rem; color: var(--muted); font-family: var(--bn); padding: .5rem 0; }
+.edit-lesson-row {
+  display: flex; align-items: center; justify-content: space-between; gap: 1rem;
+  padding: .65rem .75rem; background: var(--surface); border: 1px solid var(--border);
+  border-radius: 10px; margin-bottom: .5rem;
+}
+.edit-lesson-info { flex: 1; min-width: 0; }
+.edit-lesson-title { font-size: .82rem; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.edit-lesson-meta { display: flex; gap: .35rem; flex-wrap: wrap; margin-top: .25rem; }
+.toggle-wrap { display: flex; flex-direction: column; align-items: flex-end; gap: .35rem; flex-shrink: 0; }
+.toggle-switch {
+  position: relative; width: 44px; height: 24px; background: var(--border2);
+  border-radius: 20px; cursor: pointer; transition: background .2s;
+}
+.toggle-switch::after {
+  content: ''; position: absolute; top: 3px; left: 3px; width: 18px; height: 18px;
+  background: #fff; border-radius: 50%; transition: transform .2s;
+}
+.toggle-switch-input { position: absolute; opacity: 0; width: 0; height: 0; }
+.toggle-switch-input:checked + .toggle-switch { background: var(--green); }
+.toggle-switch-input:checked + .toggle-switch::after { transform: translateX(20px); }
+.toggle-switch-input:disabled + .toggle-switch { opacity: .35; cursor: not-allowed; }
+.toggle-label { font-size: .68rem; font-weight: 700; font-family: var(--bn); white-space: nowrap; }
+.toggle-label.mandatory { color: var(--green); }
+.toggle-label.optional { color: var(--amber); }
+
+/* quiz builder */
+.quiz-section { margin-top: .5rem; padding-top: 1rem; border-top: 1px solid var(--border); }
+.quiz-section-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: .8rem; }
+.quiz-section-head h4 { font-size: .85rem; font-weight: 700; font-family: var(--bn); }
+.quiz-question-block {
+  background: var(--surface); border: 1px solid var(--border); border-radius: 10px;
+  padding: .9rem; margin-bottom: .7rem;
+}
+.quiz-q-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: .6rem; }
+.quiz-q-head span { font-size: .72rem; font-weight: 700; color: var(--muted); }
+.quiz-opt-row { display: flex; align-items: center; gap: .5rem; margin-bottom: .45rem; }
+.quiz-opt-row input[type="text"] { flex: 1; }
+.quiz-opt-row input[type="radio"] { accent-color: var(--primary); flex-shrink: 0; }
+.ll-quiz { background: rgba(88,101,242,.12); color: #818CF8; border: 1px solid rgba(88,101,242,.2); }
+.ll-mand { background: rgba(35,209,139,.1); color: var(--green); border: 1px solid rgba(35,209,139,.2); }
+.ll-opt { background: rgba(240,165,0,.1); color: var(--amber); border: 1px solid rgba(240,165,0,.2); }
+
+/* toast */
+#toast {
+  position: fixed; bottom: 1.5rem; right: 1.5rem; z-index: 9000;
+  padding: .75rem 1.3rem; border-radius: 10px;
+  font-size: .85rem; font-weight: 600;
+  box-shadow: 0 4px 20px rgba(0,0,0,.4);
+  transform: translateY(80px); opacity: 0;
+  transition: all .3s cubic-bezier(.34,1.56,.64,1);
+  pointer-events: none;
+}
+#toast.show { transform: translateY(0); opacity: 1; }
+#toast.ok   { background: rgba(35,209,139,.15); color: var(--green); border: 1px solid rgba(35,209,139,.3); }
+#toast.err  { background: rgba(240,71,71,.15);  color: #F08080;      border: 1px solid rgba(240,71,71,.3); }
+
+/* auth msg */
+.msg {
+  padding: .55rem .9rem; border-radius: 8px;
+  font-size: .8rem; font-family: var(--bn);
+  margin-top: .7rem; display: none;
+}
+.msg.ok  { background: rgba(35,209,139,.1); color: var(--green); display: block; }
+.msg.err { background: rgba(240,71,71,.1);  color: #F08080;      display: block; }
+
+/* ═══════════════════════════════════════
+   SETTINGS PAGE
+═══════════════════════════════════════ */
+.settings-grid {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 1.2rem;
+}
+.settings-card {
+  background: var(--card); border: 1px solid var(--border);
+  border-radius: var(--r); padding: 1.5rem;
+}
+.settings-card h3 {
+  font-size: .88rem; font-weight: 700; margin-bottom: .25rem;
+}
+.settings-card p {
+  font-size: .78rem; color: var(--muted); font-family: var(--bn);
+  margin-bottom: 1.2rem;
+}
+.color-preview {
+  width: 36px; height: 36px; border-radius: 8px;
+  border: 2px solid var(--border2); cursor: pointer;
+  flex-shrink: 0;
+}
+.color-row { display: flex; align-items: center; gap: .6rem; }
+.color-row input[type=color] {
+  position: absolute; opacity: 0; width: 0; height: 0;
+}
+
+/* empty state */
+.empty {
+  text-align: center; padding: 3rem 2rem;
+  background: var(--card); border: 1px dashed var(--border2);
+  border-radius: var(--r);
+}
+.empty-ico { font-size: 2.5rem; margin-bottom: .7rem; }
+.empty-t { font-size: .9rem; font-weight: 700; margin-bottom: .3rem; }
+.empty-d { font-size: .8rem; color: var(--muted); font-family: var(--bn); }
+
+/* skeleton */
+.sk { background: linear-gradient(90deg,var(--card) 25%,var(--card2) 50%,var(--card) 75%); background-size: 200% 100%; animation: shim 1.4s infinite; border-radius: 8px; }
+@keyframes shim { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+
+/* ── CLOUDINARY THUMBNAIL UPLOAD ── */
+.thumb-upload-wrap { position: relative; }
+.thumb-dropzone {
+  border: 2px dashed var(--border2);
+  border-radius: 10px; padding: 1.4rem 1rem;
+  text-align: center; cursor: pointer;
+  transition: border-color .2s, background .2s;
+  background: var(--surface);
+}
+.thumb-dropzone:hover, .thumb-dropzone.drag {
+  border-color: var(--primary);
+  background: rgba(88,101,242,.05);
+}
+.thumb-dz-icon { font-size: 1.8rem; margin-bottom: .4rem; }
+.thumb-dz-text { font-size: .82rem; color: var(--soft); margin-bottom: .25rem; }
+.thumb-dz-text span { color: var(--primary); text-decoration: underline; }
+.thumb-dz-hint { font-size: .7rem; color: var(--muted); }
+
+.thumb-preview {
+  position: relative; border-radius: 10px; overflow: hidden;
+  border: 1px solid var(--border2); margin-bottom: .5rem;
+  aspect-ratio: 16/9; background: var(--surface);
+}
+.thumb-preview img {
+  width: 100%; height: 100%; object-fit: cover; display: block;
+}
+.thumb-remove-btn {
+  position: absolute; top: .5rem; right: .5rem;
+  background: rgba(0,0,0,.7); border: none; color: #fff;
+  width: 26px; height: 26px; border-radius: 50%;
+  font-size: .8rem; cursor: pointer; display: flex;
+  align-items: center; justify-content: center;
+  transition: background .2s;
+}
+.thumb-remove-btn:hover { background: var(--rose); }
+
+.thumb-progress {
+  margin-top: .6rem; display: flex;
+  align-items: center; gap: .7rem;
+}
+.thumb-progress-bar {
+  flex: 1; height: 5px; background: var(--border2);
+  border-radius: 10px; overflow: hidden;
+}
+.thumb-progress-fill {
+  height: 100%; background: var(--primary);
+  border-radius: 10px; width: 0%;
+  transition: width .2s;
+}
+#thumbProgressText { font-size: .72rem; color: var(--muted); white-space: nowrap; }
+
+/* course table thumbnail */
+.course-thumb-cell {
+  width: 52px; height: 34px; border-radius: 6px;
+  object-fit: cover; display: block;
+  background: var(--card2);
+}
+.course-thumb-placeholder {
+  width: 52px; height: 34px; border-radius: 6px;
+  background: linear-gradient(135deg, rgba(88,101,242,.3), rgba(0,188,212,.2));
+  display: flex; align-items: center; justify-content: center;
+  font-size: 1.1rem;
+}
+
+/* notice list */
+.notice-item {
+  background: var(--card2); border: 1px solid var(--border);
+  border-radius: var(--r); padding: 1rem 1.2rem;
+  display: flex; align-items: flex-start; justify-content: space-between;
+  gap: 1rem; margin-bottom: .7rem; transition: border-color .18s;
+}
+.notice-item:hover { border-color: var(--border2); }
+.notice-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--cyan); box-shadow: 0 0 6px var(--cyan); margin-top: .35rem; flex-shrink: 0; }
+.notice-title { font-size: .88rem; font-weight: 600; margin-bottom: .2rem; }
+.notice-body  { font-size: .78rem; color: var(--soft); font-family: var(--bn); }
+.notice-date  { font-size: .7rem; color: var(--muted); margin-top: .2rem; }
+
+/* ═══════════════════════════════════════
+   RESPONSIVE (NO SCROLL & COMPACT OVERVIEW)
+═══════════════════════════════════════ */
+@media (max-width: 1100px) {
+  .stat-row { grid-template-columns: repeat(2,1fr); }
+  .settings-grid { grid-template-columns: 1fr; }
+}
+
+@media (max-width: 900px) {
+  .sidebar { transform: translateX(-100%); }
+  .sidebar.open { transform: translateX(0); box-shadow: 12px 0 40px rgba(0,0,0,.5); }
+  .topbar { left: 0; }
+  .main  { margin-left: 0; }
+  .hamburger { display: flex; }
+}
+
+@media (max-width: 640px) {
+  .content { padding: 1rem; }
+  .fg-row  { grid-template-columns: 1fr; }
+  .ph { flex-direction: column; align-items: flex-start; gap: 0.5rem; }
+  .ph .btn { width: 100%; justify-content: center; }
+  
+  /* --------------------------------------------------
+     ১. ওভারভিউ (Stat Cards): এক লাইনে ৪টি ছোট ছোট বক্স
+     -------------------------------------------------- */
+  .stat-row { 
+    grid-template-columns: repeat(4, 1fr) !important; /* জোরপূর্বক এক লাইনে ৪টা */
+    gap: 0.3rem !important; /* স্পেস একদম কমিয়ে আনা হয়েছে */
+  }
+  .sc { 
+    padding: 0.5rem 0.25rem !important; 
+    border-radius: 8px !important;
+    text-align: center;
+  }
+  .sc::after { display: none !important; } /* মোবাইলে ব্যাকগ্রাউন্ড বড় ইমোজি হাইড */
+  .sc-val { font-size: 1rem !important; line-height: 1.2; }
+  .sc-label { font-size: 0.58rem !important; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; width: 100%; margin-bottom: 0.2rem !important; }
+  .sc-sub { display: none !important; } /* ছোট স্ক্রিনে নিচের সাবটাইটেল হাইড */
+
+  /* --------------------------------------------------
+     ২. নো-স্ক্রল টেবিল ফিক্স (টেবিল টু কার্ড কনভার্সন)
+     -------------------------------------------------- */
+  .table-wrap { overflow-x: visible !important; background: transparent !important; border: none !important; }
+  
+  /* টেবিলের স্ট্রাকচার লুকিয়ে ফেলা */
+  table, thead, tbody, th, td, tr { 
+    display: block; 
+    width: 100%; 
+  }
+  
+  /* হেডার লুকিয়ে ফেলা */
+  thead { display: none; }
+  
+  /* প্রতিটি রো এখন একটি আলাদা কার্ড */
+  tbody tr {
+    background: var(--card) !important;
+    border: 1px solid var(--border) !important;
+    border-radius: 12px !important;
+    margin-bottom: 0.8rem !important;
+    padding: 0.6rem 0.9rem !important;
+  }
+  
+  /* প্রতিটি সেল বা কলামের ডিজাইন */
+  tbody td {
+    display: flex !important;
+    justify-content: space-between !important;
+    align-items: center !important;
+    padding: 0.5rem 0 !important;
+    border-bottom: 1px dashed var(--border) !important;
+    font-size: 0.85rem !important;
+    text-align: right !important;
+  }
+  
+  tbody td:last-child {
+    border-bottom: none !important;
+    justify-content: flex-end !important; /* বাটনগুলো ডানে থাকবে */
+    padding-top: 0.6rem !important;
+  }
+
+  /* 💡 গুরুত্বপূর্ণ: ডেটার বামপাশে লেবেল বসানোর ম্যাজিক */
+  tbody td::before {
+    content: attr(data-label); /* HTML এর data-label থেকে নাম নিবে */
+    font-weight: 600;
+    color: var(--soft);
+    float: left;
+    text-align: left;
+    font-size: 0.8rem;
+  }
+  
+  /* মডাল ফিক্স */
+  .modal { padding: 1.25rem; margin: 0 0.75rem; }
+  .modal-footer { flex-direction: column-reverse; gap: 0.5rem; }
+  .modal-footer .btn { width: 100%; justify-content: center; }
+}
+</style>
+</head>
+<body>
+
+<!-- LOADER -->
+<div id="loader">
+  <div class="ld-ring"></div>
+  <div class="ld-text">Admin Panel লোড হচ্ছে...</div>
+</div>
+
+<!-- TOAST -->
+<div id="toast"></div>
+
+<!-- SIDEBAR OVERLAY -->
+<div class="sb-overlay" id="sbOverlay" onclick="closeSidebar()"></div>
+
+<!-- ══════════════════════ SIDEBAR ══════════════════════ -->
+<aside class="sidebar" id="sidebar">
+  <div class="sb-top">
+    <div class="sb-logo" id="sbLogo">A</div>
+    <span class="sb-app-name" id="sbAppName">LMS Admin</span>
+    <span class="sb-admin-tag">Admin</span>
+  </div>
+
+  <nav class="sb-nav">
+    <div class="sb-group-label">Overview</div>
+    <button class="sb-btn active" data-p="dashboard" onclick="go('dashboard',this)">
+      <span class="ico">📊</span>Dashboard
+    </button>
+
+    <div class="sb-group-label">Content</div>
+    <button class="sb-btn" data-p="courses" onclick="go('courses',this)">
+      <span class="ico">📚</span>কোর্স ম্যানেজমেন্ট
+    </button>
+    <button class="sb-btn" data-p="notices" onclick="go('notices',this)">
+      <span class="ico">📢</span>নোটিশ বোর্ড
+    </button>
+
+    <div class="sb-group-label">Users</div>
+    <button class="sb-btn" data-p="payments" onclick="go('payments',this)">
+      <span class="ico">💳</span>Payments
+      <span class="sb-count" id="pendingCount" style="display:none">0</span>
+    </button>
+    <button class="sb-btn" data-p="reviews" onclick="go('reviews',this)">
+      <span class="ico">⭐</span>Reviews
+      <span class="sb-count" id="reviewCount" style="display:none">0</span>
+    </button>
+    <button class="sb-btn" data-p="certificates" onclick="go('certificates',this)">
+      <span class="ico">🎓</span>Certificates
+      <span class="sb-count" id="certCount" style="display:none">0</span>
+    </button>
+    <button class="sb-btn" data-p="students" onclick="go('students',this)">
+      <span class="ico">👥</span>শিক্ষার্থী
+      <span class="sb-count" id="studentCount" style="display:none">0</span>
+    </button>
+
+    <div class="sb-group-label">System</div>
+    <button class="sb-btn" data-p="settings" onclick="go('settings',this)">
+      <span class="ico">⚙️</span>Site Settings
+    </button>
+  </nav>
+
+  <div class="sb-footer">
+    <div class="sb-user-card">
+      <div class="sb-avatar" id="sbAvatar">A</div>
+      <div>
+        <div class="sb-uname" id="sbName">—</div>
+        <div class="sb-urole">Administrator</div>
+      </div>
+    </div>
+    <button class="sb-logout" onclick="doLogout()">🚪 Logout</button>
+  </div>
+</aside>
+
+<!-- ══════════════════════ TOPBAR ══════════════════════ -->
+<header class="topbar">
+  <div class="topbar-left">
+    <button class="hamburger" onclick="toggleSidebar()">☰</button>
+    <span class="topbar-title" id="topbarTitle">Dashboard</span>
+  </div>
+  <div class="topbar-right">
+    <span class="tb-badge">🛡 Admin</span>
+  </div>
+</header>
+
+<!-- ══════════════════════ MAIN ══════════════════════ -->
+<main class="main">
+<div class="content">
+
+  <!-- ─────────────── DASHBOARD ─────────────── -->
+  <div class="page active" id="page-dashboard">
+    <div class="ph">
+      <div class="ph-left">
+        <h1>📊 Dashboard</h1>
+        <p>সবকিছুর একটা overview</p>
+      </div>
+    </div>
+    <div class="stat-row">
+      <div class="sc a" data-icon="📚"><div class="sc-label">মোট কোর্স</div><div class="sc-val" id="dsCourses">—</div><div class="sc-sub">Published courses</div></div>
+      <div class="sc b" data-icon="👥"><div class="sc-label">মোট শিক্ষার্থী</div><div class="sc-val" id="dsStudents">—</div><div class="sc-sub">Registered accounts</div></div>
+      <div class="sc c" data-icon="📢"><div class="sc-label">নোটিশ</div><div class="sc-val" id="dsNotices">—</div><div class="sc-sub">Active notices</div></div>
+      <div class="sc d" data-icon="📹"><div class="sc-label">মোট লেসন</div><div class="sc-val" id="dsLessons">—</div><div class="sc-sub">Video + PDF lessons</div></div>
+    </div>
+
+    <!-- Recent students -->
+    <div class="ph" style="margin-bottom:.9rem">
+      <div class="ph-left"><h1 style="font-size:1rem">সাম্প্রতিক শিক্ষার্থী</h1></div>
+      <button class="btn btn-ghost btn-sm" onclick="go('students',document.querySelector('[data-p=students]'))">সব দেখুন →</button>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>নাম</th><th>Email</th><th>এনরোল্ড</th><th>তারিখ</th></tr></thead>
+        <tbody id="recentStudents"><tr><td colspan="4"><div class="sk" style="height:36px"></div></td></tr></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- ─────────────── COURSES ─────────────── -->
+  <div class="page" id="page-courses">
+    <div class="ph">
+      <div class="ph-left">
+        <h1>📚 কোর্স ম্যানেজমেন্ট</h1>
+        <p>কোর্স যোগ করুন, লেসন ম্যানেজ করুন</p>
+      </div>
+      <button class="btn btn-primary" onclick="openAddCourse()">+ নতুন কোর্স</button>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>কোর্সের নাম</th>
+            <th>ক্যাটাগরি</th>
+            <th>লেসন</th>
+            <th>রেটিং</th>
+            <th>স্ট্যাটাস</th>
+            <th>Action</th>
+          </tr>
+        </thead>
+        <tbody id="coursesTable">
+          <tr><td colspan="5"><div class="sk" style="height:40px"></div></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- ─────────────── NOTICES ─────────────── -->
+  <div class="page" id="page-notices">
+    <div class="ph">
+      <div class="ph-left">
+        <h1>📢 নোটিশ বোর্ড</h1>
+        <p>শিক্ষার্থীদের জন্য নোটিশ পোস্ট করুন</p>
+      </div>
+      <button class="btn btn-primary" onclick="openModal('addNotice')">+ নতুন নোটিশ</button>
+    </div>
+    <div id="noticesList"><div class="sk" style="height:70px;border-radius:12px"></div></div>
+  </div>
+
+  <!-- ─────────────── STUDENTS ─────────────── -->
+  <div class="page" id="page-students">
+    <div class="ph">
+      <div class="ph-left">
+        <h1>👥 শিক্ষার্থী</h1>
+        <p>সকল registered accounts</p>
+      </div>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>নাম</th><th>Email</th><th>এনরোল্ড কোর্স</th><th>Role</th><th>তারিখ</th><th>Action</th>
+          </tr>
+        </thead>
+        <tbody id="studentsTable">
+          <tr><td colspan="6"><div class="sk" style="height:40px"></div></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- ─────────────── PAYMENTS ─────────────── -->
+  <div class="page" id="page-payments">
+    <div class="ph">
+      <div class="ph-left">
+        <h1>💳 Payments</h1>
+        <p>Student দের payment যাচাই করুন ও এনরোল করুন</p>
+      </div>
+    </div>
+
+    <!-- Stats -->
+    <div class="pay-stat-row">
+      <div class="sc a" data-icon="⏳"><div class="sc-label">Pending</div><div class="sc-val" id="psПending">—</div><div class="sc-sub">যাচাই বাকি</div></div>
+      <div class="sc b" data-icon="✅"><div class="sc-label">Verified</div><div class="sc-val" id="psVerified">—</div><div class="sc-sub">এনরোল সম্পন্ন</div></div>
+      <div class="sc c" data-icon="💰"><div class="sc-label">মোট আয়</div><div class="sc-val" id="psRevenue">৳0</div><div class="sc-sub">Verified payments</div></div>
+    </div>
+
+    <!-- Filter -->
+    <div class="pay-filter-row">
+      <button class="pay-filter-btn active" onclick="filterPayments('all',this)">সব</button>
+      <button class="pay-filter-btn" onclick="filterPayments('pending',this)">⏳ Pending</button>
+      <button class="pay-filter-btn" onclick="filterPayments('verified',this)">✅ Verified</button>
+      <button class="pay-filter-btn" onclick="filterPayments('rejected',this)">❌ Rejected</button>
+    </div>
+
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Student</th>
+            <th>কোর্স</th>
+            <th>পরিমাণ</th>
+            <th>Method</th>
+            <th>TrxID</th>
+            <th>তারিখ</th>
+            <th>Status</th>
+            <th>Action</th>
+          </tr>
+        </thead>
+        <tbody id="paymentsTable">
+          <tr><td colspan="8"><div class="sk" style="height:40px"></div></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- ─────────────── REVIEWS ─────────────── -->
+  <div class="page" id="page-reviews">
+    <div class="ph">
+      <div class="ph-left">
+        <h1>⭐ Reviews</h1>
+        <p>Student দের রেটিং ও মতামত</p>
+      </div>
+    </div>
+
+    <!-- stat row -->
+    <div class="pay-stat-row" style="margin-bottom:1.5rem">
+      <div class="sc a" data-icon="⭐"><div class="sc-label">মোট Review</div><div class="sc-val" id="rvTotal">—</div><div class="sc-sub">সব কোর্স মিলিয়ে</div></div>
+      <div class="sc b" data-icon="🌟"><div class="sc-label">Avg Rating</div><div class="sc-val" id="rvAvg">—</div><div class="sc-sub">সামগ্রিক গড়</div></div>
+      <div class="sc c" data-icon="📚"><div class="sc-label">Rated Courses</div><div class="sc-val" id="rvCourses">—</div><div class="sc-sub">রেটিং পেয়েছে</div></div>
+    </div>
+
+    <!-- course filter -->
+    <div class="fg" style="max-width:320px;margin-bottom:1.2rem">
+      <label>কোর্স অনুযায়ী ফিল্টার</label>
+      <select id="reviewCourseFilter" onchange="filterReviews()">
+        <option value="all">সব কোর্স</option>
+      </select>
+    </div>
+
+    <div id="reviewsList" style="display:flex;flex-direction:column;gap:.7rem">
+      <div class="sk" style="height:60px;border-radius:10px"></div>
+      <div class="sk" style="height:60px;border-radius:10px"></div>
+    </div>
+  </div>
+
+  <!-- ─────────────── CERTIFICATES ─────────────── -->
+  <div class="page" id="page-certificates">
+    <div class="ph">
+      <div class="ph-left">
+        <h1>🎓 Certificates</h1>
+        <p>ইস্যু করা সার্টিফিকেটের তালিকা ও ম্যানেজমেন্ট</p>
+      </div>
+    </div>
+
+    <!-- stats -->
+    <div class="pay-stat-row" style="margin-bottom:1.5rem">
+      <div class="sc a" data-icon="🎓"><div class="sc-label">মোট Cert</div><div class="sc-val" id="csTotal">—</div><div class="sc-sub">সব কোর্স মিলিয়ে</div></div>
+      <div class="sc b" data-icon="📚"><div class="sc-label">Unique Courses</div><div class="sc-val" id="csUniqCourses">—</div><div class="sc-sub">সার্টিফিকেট পেয়েছে</div></div>
+      <div class="sc c" data-icon="👤"><div class="sc-label">Unique Students</div><div class="sc-val" id="csUniqStudents">—</div><div class="sc-sub">সার্টিফিকেট পেয়েছে</div></div>
+    </div>
+
+    <!-- filter -->
+    <div style="display:flex; gap:.6rem; flex-wrap:wrap; margin-bottom:1.2rem; align-items:flex-end">
+      <div class="fg" style="margin:0; min-width:200px">
+        <label>কোর্স অনুযায়ী ফিল্টার</label>
+        <select id="certCourseFilter" onchange="filterCerts()">
+          <option value="all">সব কোর্স</option>
+        </select>
+      </div>
+      <div class="fg" style="margin:0; min-width:200px">
+        <label>Student খুঁজুন</label>
+        <input type="search" id="certSearch" placeholder="নাম দিয়ে খুঁজুন..." oninput="filterCerts()"/>
+      </div>
+    </div>
+
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Student</th>
+            <th>কোর্স</th>
+            <th>Certificate ID</th>
+            <th>ইস্যু তারিখ</th>
+            <th>Action</th>
+          </tr>
+        </thead>
+        <tbody id="certsTable">
+          <tr><td colspan="5"><div class="sk" style="height:40px"></div></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- ─────────────── SETTINGS ─────────────── -->
+  <div class="page" id="page-settings">
+    <div class="ph">
+      <div class="ph-left">
+        <h1>⚙️ Site Settings</h1>
+        <p>App এর নাম, title, favicon, রং সব এখান থেকে বদলান</p>
+      </div>
+      <button class="btn btn-primary" onclick="saveSettings()">💾 সেভ করুন</button>
+    </div>
+    <div class="settings-grid">
+
+      <!-- App Identity -->
+      <div class="settings-card">
+        <h3>🏷 App Identity</h3>
+        <p>App এর নাম, title ও favicon</p>
+        <div class="fg"><label>App নাম (সব জায়গায় দেখাবে)</label><input id="sAppName" placeholder="e.g. Codemyst Academy"/></div>
+        <div class="fg"><label>Page Title (browser tab)</label><input id="sPageTitle" placeholder="e.g. Codemyst LMS — শিখুন, বাড়ুন"/></div>
+        <div class="fg"><label>Meta Description (SEO)</label><textarea id="sMetaDesc" placeholder="সংক্ষেপে platform এর বর্ণনা..."></textarea></div>
+        <div class="fg"><label>Favicon URL (.ico বা .png)</label><input id="sFavicon" placeholder="https://..."/><div class="fg-hint">Browser tab এ icon দেখাবে</div></div>
+        <div class="fg"><label>Logo URL</label><input id="sLogo" placeholder="https://..."/><div class="fg-hint">Sidebar এ দেখাবে</div></div>
+      </div>
+
+      <!-- Branding -->
+      <div class="settings-card">
+        <h3>🎨 Branding</h3>
+        <p>Platform এর রং ও look</p>
+        <div class="fg">
+          <label>Primary Color (buttons, links)</label>
+          <div class="color-row">
+            <div class="color-preview" id="colorPreview" onclick="document.getElementById('colorPicker').click()"></div>
+            <input type="color" id="colorPicker" oninput="updateColorPreview(this.value)"/>
+            <input id="sPrimaryColor" placeholder="#5865F2" oninput="updateColorPreview(this.value)"/>
+          </div>
+        </div>
+        <div class="fg"><label>Contact Email</label><input id="sContactEmail" type="email" placeholder="info@yourschool.com"/></div>
+        <div class="fg"><label>Phone / WhatsApp</label><input id="sPhone" placeholder="+880 1700-000000"/></div>
+        <div class="fg"><label>Address</label><input id="sAddress" placeholder="Dhaka, Bangladesh"/></div>
+      </div>
+
+      <!-- Hero Text -->
+      <div class="settings-card">
+        <h3>🏠 Landing Page Text</h3>
+        <p>index.html এর hero section</p>
+        <div class="fg"><label>Hero Title (HTML allowed)</label><textarea id="sHeroTitle" placeholder="আপনার &lt;span class='accent'&gt;স্বপ্নের&lt;/span&gt; ক্যারিয়ার গড়ুন"></textarea></div>
+        <div class="fg"><label>Hero Description</label><textarea id="sHeroDesc" placeholder="দক্ষ শিক্ষকদের সাথে অনলাইনে শিখুন..."></textarea></div>
+        <div class="fg"><label>CTA Button Text</label><input id="sHeroCta" placeholder="বিনামূল্যে শুরু করুন"/></div>
+      </div>
+
+      <!-- Stats -->
+      <div class="settings-card">
+        <h3>📊 Hero Statistics</h3>
+        <p>Landing page এর stat গুলো</p>
+        <div id="statsFields">
+          <!-- filled by JS -->
+        </div>
+        <button class="btn btn-ghost btn-sm" style="margin-top:.5rem" onclick="addStatField()">+ আরও stat যোগ করুন</button>
+      </div>
+
+      <!-- Payment Methods -->
+      <div class="settings-card">
+        <h3>💳 Payment Methods</h3>
+        <p>Student রা কোন নম্বরে পেমেন্ট করবে</p>
+        <div id="payMethodFields"><!-- filled by JS --></div>
+        <button class="btn btn-ghost btn-sm" style="margin-top:.5rem" onclick="addPayMethodField()">+ Method যোগ করুন</button>
+      </div>
+
+      <!-- Certificate Settings -->
+      <div class="settings-card">
+        <h3>🎓 Certificate Settings</h3>
+        <p>Certificate এ দেখানো signature ও frame/background</p>
+
+        <div class="fg">
+          <label>Signature Image URL</label>
+          <input id="sCertSignature" placeholder="https://... (PNG, transparent background)"
+            oninput="previewCertImg('sCertSignature','sCertSignatureImg','sCertSignaturePreview')"/>
+          <div class="fg-hint">Instructor বা Director এর signature — transparent PNG হলে ভালো দেখাবে।</div>
+        </div>
+
+        <div id="sCertSignaturePreview" style="display:none; margin:.5rem 0 1rem">
+          <div style="font-size:.72rem;color:var(--muted);margin-bottom:.4rem">Preview:</div>
+          <div style="background:rgba(255,255,255,.05);border:1px solid var(--border);border-radius:8px;padding:.8rem;display:inline-block">
+            <img id="sCertSignatureImg" src="" style="max-height:60px;max-width:200px;object-fit:contain" alt="signature"/>
+          </div>
+        </div>
+
+        <div class="fg">
+          <label>Certificate Frame/Background URL</label>
+          <input id="sCertFrame" placeholder="https://... (PNG বা JPG, A4 landscape ratio)"
+            oninput="previewCertImg('sCertFrame','sCertFrameImg','sCertFramePreview')"/>
+          <div class="fg-hint">A4 landscape (1122×794px) সাইজের ছবি দিলে সবচেয়ে ভালো হবে। এর উপরে text বসবে।</div>
+        </div>
+
+        <div id="sCertFramePreview" style="display:none; margin:.5rem 0 0">
+          <div style="font-size:.72rem;color:var(--muted);margin-bottom:.4rem">Preview:</div>
+          <img id="sCertFrameImg" src="" style="width:100%;max-width:360px;border-radius:8px;border:1px solid var(--border)" alt="frame"/>
+        </div>
+      </div>
+
+    </div>
+    <div class="msg" id="settingsMsg" style="margin-top:1rem"></div>
+  </div>
+
+</div>
+</main>
+
+<!-- ════════════════ MODALS ════════════════ -->
+
+<!-- REVIEWS MODAL -->
+<div class="modal-bg" id="modal-reviews">
+  <div class="modal" style="max-width:560px">
+    <div class="modal-header">
+      <h3 id="reviewsModalTitle">⭐ Reviews</h3>
+      <button class="modal-close" onclick="closeModal('reviews')">✕</button>
+    </div>
+    <div style="display:flex;align-items:center;gap:1rem;background:var(--card);border:1px solid var(--border);border-radius:10px;padding:.9rem 1.1rem;margin-bottom:1.2rem">
+      <div>
+        <div style="font-size:2.5rem;font-weight:800;color:var(--amber);line-height:1" id="modalAvgBig">—</div>
+        <div class="rating-stars" id="modalAvgStars" style="margin:.25rem 0"></div>
+        <div style="font-size:.75rem;color:var(--muted)" id="modalTotalRatings">0 রেটিং</div>
+      </div>
+      <div style="flex:1;display:flex;flex-direction:column;gap:.3rem" id="modalRatingBars"></div>
+    </div>
+    <div id="modalReviewsList" style="display:flex;flex-direction:column;gap:.6rem;max-height:400px;overflow-y:auto"></div>
+  </div>
+</div>
+
+<!-- ADD COURSE -->
+<div class="modal-bg" id="modal-addCourse">
+  <div class="modal">
+    <div class="modal-header">
+      <h3 id="addCourseModalTitle">📚 নতুন কোর্স যোগ করুন</h3>
+      <button class="modal-close" onclick="closeModal('addCourse')">✕</button>
+    </div>
+    <input type="hidden" id="editCourseId"/>
+    <div class="fg-row">
+      <div class="fg"><label>কোর্সের নাম *</label><input id="cTitle" placeholder="e.g. Python Fundamentals"/></div>
+      <div class="fg"><label>ক্যাটাগরি</label><input id="cCat" placeholder="e.g. Programming"/></div>
+    </div>
+    <div class="fg"><label>বিবরণ</label><textarea id="cDesc" placeholder="কোর্স সম্পর্কে সংক্ষেপে লিখুন..."></textarea></div>
+    <div class="fg">
+      <label>শিক্ষকের নাম</label>
+      <input id="cInstructor" placeholder="e.g. Mr. Rahim"/>
+    </div>
+    <!-- ── CLOUDINARY THUMBNAIL ── -->
+    <div class="fg">
+      <label>Course Thumbnail</label>
+      <div class="thumb-upload-wrap" id="thumbUploadWrap">
+        <!-- Preview -->
+        <div class="thumb-preview" id="thumbPreview" style="display:none">
+          <img id="thumbPreviewImg" src="" alt="thumbnail"/>
+          <button type="button" class="thumb-remove-btn" onclick="removeThumbnail()" title="সরান">✕</button>
+        </div>
+        <!-- Drop zone -->
+        <div class="thumb-dropzone" id="thumbDropzone"
+             onclick="document.getElementById('thumbFileInput').click()"
+             ondragover="event.preventDefault();this.classList.add('drag')"
+             ondragleave="this.classList.remove('drag')"
+             ondrop="handleThumbDrop(event)">
+          <div class="thumb-dz-icon">🖼️</div>
+          <div class="thumb-dz-text">ছবি drag করুন বা <span>browse</span> করুন</div>
+          <div class="thumb-dz-hint">JPG, PNG, WEBP — সর্বোচ্চ 5MB</div>
+        </div>
+        <input type="file" id="thumbFileInput" accept="image/*" style="display:none" onchange="handleThumbFile(this.files[0])"/>
+        <!-- Upload progress -->
+        <div class="thumb-progress" id="thumbProgress" style="display:none">
+          <div class="thumb-progress-bar">
+            <div class="thumb-progress-fill" id="thumbProgressFill"></div>
+          </div>
+          <span id="thumbProgressText">Uploading...</span>
+        </div>
+        <!-- Hidden URL storage -->
+        <input type="hidden" id="cThumbnailUrl"/>
+        <input type="hidden" id="cThumbnailPublicId"/>
+      </div>
+      <div class="fg-hint">Cloudinary তে upload হবে। ছবি না দিলে default color দেখাবে।</div>
+    </div>
+    <div class="fg">
+      <label>Publish করবেন?</label>
+      <select id="cPublished">
+        <option value="true">✅ হ্যাঁ — সবাই দেখতে পাবে</option>
+        <option value="false">📝 না — Draft রাখুন</option>
+      </select>
+    </div>
+    <div class="fg">
+      <label>কোর্স ফি (৳) — 0 দিলে Free</label>
+      <input type="number" id="cPrice" placeholder="0" min="0" value="0"/>
+      <div class="fg-hint">0 = বিনামূল্যে। অন্যথায় টাকার পরিমাণ লিখুন।</div>
+    </div>
+    <div class="fg">
+      <label>🎓 সার্টিফিকেট</label>
+      <select id="cCertificate" onchange="toggleSignatureField()">
+        <option value="false">❌ না — এই কোর্সে সার্টিফিকেট নেই</option>
+        <option value="true">✅ হ্যাঁ — সম্পন্ন করলে সার্টিফিকেট পাবে</option>
+      </select>
+      <div class="fg-hint">চালু থাকলে student ১০০% complete করলে সার্টিফিকেট button দেখাবে।</div>
+    </div>
+    <div class="fg" id="signatureFieldWrap" style="display:none">
+      <label>✍️ Signature Image URL (এই কোর্সের জন্য)</label>
+      <input id="cSignatureUrl" placeholder="https://... (transparent PNG)"
+        oninput="previewCertImg('cSignatureUrl','cSignatureImg','cSignaturePreview')"/>
+      <div class="fg-hint">খালি রাখলে Settings এর default signature নেবে।</div>
+      <div id="cSignaturePreview" style="display:none;margin-top:.5rem">
+        <div style="background:rgba(255,255,255,.05);border:1px solid var(--border);border-radius:8px;padding:.6rem;display:inline-block">
+          <img id="cSignatureImg" src="" style="max-height:50px;max-width:180px;object-fit:contain" alt="sig"/>
+        </div>
+      </div>
+    </div>
+    <div class="edit-lesson-settings" id="editLessonSettings" style="display:none">
+      <h4>📹 লেসন সেটিংস — Quiz বাধ্যতামূলক/ঐচ্ছিক</h4>
+      <div id="editLessonTogglesList"></div>
+    </div>
+    <div class="msg" id="addCourseMsg"></div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('addCourse')">বাতিল</button>
+      <button class="btn btn-primary" id="btnAddCourse" onclick="saveCourse()">কোর্স সেভ করুন</button>
+    </div>
+  </div>
+</div>
+
+<!-- ADD / EDIT LESSON -->
+<div class="modal-bg" id="modal-addLesson">
+  <div class="modal">
+    <div class="modal-header">
+      <h3 id="lessonModalTitle">📹 লেসন যোগ করুন</h3>
+      <button class="modal-close" onclick="closeModal('addLesson')">✕</button>
+    </div>
+    <input type="hidden" id="lessonCourseId"/>
+    <input type="hidden" id="editLessonId"/>
+    <div class="fg"><label>লেসনের শিরোনাম *</label><input id="lTitle" placeholder="e.g. Variables ও Data Types"/></div>
+    <div class="fg">
+      <label>YouTube Unlisted Link *</label>
+      <input id="lYoutube" placeholder="https://www.youtube.com/watch?v=..."/>
+      <div class="fg-hint">Unlisted ভিডিওর পুরো URL দিন। এটা শুধু LMS এ দেখাবে।</div>
+    </div>
+    <div class="fg">
+      <label>Google Drive PDF Link (optional)</label>
+      <input id="lPdf" placeholder="https://drive.google.com/file/d/.../view"/>
+      <div class="fg-hint">Share > "Anyone with link" করে দিন।</div>
+    </div>
+    <div class="fg"><label>লেসন নম্বর (Order)</label><input type="number" id="lOrder" placeholder="1" min="1"/></div>
+    <div class="quiz-section">
+      <div class="quiz-section-head">
+        <h4>📝 Quiz (optional)</h4>
+        <button type="button" class="btn btn-ghost btn-sm" onclick="addQuizQuestion()">+ প্রশ্ন যোগ করুন</button>
+      </div>
+      <div id="quizQuestionsContainer"></div>
+    </div>
+    <div class="msg" id="addLessonMsg"></div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('addLesson')">বাতিল</button>
+      <button class="btn btn-primary" id="btnAddLesson" onclick="saveLesson()">লেসন সেভ করুন</button>
+    </div>
+  </div>
+</div>
+
+<!-- ADD NOTICE -->
+<div class="modal-bg" id="modal-addNotice">
+  <div class="modal">
+    <div class="modal-header">
+      <h3>📢 নতুন নোটিশ</h3>
+      <button class="modal-close" onclick="closeModal('addNotice')">✕</button>
+    </div>
+    <div class="fg"><label>শিরোনাম *</label><input id="nTitle" placeholder="নোটিশের শিরোনাম"/></div>
+    <div class="fg"><label>বিস্তারিত (optional)</label><textarea id="nBody" placeholder="নোটিশের বিস্তারিত বিবরণ..."></textarea></div>
+    <div class="msg" id="addNoticeMsg"></div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('addNotice')">বাতিল</button>
+      <button class="btn btn-primary" id="btnAddNotice" onclick="saveNotice()">পোস্ট করুন</button>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════ FIREBASE + LOGIC ════════════════ -->
+<script>
+/* ── Firebase ──────────────────────────── */
+// ── Firebase Init (config.js থেকে) ───────────────
+firebase.initializeApp(LMS_CONFIG.firebase);
+const auth = firebase.auth();
+const db   = firebase.firestore();
+
+/* ── State ─────────────────────────────── */
+let allCourses   = [];
+let allStudents  = [];
+let allPayments  = [];
+let allReviews   = [];
+let allCerts     = [];
+let statsFields  = [];
+let payMethodFields = [];
+let settingsData = {};
+
+/* ── Boot ──────────────────────────────── */
+auth.onAuthStateChanged(async user => {
+  if (!user) { location.href = 'index.html'; return; }
+  const snap = await db.collection('users').doc(user.uid).get();
+  const data = snap.exists ? snap.data() : {};
+  if (data.role !== 'admin') { location.href = 'dashboard.html'; return; }
+
+  const name = data.name || user.displayName || 'Admin';
+  document.getElementById('sbAvatar').textContent = name.charAt(0).toUpperCase();
+  document.getElementById('sbName').textContent   = name;
+
+  await loadSettings();
+  await loadAll();
+  document.getElementById('loader').classList.add('gone');
+});
+
+/* ── Load Settings ─────────────────────── */
+async function loadSettings() {
+  try {
+    const snap = await db.collection('siteSettings').doc('main').get();
+    settingsData = snap.exists ? snap.data() : {};
+    const s = settingsData;
+    const appName = s.appName || 'LMS';
+
+    document.getElementById('sbAppName').textContent = appName + ' Admin';
+    document.getElementById('sbLogo').textContent    = appName.charAt(0).toUpperCase();
+    if (s.logoUrl) {
+      document.getElementById('sbLogo').innerHTML = `<img src="${s.logoUrl}" alt=""/>`;
+    }
+    if (s.faviconUrl) document.getElementById('favicon').href = s.faviconUrl;
+    if (s.primaryColor) {
+      document.documentElement.style.setProperty('--primary', s.primaryColor);
+    }
+
+    /* fill settings form */
+    const set = (id, val) => { const el = document.getElementById(id); if (el && val) el.value = val; };
+    set('sAppName',       s.appName);
+    set('sPageTitle',     s.pageTitle);
+    set('sMetaDesc',      s.metaDesc);
+    set('sFavicon',       s.faviconUrl);
+    set('sLogo',          s.logoUrl);
+    set('sPrimaryColor',  s.primaryColor);
+    set('sContactEmail',  s.contactEmail);
+    set('sPhone',         s.phone);
+    set('sAddress',       s.address);
+    set('sHeroTitle',     s.heroTitle);
+    set('sHeroDesc',      s.heroDesc);
+    set('sHeroCta',       s.heroCta);
+
+    /* color preview */
+    updateColorPreview(s.primaryColor || '#5865F2');
+    if (s.primaryColor) document.getElementById('colorPicker').value = s.primaryColor;
+
+    /* stats fields */
+    statsFields = s.stats || [
+      { value: '500+', label: 'শিক্ষার্থী' },
+      { value: '20+',  label: 'কোর্স' },
+      { value: '95%',  label: 'সন্তুষ্টি' }
+    ];
+    renderStatsFields();
+
+    /* payment methods */
+    payMethodFields = s.paymentMethods || [];
+    renderPayMethodFields();
+
+    // certificate settings
+    if (s.certSignatureUrl) {
+      document.getElementById('sCertSignature').value = s.certSignatureUrl;
+      document.getElementById('sCertSignatureImg').src = s.certSignatureUrl;
+      document.getElementById('sCertSignaturePreview').style.display = 'block';
+    }
+    if (s.certFrameUrl) {
+      document.getElementById('sCertFrame').value = s.certFrameUrl;
+      document.getElementById('sCertFrameImg').src = s.certFrameUrl;
+      document.getElementById('sCertFramePreview').style.display = 'block';
+    }
+  } catch(e) { console.warn('settings load:', e); }
+}
+
+/* ── Load All Data ─────────────────────── */
+async function loadAll() {
+  const [cSnap, sSnap, nSnap, pSnap, rSnap, certSnap] = await Promise.all([
+    db.collection('courses').orderBy('createdAt','desc').get(),
+    db.collection('users').get(),
+    db.collection('notices').orderBy('date','desc').get(),
+    db.collection('payments').orderBy('submittedAt','desc').get(),
+    db.collection('ratings').orderBy('createdAt','desc').get(),
+    db.collection('certificates').orderBy('issuedAt','desc').get()
+  ]);
+
+  /* courses */
+  allCourses = [];
+  let totalLessons = 0;
+  for (const doc of cSnap.docs) {
+    const c = { id: doc.id, ...doc.data() };
+    const lSnap = await db.collection('courses').doc(doc.id).collection('lessons').get();
+    c._lessons = [];
+    lSnap.forEach(ld => c._lessons.push({ id: ld.id, ...ld.data() }));
+    c._lessons.sort((a,b) => (a.order||0)-(b.order||0));
+    c.totalLessons = c._lessons.length;
+    totalLessons += c.totalLessons;
+    allCourses.push(c);
+  }
+
+  /* students */
+  allStudents = [];
+  sSnap.forEach(doc => {
+    const data = doc.data();
+    if(data.role !== 'admin') allStudents.push({ id: doc.id, ...data });
+  });
+  allStudents.sort((a,b) => (b.createdAt?.toMillis?.() || 0) - (a.createdAt?.toMillis?.() || 0));
+
+  /* notices */
+  const notices = [];
+  nSnap.forEach(doc => notices.push({ id: doc.id, ...doc.data() }));
+
+  /* payments */
+  allPayments = [];
+  pSnap.forEach(doc => allPayments.push({ id: doc.id, ...doc.data() }));
+
+  /* reviews */
+  allReviews = [];
+  rSnap.forEach(doc => allReviews.push({ id: doc.id, ...doc.data() }));
+
+  /* certificates */
+  allCerts = [];
+  certSnap.forEach(doc => allCerts.push({ id: doc.id, ...doc.data() }));
+
+  /* ── stats ── */
+  document.getElementById('dsCourses').textContent  = allCourses.filter(c=>c.published).length;
+  document.getElementById('dsStudents').textContent = allStudents.length;
+  document.getElementById('dsNotices').textContent  = notices.length;
+  document.getElementById('dsLessons').textContent  = totalLessons;
+
+  const sc = document.getElementById('studentCount');
+  sc.textContent = allStudents.length; sc.style.display = allStudents.length ? 'inline' : 'none';
+
+  const pending = allPayments.filter(p => p.status === 'pending').length;
+  const pc = document.getElementById('pendingCount');
+  pc.textContent = pending; pc.style.display = pending ? 'inline' : 'none';
+
+  const rc = document.getElementById('reviewCount');
+  rc.textContent = allReviews.length; rc.style.display = allReviews.length ? 'inline' : 'none';
+
+  const cc = document.getElementById('certCount');
+  cc.textContent = allCerts.length; cc.style.display = allCerts.length ? 'inline' : 'none';
+
+  renderCoursesTable();
+  renderStudents(allStudents.slice(0, 5), 'recentStudents', true);
+  renderStudents(allStudents, 'studentsTable', false);
+  renderNotices(notices);
+  renderPayments(allPayments);
+  renderReviewsPage(allReviews);
+  renderCertificates(allCerts);
+}
+
+/* ── Courses Table ─────────────────────── */
+function renderCoursesTable() {
+  const tbody = document.getElementById('coursesTable');
+  if (!allCourses.length) {
+    tbody.innerHTML = `<tr><td colspan="5" style="text-align:center;padding:2rem;color:var(--muted)">কোনো কোর্স নেই</td></tr>`;
+    return;
+  }
+  tbody.innerHTML = allCourses.map(c => `
+    <tr>
+      <td data-label="কোর্সের নাম">
+        <div style="display:flex;align-items:center;gap:.75rem">
+          ${c.thumbnailUrl
+            ? `<img src="${c.thumbnailUrl}" class="course-thumb-cell" alt="thumb"/>`
+            : `<div class="course-thumb-placeholder">📚</div>`
+          }
+          <div>
+            <div style="font-weight:600">${c.title}</div>
+            <div style="font-size:.72rem;color:var(--muted);margin-top:.2rem">${c.description?.slice(0,45)||''}</div>
+          </div>
+        </div>
+      </td>
+      <td data-label="ক্যাটাগরি"><span class="badge badge-blue">${c.category||'General'}</span></td>
+      <td data-label="লেসন">
+        <span style="font-weight:700;color:var(--cyan)">${c.totalLessons}</span>
+        <span style="color:var(--muted);font-size:.75rem"> লেসন</span>
+      </td>
+      <td data-label="রেটিং">
+        ${c.avgRating ? `
+          <div class="avg-badge">
+            <span>⭐ ${parseFloat(c.avgRating).toFixed(1)}</span>
+            <span class="avg-count">(${c.totalRatings||0})</span>
+          </div>` : `<span style="color:var(--muted);font-size:.75rem">—</span>`}
+      </td>
+      <td data-label="স্ট্যাটাস">
+        <span class="badge ${c.published?'badge-green':'badge-gray'}">${c.published?'Published':'Draft'}</span>
+        ${c.certificate ? `<span class="badge badge-amber" style="margin-left:.3rem">🎓 Cert</span>` : ''}
+      </td>
+      <td data-label="Action">
+        <div class="course-row-actions">
+          <button class="btn btn-ghost btn-sm" onclick="openEditCourse('${c.id}')">✏️ Edit</button>
+          <button class="btn btn-ghost btn-sm" onclick="toggleLessons('${c.id}')">📹 লেসন</button>
+          <button class="btn btn-ghost btn-sm" onclick="openAddLesson('${c.id}')">+ লেসন</button>
+          <button class="btn btn-ghost btn-sm" onclick="openReviewsModal('${c.id}')">⭐ Reviews</button>
+          <button class="btn btn-rose btn-sm" onclick="deleteCourse('${c.id}')">🗑</button>
+        </div>
+      </td>
+    </tr>
+    <tr class="course-expand-row" id="expand-${c.id}">
+      <td colspan="6">
+        <div class="course-expand-inner">
+          <div class="lessons-header">
+            <h4>📹 ${c.title} — লেসন তালিকা</h4>
+            <button class="btn btn-primary btn-sm" onclick="openAddLesson('${c.id}')">+ লেসন যোগ করুন</button>
+          </div>
+          <div class="lesson-list" id="lessons-${c.id}">
+            ${c._lessons.length ? c._lessons.map(l => lessonItem(c.id, l)).join('') :
+              `<div style="color:var(--muted);font-size:.82rem;padding:.5rem">এখনো কোনো লেসন নেই।</div>`}
+          </div>
+        </div>
+      </td>
+    </tr>
+  `).join('');
+}
+
+function lessonItem(courseId, l) {
+  const hasQuiz = l.quiz?.questions?.length > 0;
+  const mandatory = l.quizMandatory !== false;
+  return `
+  <div class="lesson-item" id="li-${l.id}">
+    <div class="lesson-order">${l.order||'?'}</div>
+    <div class="lesson-title">${l.title}</div>
+    <div class="lesson-links">
+      ${l.youtubeUrl ? `<span class="lesson-link-badge ll-yt">▶ YouTube</span>` : ''}
+      ${l.pdfUrl     ? `<span class="lesson-link-badge ll-pdf">📄 PDF</span>`   : ''}
+      ${hasQuiz ? `<span class="lesson-link-badge ll-quiz">📝 Quiz</span>` : ''}
+      ${hasQuiz ? (mandatory
+        ? `<span class="lesson-link-badge ll-mand">🔒 Mandatory</span>`
+        : `<span class="lesson-link-badge ll-opt">📋 Optional</span>`) : ''}
+    </div>
+    <div style="display:flex;gap:.3rem;margin-left:auto">
+      <button class="lesson-del" style="color:var(--soft)" onclick="openEditLesson('${courseId}','${l.id}')" title="Edit">✏️</button>
+      <button class="lesson-del" onclick="deleteLesson('${courseId}','${l.id}')" title="Delete">🗑</button>
+    </div>
+  </div>`;
+}
+
+function toggleLessons(courseId) {
+  const row = document.getElementById('expand-'+courseId);
+  row.classList.toggle('open');
+}
+
+/* ── Students ──────────────────────────── */
+function renderStudents(students, tbodyId, brief) {
+  const tbody = document.getElementById(tbodyId);
+  if (!students.length) {
+    tbody.innerHTML = `<tr><td colspan="${brief?4:6}" style="text-align:center;padding:2rem;color:var(--muted)">কোনো শিক্ষার্থী নেই</td></tr>`;
+    return;
+  }
+  tbody.innerHTML = students.map(s => {
+    const date = s.createdAt?.toDate?.().toLocaleDateString('bn-BD') || '—';
+    const enrolled = (s.enrolledCourses||[]).length;
+    const name = s.name || 'Unknown Student';
+    const email = s.email || 'No email provided';
+    const phone = s.phone || '';
+    
+    const emailCell = `
+      <div style="font-size:.8rem;color:var(--muted)">📧 ${email}</div>
+      ${phone ? `<div style="font-size:.75rem;color:var(--muted);margin-top:2px">📞 ${phone}</div>` : ''}
+    `;
+
+    if (brief) return `
+      <tr>
+        <td data-label="নাম"><span style="font-weight:600">${name}</span></td>
+        <td data-label="Email">${emailCell}</td>
+        <td data-label="এনরোল্ড"><span class="badge badge-blue">${enrolled} কোর্স</span></td>
+        <td data-label="তারিখ" style="color:var(--muted);font-size:.78rem">${date}</td>
+      </tr>`;
+    return `
+      <tr>
+        <td data-label="নাম"><span style="font-weight:600">${name}</span></td>
+        <td data-label="Email">${emailCell}</td>
+        <td data-label="এনরোল্ড কোর্স"><span class="badge badge-blue">${enrolled}</span></td>
+        <td data-label="Role"><span class="badge ${s.role==='admin'?'badge-amber':'badge-gray'}">${s.role||'student'}</span></td>
+        <td data-label="তারিখ" style="color:var(--muted);font-size:.78rem">${date}</td>
+        <td data-label="Action">
+          ${s.role!=='admin'
+            ? `<button class="btn btn-ghost btn-sm" onclick="makeAdmin('${s.id}')">Admin করুন</button>`
+            : `<span style="color:var(--muted);font-size:.78rem">Admin</span>`}
+        </td>
+      </tr>`;
+  }).join('');
+}
+
+/* ── Notices ───────────────────────────── */
+function renderNotices(notices) {
+  const el = document.getElementById('noticesList');
+  if (!notices.length) {
+    el.innerHTML = `<div class="empty"><div class="empty-ico">📭</div><div class="empty-t">কোনো নোটিশ নেই</div></div>`;
+    return;
+  }
+  el.innerHTML = notices.map(n => {
+    const date = n.date?.toDate?.().toLocaleDateString('bn-BD', {year:'numeric',month:'long',day:'numeric'}) || '';
+    return `
+    <div class="notice-item">
+      <div style="display:flex;gap:.8rem;align-items:flex-start;flex:1">
+        <div class="notice-dot" style="margin-top:.35rem"></div>
+        <div>
+          <div class="notice-title">${n.title}</div>
+          ${n.body ? `<div class="notice-body">${n.body}</div>` : ''}
+          <div class="notice-date">🗓 ${date}</div>
+        </div>
+      </div>
+      <button class="btn btn-rose btn-sm" onclick="deleteNotice('${n.id}')">🗑 মুছুন</button>
+    </div>`;
+  }).join('');
+}
+
+/* ── Stats Fields (Settings) ───────────── */
+function renderStatsFields() {
+  const el = document.getElementById('statsFields');
+  el.innerHTML = statsFields.map((s,i) => `
+    <div style="display:grid;grid-template-columns:1fr 1fr auto;gap:.5rem;margin-bottom:.5rem;align-items:end">
+      <div class="fg" style="margin:0"><label style="${i===0?'':'visibility:hidden'}">মান</label>
+        <input value="${s.value}" oninput="statsFields[${i}].value=this.value" placeholder="500+"/>
+      </div>
+      <div class="fg" style="margin:0"><label style="${i===0?'':'visibility:hidden'}">লেবেল</label>
+        <input value="${s.label}" oninput="statsFields[${i}].label=this.value" placeholder="শিক্ষার্থী"/>
+      </div>
+      <button class="btn btn-rose btn-sm" style="margin-bottom:1px" onclick="removeStatField(${i})">✕</button>
+    </div>`).join('');
+}
+function addStatField() {
+  statsFields.push({ value: '', label: '' });
+  renderStatsFields();
+}
+function removeStatField(i) {
+  statsFields.splice(i,1);
+  renderStatsFields();
+}
+
+/* ── Payment Method Fields (Settings) ─────── */
+function renderPayMethodFields() {
+  const el = document.getElementById('payMethodFields');
+  if (!payMethodFields.length) {
+    el.innerHTML = '<div style="font-size:.8rem;color:var(--muted);font-family:var(--bn);padding:.3rem 0">কোনো method নেই। নিচে যোগ করুন।</div>';
+    return;
+  }
+  el.innerHTML = payMethodFields.map((m, i) => `
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:.8rem;margin-bottom:.6rem">
+      <div style="display:grid;grid-template-columns:60px 1fr 1fr auto;gap:.5rem;align-items:end;margin-bottom:.5rem">
+        <div class="fg" style="margin:0"><label style="${i===0?'':'visibility:hidden'}">Icon</label>
+          <input value="${m.icon||''}" oninput="payMethodFields[${i}].icon=this.value" placeholder="🟣" style="text-align:center"/>
+        </div>
+        <div class="fg" style="margin:0"><label style="${i===0?'':'visibility:hidden'}">নাম</label>
+          <input value="${m.name||''}" oninput="payMethodFields[${i}].name=this.value" placeholder="bKash"/>
+        </div>
+        <div class="fg" style="margin:0"><label style="${i===0?'':'visibility:hidden'}">নম্বর</label>
+          <input value="${m.number||''}" oninput="payMethodFields[${i}].number=this.value" placeholder="017XXXXXXXX"/>
+        </div>
+        <button class="btn btn-rose btn-sm" style="margin-bottom:1px" onclick="removePayMethodField(${i})">✕</button>
+      </div>
+      <div class="fg" style="margin:0"><label>Instruction (student দেখবে)</label>
+        <input value="${m.note||''}" oninput="payMethodFields[${i}].note=this.value" placeholder="Send Money করুন, TrxID দিন"/>
+      </div>
+    </div>`).join('');
+}
+function addPayMethodField() {
+  payMethodFields.push({ icon:'💳', name:'', number:'', note:'' });
+  renderPayMethodFields();
+}
+function removePayMethodField(i) {
+  payMethodFields.splice(i,1);
+  renderPayMethodFields();
+}
+
+/* ── Color Preview ─────────────────────── */
+function updateColorPreview(val) {
+  document.getElementById('colorPreview').style.background = val;
+  document.getElementById('sPrimaryColor').value = val;
+  document.documentElement.style.setProperty('--primary', val);
+}
+
+/* ── Save Settings ─────────────────────── */
+async function saveSettings() {
+  const g = id => document.getElementById(id)?.value?.trim() || '';
+  const data = {
+    appName:       g('sAppName'),
+    pageTitle:     g('sPageTitle'),
+    metaDesc:      g('sMetaDesc'),
+    faviconUrl:    g('sFavicon'),
+    logoUrl:       g('sLogo'),
+    primaryColor:  g('sPrimaryColor'),
+    contactEmail:  g('sContactEmail'),
+    phone:         g('sPhone'),
+    address:       g('sAddress'),
+    heroTitle:     g('sHeroTitle'),
+    heroDesc:      g('sHeroDesc'),
+    heroCta:       g('sHeroCta'),
+    stats:         statsFields.filter(s => s.value && s.label),
+    paymentMethods:  payMethodFields.filter(m => m.name && m.number),
+    certSignatureUrl: document.getElementById('sCertSignature').value.trim(),
+    certFrameUrl:     document.getElementById('sCertFrame').value.trim(),
+    updatedAt:        firebase.firestore.FieldValue.serverTimestamp()
+  };
+  const msg = document.getElementById('settingsMsg');
+  try {
+    await db.collection('siteSettings').doc('main').set(data, { merge: true });
+    showMsg(msg,'ok','✅ Settings সেভ হয়েছে! Index page refresh করলে দেখা যাবে।');
+    toast('✅ Settings সেভ হয়েছে!','ok');
+    /* live update sidebar */
+    if (data.appName) {
+      document.getElementById('sbAppName').textContent = data.appName + ' Admin';
+      document.getElementById('sbLogo').textContent    = data.appName.charAt(0).toUpperCase();
+    }
+    if (data.logoUrl) document.getElementById('sbLogo').innerHTML = `<img src="${data.logoUrl}" alt=""/>`;
+  } catch(e) {
+    showMsg(msg,'err','❌ সেভ হয়নি: '+e.message);
+  }
+}
+
+/* ── Course Add / Edit ─────────────────── */
+function openAddCourse() {
+  document.getElementById('editCourseId').value = '';
+  document.getElementById('addCourseModalTitle').textContent = '📚 নতুন কোর্স যোগ করুন';
+  document.getElementById('btnAddCourse').textContent = 'কোর্স সেভ করুন';
+  document.getElementById('editLessonSettings').style.display = 'none';
+  ['cTitle','cDesc','cCat','cInstructor'].forEach(id => document.getElementById(id).value = '');
+  document.getElementById('cPublished').value = 'true';
+  resetThumbnailForm();
+  openModal('addCourse');
+}
+
+function openEditCourse(id) {
+  const c = allCourses.find(x => x.id === id);
+  if (!c) return;
+  document.getElementById('editCourseId').value = id;
+  document.getElementById('addCourseModalTitle').textContent = '✏️ কোর্স সম্পাদনা';
+  document.getElementById('btnAddCourse').textContent = 'আপডেট করুন';
+  document.getElementById('cTitle').value      = c.title       || '';
+  document.getElementById('cDesc').value       = c.description || '';
+  document.getElementById('cCat').value        = c.category    || '';
+  document.getElementById('cInstructor').value = c.instructor  || '';
+  document.getElementById('cPublished').value  = c.published ? 'true' : 'false';
+  document.getElementById('cPrice').value      = c.price || 0;
+  document.getElementById('cCertificate').value = c.certificate ? 'true' : 'false';
+  document.getElementById('cSignatureUrl').value = c.signatureUrl || '';
+  document.getElementById('signatureFieldWrap').style.display = c.certificate ? 'block' : 'none';
+  if (c.signatureUrl) {
+    document.getElementById('cSignatureImg').src = c.signatureUrl;
+    document.getElementById('cSignaturePreview').style.display = 'block';
+  } else {
+    document.getElementById('cSignaturePreview').style.display = 'none';
+  }
+
+  /* load existing thumbnail */
+  resetThumbnailForm();
+  if (c.thumbnailUrl) {
+    document.getElementById('cThumbnailUrl').value      = c.thumbnailUrl;
+    document.getElementById('cThumbnailPublicId').value = c.thumbnailId || '';
+    document.getElementById('thumbPreviewImg').src        = c.thumbnailUrl;
+    document.getElementById('thumbPreview').style.display = 'block';
+    document.getElementById('thumbDropzone').style.display = 'none';
+  }
+
+  document.getElementById('editLessonSettings').style.display = 'block';
+  renderEditLessonToggles(c._lessons || []);
+  openModal('addCourse');
+}
+
+function renderEditLessonToggles(lessons) {
+  const el = document.getElementById('editLessonTogglesList');
+  if (!lessons.length) {
+    el.innerHTML = '<div class="edit-lesson-empty">এই কোর্সে এখনো কোনো লেসন নেই।</div>';
+    return;
+  }
+  el.innerHTML = lessons.map(l => {
+    const hasQuiz = l.quiz?.questions?.length > 0;
+    const mandatory = l.quizMandatory !== false;
+    const label = mandatory ? 'বাধ্যতামূলক (Mandatory)' : 'ঐচ্ছিক (Optional)';
+    const labelClass = mandatory ? 'mandatory' : 'optional';
+    return `
+    <div class="edit-lesson-row">
+      <div class="edit-lesson-info">
+        <div class="edit-lesson-title">[${l.order || '?'}] ${l.title}</div>
+        <div class="edit-lesson-meta">
+          ${hasQuiz ? '<span class="lesson-link-badge ll-quiz">📝 Quiz</span>' : '<span style="font-size:.72rem;color:var(--muted);font-family:var(--bn)">Quiz নেই</span>'}
+        </div>
+      </div>
+      <div class="toggle-wrap">
+        <label style="position:relative;display:inline-block">
+          <input type="checkbox" class="toggle-switch-input" data-lesson-id="${l.id}"
+            ${mandatory ? 'checked' : ''} ${hasQuiz ? '' : 'disabled'}
+            onchange="updateToggleLabel(this)"/>
+          <span class="toggle-switch"></span>
+        </label>
+        <span class="toggle-label ${labelClass}" data-for="${l.id}">${hasQuiz ? label : '—'}</span>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function updateToggleLabel(input) {
+  const label = input.closest('.toggle-wrap')?.querySelector('.toggle-label');
+  if (!label || input.disabled) return;
+  label.textContent = input.checked ? 'বাধ্যতামূলক (Mandatory)' : 'ঐচ্ছিক (Optional)';
+  label.className = 'toggle-label ' + (input.checked ? 'mandatory' : 'optional');
+}
+
+/* ── Quiz Builder ──────────────────────── */
+let quizQuestionIdx = 0;
+
+function resetQuizForm() {
+  document.getElementById('quizQuestionsContainer').innerHTML = '';
+  quizQuestionIdx = 0;
+}
+
+function addQuizQuestion(data) {
+  const idx = quizQuestionIdx++;
+  const container = document.getElementById('quizQuestionsContainer');
+  const block = document.createElement('div');
+  block.className = 'quiz-question-block';
+  block.dataset.idx = idx;
+  const opts = data?.options || ['', '', '', ''];
+  const correct = data?.correctIndex ?? 0;
+  block.innerHTML = `
+    <div class="quiz-q-head">
+      <span>প্রশ্ন ${container.children.length + 1}</span>
+      <button type="button" class="btn btn-rose btn-sm" onclick="removeQuizQuestion(this)">🗑</button>
+    </div>
+    <div class="fg" style="margin-bottom:.6rem">
+      <input type="text" class="qq-text" placeholder="প্রশ্ন লিখুন..." value="${(data?.question || '').replace(/"/g, '&quot;')}"/>
+    </div>
+    ${[0,1,2,3].map(i => `
+    <div class="quiz-opt-row">
+      <input type="radio" name="qq-correct-${idx}" value="${i}" ${correct === i ? 'checked' : ''}/>
+      <input type="text" class="qq-opt" placeholder="অপশন ${String.fromCharCode(65 + i)}" value="${(opts[i] || '').replace(/"/g, '&quot;')}"/>
+    </div>`).join('')}
+  `;
+  container.appendChild(block);
+}
+
+function removeQuizQuestion(btn) {
+  btn.closest('.quiz-question-block')?.remove();
+  document.querySelectorAll('.quiz-question-block .quiz-q-head span').forEach((el, i) => {
+    el.textContent = 'প্রশ্ন ' + (i + 1);
+  });
+}
+
+function collectQuizData(msgEl) {
+  const blocks = document.querySelectorAll('.quiz-question-block');
+  if (!blocks.length) return null;
+  const questions = [];
+  for (let i = 0; i < blocks.length; i++) {
+    const block = blocks[i];
+    const question = block.querySelector('.qq-text')?.value?.trim() || '';
+    const options = [...block.querySelectorAll('.qq-opt')].map(inp => inp.value.trim());
+    const correctRadio = block.querySelector('input[type="radio"]:checked');
+    if (!question) { showMsg(msgEl, 'err', `প্রশ্ন ${i + 1}: প্রশ্নের টেক্সট দিন`); return false; }
+    if (options.some(o => !o)) { showMsg(msgEl, 'err', `প্রশ্ন ${i + 1}: সব ৪টি অপশন পূরণ করুন`); return false; }
+    if (!correctRadio) { showMsg(msgEl, 'err', `প্রশ্ন ${i + 1}: সঠিক উত্তর সিলেক্ট করুন`); return false; }
+    questions.push({ question, options, correctIndex: parseInt(correctRadio.value, 10) });
+  }
+  return { questions };
+}
+
+/* ── Cloudinary Config ─────────────────── */
+const CLOUDINARY = {
+  cloudName:    'dbdkxzx7z',
+  uploadPreset: 'ribd-img'
+};
+
+/* ── Cloudinary Upload ─────────────────── */
+async function uploadToCloudinary(file) {
+  const formData = new FormData();
+  formData.append('file', file);
+  formData.append('upload_preset', CLOUDINARY.uploadPreset);
+  formData.append('folder', 'lms/courses');
+
+  return new Promise((resolve, reject) => {
+    const xhr = new XMLHttpRequest();
+    xhr.open('POST', `https://api.cloudinary.com/v1_1/${CLOUDINARY.cloudName}/image/upload`);
+
+    xhr.upload.onprogress = (e) => {
+      if (e.lengthComputable) {
+        const pct = Math.round((e.loaded / e.total) * 100);
+        document.getElementById('thumbProgressFill').style.width = pct + '%';
+        document.getElementById('thumbProgressText').textContent = pct + '%';
+      }
+    };
+    xhr.onload = () => {
+      if (xhr.status === 200) {
+        resolve(JSON.parse(xhr.responseText));
+      } else {
+        reject(new Error('Upload failed: ' + xhr.status));
+      }
+    };
+    xhr.onerror = () => reject(new Error('Network error'));
+    xhr.send(formData);
+  });
+}
+
+/* ── Handle Thumbnail File ─────────────── */
+async function handleThumbFile(file) {
+  if (!file) return;
+  if (file.size > 5 * 1024 * 1024) { toast('❌ ফাইল 5MB এর বেশি', 'err'); return; }
+
+  // Show progress
+  document.getElementById('thumbDropzone').style.display = 'none';
+  document.getElementById('thumbProgress').style.display = 'flex';
+  document.getElementById('thumbProgressFill').style.width = '0%';
+  document.getElementById('thumbProgressText').textContent = 'Uploading...';
+
+  try {
+    const result = await uploadToCloudinary(file);
+    // Save URL and public_id
+    document.getElementById('cThumbnailUrl').value      = result.secure_url;
+    document.getElementById('cThumbnailPublicId').value = result.public_id;
+
+    // Show preview
+    document.getElementById('thumbPreviewImg').src        = result.secure_url;
+    document.getElementById('thumbPreview').style.display = 'block';
+    document.getElementById('thumbProgress').style.display = 'none';
+
+    toast('✅ Thumbnail upload হয়েছে!', 'ok');
+  } catch(e) {
+    document.getElementById('thumbDropzone').style.display = 'block';
+    document.getElementById('thumbProgress').style.display = 'none';
+    toast('❌ Upload failed: ' + e.message, 'err');
+  }
+}
+
+/* ── Handle Drop ───────────────────────── */
+function handleThumbDrop(e) {
+  e.preventDefault();
+  document.getElementById('thumbDropzone').classList.remove('drag');
+  const file = e.dataTransfer.files[0];
+  if (file && file.type.startsWith('image/')) handleThumbFile(file);
+}
+
+/* ── Remove Thumbnail ──────────────────── */
+function removeThumbnail() {
+  document.getElementById('cThumbnailUrl').value      = '';
+  document.getElementById('cThumbnailPublicId').value = '';
+  document.getElementById('thumbPreview').style.display   = 'none';
+  document.getElementById('thumbDropzone').style.display  = 'block';
+  document.getElementById('thumbFileInput').value = '';
+}
+
+/* ── Reset Thumb Form ──────────────────── */
+function resetThumbnailForm() {
+  removeThumbnail();
+  document.getElementById('thumbProgress').style.display = 'none';
+}
+async function saveCourse() {
+  const editId = document.getElementById('editCourseId').value.trim();
+  if (editId) { await updateCourse(editId); return; }
+
+  const title = document.getElementById('cTitle').value.trim();
+  const msg   = document.getElementById('addCourseMsg');
+  const btn   = document.getElementById('btnAddCourse');
+  if (!title) { showMsg(msg,'err','কোর্সের নাম দিন'); return; }
+
+  btn.disabled = true; btn.textContent = 'সেভ হচ্ছে...';
+  try {
+    await db.collection('courses').add({
+      title,
+      description:  document.getElementById('cDesc').value.trim(),
+      category:     document.getElementById('cCat').value.trim() || 'General',
+      instructor:   document.getElementById('cInstructor').value.trim(),
+      thumbnailUrl: document.getElementById('cThumbnailUrl').value.trim(),
+      thumbnailId:  document.getElementById('cThumbnailPublicId').value.trim(),
+      published:    document.getElementById('cPublished').value === 'true',
+      price:        parseFloat(document.getElementById('cPrice').value) || 0,
+      certificate:  document.getElementById('cCertificate').value === 'true',
+      signatureUrl: document.getElementById('cSignatureUrl').value.trim(),
+      totalLessons: 0,
+      createdAt:    firebase.firestore.FieldValue.serverTimestamp()
+    });
+    toast('✅ কোর্স সেভ হয়েছে!','ok');
+    closeModal('addCourse');
+    document.getElementById('editCourseId').value = '';
+    ['cTitle','cDesc','cCat','cInstructor'].forEach(id => document.getElementById(id).value = '');
+    document.getElementById('cPublished').value   = 'true';
+    document.getElementById('cCertificate').value = 'false';
+    document.getElementById('cSignatureUrl').value = '';
+    document.getElementById('cSignaturePreview').style.display = 'none';
+    document.getElementById('signatureFieldWrap').style.display = 'none';
+    document.getElementById('editLessonSettings').style.display = 'none';
+    resetThumbnailForm();
+    await loadAll();
+  } catch(e) { showMsg(msg,'err','❌ '+e.message); }
+  btn.disabled = false; btn.textContent = 'কোর্স সেভ করুন';
+}
+
+async function updateCourse(courseId) {
+  const title = document.getElementById('cTitle').value.trim();
+  const msg   = document.getElementById('addCourseMsg');
+  const btn   = document.getElementById('btnAddCourse');
+  if (!title) { showMsg(msg,'err','কোর্সের নাম দিন'); return; }
+
+  btn.disabled = true; btn.textContent = 'আপডেট হচ্ছে...';
+  try {
+    await db.collection('courses').doc(courseId).update({
+      title,
+      description:  document.getElementById('cDesc').value.trim(),
+      category:     document.getElementById('cCat').value.trim() || 'General',
+      instructor:   document.getElementById('cInstructor').value.trim(),
+      thumbnailUrl: document.getElementById('cThumbnailUrl').value.trim(),
+      thumbnailId:  document.getElementById('cThumbnailPublicId').value.trim(),
+      published:    document.getElementById('cPublished').value === 'true',
+      price:        parseFloat(document.getElementById('cPrice').value) || 0,
+      certificate:  document.getElementById('cCertificate').value === 'true',
+      signatureUrl: document.getElementById('cSignatureUrl').value.trim(),
+    });
+
+    const toggles = document.querySelectorAll('#editLessonTogglesList .toggle-switch-input:not([disabled])');
+    if (toggles.length) {
+      const batch = db.batch();
+      toggles.forEach(t => {
+        batch.update(
+          db.collection('courses').doc(courseId).collection('lessons').doc(t.dataset.lessonId),
+          { quizMandatory: t.checked }
+        );
+      });
+      await batch.commit();
+    }
+
+    toast('✅ কোর্স আপডেট হয়েছে!','ok');
+    closeModal('addCourse');
+    await loadAll();
+  } catch(e) { showMsg(msg,'err','❌ '+e.message); }
+  btn.disabled = false; btn.textContent = 'আপডেট করুন';
+}
+
+/* ── Open Add Lesson ───────────────────── */
+function openAddLesson(courseId) {
+  document.getElementById('lessonCourseId').value = courseId;
+  document.getElementById('editLessonId').value   = '';
+  document.getElementById('lessonModalTitle').textContent = '📹 লেসন যোগ করুন';
+  document.getElementById('btnAddLesson').textContent     = 'লেসন সেভ করুন';
+  ['lTitle','lYoutube','lPdf'].forEach(id => document.getElementById(id).value = '');
+  document.getElementById('lOrder').value = '';
+  resetQuizForm();
+  openModal('addLesson');
+}
+
+/* ── Open Edit Lesson ──────────────────── */
+function openEditLesson(courseId, lessonId) {
+  const course = allCourses.find(c => c.id === courseId);
+  if (!course) return;
+  const lesson = course._lessons.find(l => l.id === lessonId);
+  if (!lesson) return;
+
+  document.getElementById('lessonCourseId').value = courseId;
+  document.getElementById('editLessonId').value   = lessonId;
+  document.getElementById('lessonModalTitle').textContent = '✏️ লেসন সম্পাদনা';
+  document.getElementById('btnAddLesson').textContent     = 'আপডেট করুন';
+
+  document.getElementById('lTitle').value   = lesson.title      || '';
+  document.getElementById('lYoutube').value = lesson.youtubeUrl || '';
+  document.getElementById('lPdf').value     = lesson.pdfUrl     || '';
+  document.getElementById('lOrder').value   = lesson.order      || '';
+
+  /* load existing quiz questions if any */
+  resetQuizForm();
+  if (lesson.quiz?.questions?.length) {
+    lesson.quiz.questions.forEach(q => {
+      addQuizQuestion();
+      /* fill last added block */
+      const blocks = document.querySelectorAll('.quiz-question-block');
+      const block  = blocks[blocks.length - 1];
+      block.querySelector('.qq-text').value = q.question || '';
+      const opts = block.querySelectorAll('.qq-opt');
+      q.options?.forEach((opt, i) => { if (opts[i]) opts[i].value = opt; });
+      const radios = block.querySelectorAll('input[type="radio"]');
+      if (radios[q.correctIndex]) radios[q.correctIndex].checked = true;
+    });
+  }
+
+  openModal('addLesson');
+}
+
+/* ── Update Lesson ─────────────────────── */
+async function updateLesson(courseId, lessonId) {
+  const title   = document.getElementById('lTitle').value.trim();
+  const youtube = document.getElementById('lYoutube').value.trim();
+  const pdf     = document.getElementById('lPdf').value.trim();
+  const order   = parseInt(document.getElementById('lOrder').value) || 1;
+  const msg     = document.getElementById('addLessonMsg');
+  const btn     = document.getElementById('btnAddLesson');
+
+  if (!title)   { showMsg(msg,'err','লেসনের শিরোনাম দিন'); return; }
+  if (!youtube) { showMsg(msg,'err','YouTube link দিন'); return; }
+
+  const quizData = collectQuizData(msg);
+  if (quizData === false) return;
+
+  btn.disabled = true; btn.textContent = 'আপডেট হচ্ছে...';
+  try {
+    const payload = {
+      title,
+      youtubeUrl: youtube,
+      pdfUrl:     pdf || '',
+      order,
+    };
+    if (quizData) {
+      payload.quiz          = quizData;
+      payload.quizMandatory = true;
+    } else {
+      /* if quiz was removed, clear it */
+      payload.quiz          = firebase.firestore.FieldValue.delete();
+      payload.quizMandatory = false;
+    }
+
+    await db.collection('courses').doc(courseId)
+      .collection('lessons').doc(lessonId)
+      .update(payload);
+
+    toast('✅ লেসন আপডেট হয়েছে!', 'ok');
+    closeModal('addLesson');
+    await loadAll();
+  } catch(e) { showMsg(msg,'err','❌ '+e.message); }
+  btn.disabled = false; btn.textContent = 'আপডেট করুন';
+}
+
+/* ── Save Lesson ───────────────────────── */
+async function saveLesson() {
+  const courseId  = document.getElementById('lessonCourseId').value;
+  const editId    = document.getElementById('editLessonId').value;
+
+  /* if edit mode, call updateLesson instead */
+  if (editId) { updateLesson(courseId, editId); return; }
+
+  const title    = document.getElementById('lTitle').value.trim();
+  const youtube  = document.getElementById('lYoutube').value.trim();
+  const pdf      = document.getElementById('lPdf').value.trim();
+  const order    = parseInt(document.getElementById('lOrder').value) || 1;
+  const msg      = document.getElementById('addLessonMsg');
+  const btn      = document.getElementById('btnAddLesson');
+
+  if (!title)   { showMsg(msg,'err','লেসনের শিরোনাম দিন'); return; }
+  if (!youtube) { showMsg(msg,'err','YouTube link দিন'); return; }
+
+  const quizData = collectQuizData(msg);
+  if (quizData === false) return;
+
+  btn.disabled = true; btn.textContent = 'সেভ হচ্ছে...';
+  try {
+    const payload = {
+      title, youtubeUrl: youtube, pdfUrl: pdf || '', order,
+      createdAt: firebase.firestore.FieldValue.serverTimestamp()
+    };
+    if (quizData) {
+      payload.quiz = quizData;
+      payload.quizMandatory = true;
+    }
+    const lessonRef = db.collection('courses').doc(courseId).collection('lessons');
+    await lessonRef.add(payload);
+    await db.collection('courses').doc(courseId).update({
+      totalLessons: firebase.firestore.FieldValue.increment(1)
+    });
+    toast('✅ লেসন সেভ হয়েছে!','ok');
+    closeModal('addLesson');
+    await loadAll();
+  } catch(e) { showMsg(msg,'err','❌ '+e.message); }
+  btn.disabled = false; btn.textContent = 'লেসন সেভ করুন';
+}
+
+/* ── Delete Lesson ─────────────────────── */
+async function deleteLesson(courseId, lessonId) {
+  if (!confirm('লেসনটি মুছবেন?')) return;
+  await db.collection('courses').doc(courseId).collection('lessons').doc(lessonId).delete();
+  await db.collection('courses').doc(courseId).update({
+    totalLessons: firebase.firestore.FieldValue.increment(-1)
+  });
+  toast('🗑 লেসন মুছে গেছে','ok');
+  await loadAll();
+}
+
+/* ── Delete Course ─────────────────────── */
+async function deleteCourse(id) {
+  if (!confirm('কোর্সটি ও সব লেসন মুছবেন? এটা undo করা যাবে না।')) return;
+  /* delete all lessons subcollection */
+  const lSnap = await db.collection('courses').doc(id).collection('lessons').get();
+  const batch = db.batch();
+  lSnap.forEach(doc => batch.delete(doc.ref));
+  batch.delete(db.collection('courses').doc(id));
+  await batch.commit();
+  toast('🗑 কোর্স মুছে গেছে','ok');
+  await loadAll();
+}
+
+/* ── Save Notice ───────────────────────── */
+async function saveNotice() {
+  const title = document.getElementById('nTitle').value.trim();
+  const msg   = document.getElementById('addNoticeMsg');
+  const btn   = document.getElementById('btnAddNotice');
+  if (!title) { showMsg(msg,'err','শিরোনাম দিন'); return; }
+
+  btn.disabled = true; btn.textContent = 'পোস্ট হচ্ছে...';
+  try {
+    await db.collection('notices').add({
+      title, body: document.getElementById('nBody').value.trim(),
+      date: firebase.firestore.FieldValue.serverTimestamp()
+    });
+    toast('✅ নোটিশ পোস্ট হয়েছে!','ok');
+    closeModal('addNotice');
+    document.getElementById('nTitle').value = '';
+    document.getElementById('nBody').value  = '';
+    await loadAll();
+  } catch(e) { showMsg(msg,'err','❌ '+e.message); }
+  btn.disabled = false; btn.textContent = 'পোস্ট করুন';
+}
+
+/* ── Delete Notice ─────────────────────── */
+async function deleteNotice(id) {
+  if (!confirm('নোটিশটি মুছবেন?')) return;
+  await db.collection('notices').doc(id).delete();
+  toast('🗑 নোটিশ মুছে গেছে','ok');
+  await loadAll();
+}
+
+/* ── Payments ──────────────────────────── */
+function renderPayments(payments) {
+  const pending  = payments.filter(p => p.status === 'pending').length;
+  const verified = payments.filter(p => p.status === 'verified').length;
+  const revenue  = payments.filter(p => p.status === 'verified').reduce((s,p) => s + (p.amount||0), 0);
+  document.getElementById('psПending').textContent  = pending;
+  document.getElementById('psVerified').textContent = verified;
+  document.getElementById('psRevenue').textContent  = '৳' + revenue.toLocaleString();
+
+  const tbody = document.getElementById('paymentsTable');
+  if (!payments.length) {
+    tbody.innerHTML = `<tr><td colspan="8" style="text-align:center;padding:2rem;color:var(--muted)">কোনো payment নেই</td></tr>`;
+    return;
+  }
+  tbody.innerHTML = payments.map(p => {
+    const date = p.submittedAt?.toDate?.().toLocaleDateString('bn-BD', {
+      year:'numeric', month:'short', day:'numeric'
+    }) || '—';
+    const statusBadge = {
+      pending:  '<span class="badge badge-amber">⏳ Pending</span>',
+      verified: '<span class="badge badge-green">✅ Verified</span>',
+      rejected: '<span class="badge badge-rose">❌ Rejected</span>',
+    }[p.status] || '<span class="badge badge-gray">Unknown</span>';
+
+    const actions = p.status === 'pending' ? `
+      <div style="display:flex;gap:.35rem;flex-wrap:wrap">
+        <button class="btn btn-verify btn-sm" onclick="verifyPayment('${p.id}','${p.userId}','${p.courseId}')">✅ Verify</button>
+        <button class="btn btn-reject btn-sm" onclick="rejectPayment('${p.id}')">❌ Reject</button>
+      </div>` : `<span style="color:var(--muted);font-size:.75rem">—</span>`;
+
+    return `
+    <tr>
+      <td data-label="Student">
+        <div style="font-weight:600;font-size:.85rem">${p.userName || '—'}</div>
+        <div style="font-size:.72rem;color:var(--muted)">${p.userPhone || ''}</div>
+      </td>
+      <td data-label="কোর্স" style="font-size:.82rem;max-width:160px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${p.courseTitle || '—'}</td>
+      <td data-label="পরিমাণ"><span style="font-weight:700;color:var(--amber)">৳${p.amount||0}</span></td>
+      <td data-label="Method"><span class="badge badge-blue">${p.method||'—'}</span></td>
+      <td data-label="TrxID">
+        <span style="font-family:monospace;font-size:.8rem;color:var(--cyan)">${p.transactionId||'—'}</span>
+      </td>
+      <td data-label="তারিখ" style="color:var(--muted);font-size:.76rem">${date}</td>
+      <td data-label="Status">${statusBadge}</td>
+      <td data-label="Action">${actions}</td>
+    </tr>`;
+  }).join('');
+}
+
+function filterPayments(status, btn) {
+  document.querySelectorAll('.pay-filter-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  const filtered = status === 'all' ? allPayments : allPayments.filter(p => p.status === status);
+  renderPayments(filtered);
+}
+
+async function verifyPayment(payId, userId, courseId) {
+  if (!confirm('এই payment verify করবেন? Student টিকে কোর্সে এনরোল করা হবে।')) return;
+  try {
+    const batch = db.batch();
+    // update payment status
+    batch.update(db.collection('payments').doc(payId), {
+      status: 'verified',
+      verifiedAt: firebase.firestore.FieldValue.serverTimestamp(),
+    });
+    // enroll student
+    batch.update(db.collection('users').doc(userId), {
+      enrolledCourses: firebase.firestore.FieldValue.arrayUnion(courseId)
+    });
+    await batch.commit();
+    toast('✅ Verified! Student কে এনরোল করা হয়েছে।', 'ok');
+    await loadAll();
+  } catch(e) {
+    toast('❌ সমস্যা হয়েছে: ' + e.message, 'err');
+  }
+}
+
+async function rejectPayment(payId) {
+  if (!confirm('এই payment reject করবেন?')) return;
+  try {
+    await db.collection('payments').doc(payId).update({
+      status: 'rejected',
+      rejectedAt: firebase.firestore.FieldValue.serverTimestamp(),
+    });
+    toast('❌ Payment reject করা হয়েছে।', 'ok');
+    await loadAll();
+  } catch(e) {
+    toast('❌ সমস্যা হয়েছে: ' + e.message, 'err');
+  }
+}
+
+/* ── Reviews Page ──────────────────────── */
+function starsHtml(avg, size = '.85rem') {
+  let h = '';
+  for (let i = 1; i <= 5; i++) {
+    h += `<span style="color:${i <= Math.round(avg) ? 'var(--amber)' : 'var(--border2)'};font-size:${size}">★</span>`;
+  }
+  return h;
+}
+
+function renderReviewsPage(reviews) {
+  const total = reviews.length;
+  const avg   = total ? (reviews.reduce((s,r) => s + r.rating, 0) / total) : 0;
+  const ratedCourseIds = new Set(reviews.map(r => r.courseId));
+
+  document.getElementById('rvTotal').textContent   = total;
+  document.getElementById('rvAvg').textContent     = total ? avg.toFixed(1) + ' ⭐' : '—';
+  document.getElementById('rvCourses').textContent = ratedCourseIds.size;
+
+  // course filter dropdown
+  const sel = document.getElementById('reviewCourseFilter');
+  const prev = sel.value;
+  sel.innerHTML = '<option value="all">সব কোর্স</option>' +
+    allCourses.map(c => `<option value="${c.id}">${c.title}</option>`).join('');
+  if (prev) sel.value = prev;
+
+  renderReviewCards(reviews);
+}
+
+function filterReviews() {
+  const courseId = document.getElementById('reviewCourseFilter').value;
+  const filtered = courseId === 'all'
+    ? allReviews
+    : allReviews.filter(r => r.courseId === courseId);
+  renderReviewCards(filtered);
+}
+
+function renderReviewCards(reviews) {
+  const el = document.getElementById('reviewsList');
+  if (!reviews.length) {
+    el.innerHTML = `<div style="text-align:center;padding:3rem;color:var(--muted);font-family:var(--bn)">কোনো review নেই</div>`;
+    return;
+  }
+  el.innerHTML = reviews.map(r => {
+    const course = allCourses.find(c => c.id === r.courseId);
+    const date   = r.createdAt?.toDate?.().toLocaleDateString('bn-BD', {
+      year:'numeric', month:'short', day:'numeric'
+    }) || '—';
+    return `
+    <div class="review-card">
+      <div style="flex:1">
+        <div style="display:flex;align-items:center;gap:.6rem;margin-bottom:.3rem;flex-wrap:wrap">
+          <div class="review-user">${r.userName || 'Student'}</div>
+          <div class="rating-stars">${starsHtml(r.rating)}</div>
+          <span style="font-size:.75rem;font-weight:700;color:var(--amber)">${r.rating}/5</span>
+        </div>
+        ${course ? `<div style="font-size:.72rem;color:var(--primary);margin-bottom:.3rem">📚 ${course.title}</div>` : ''}
+        ${r.review ? `<div class="review-text">${r.review}</div>` : ''}
+        <div class="review-date">🗓 ${date}</div>
+      </div>
+      <button class="btn btn-rose btn-sm" onclick="deleteReview('${r.id}','${r.courseId}')">🗑</button>
+    </div>`;
+  }).join('');
+}
+
+/* ── Reviews Modal (from course row) ──── */
+async function openReviewsModal(courseId) {
+  const course  = allCourses.find(c => c.id === courseId);
+  const reviews = allReviews.filter(r => r.courseId === courseId);
+  const total   = reviews.length;
+  const avg     = total ? (reviews.reduce((s,r) => s + r.rating, 0) / total) : 0;
+
+  document.getElementById('reviewsModalTitle').textContent =
+    `⭐ Reviews — ${course?.title || ''}`;
+  document.getElementById('modalAvgBig').textContent  = total ? avg.toFixed(1) : '—';
+  document.getElementById('modalAvgStars').innerHTML  = total ? starsHtml(avg, '1rem') : '';
+  document.getElementById('modalTotalRatings').textContent = `${total} রেটিং`;
+
+  // breakdown bars 5→1
+  const bars = document.getElementById('modalRatingBars');
+  bars.innerHTML = [5,4,3,2,1].map(star => {
+    const cnt = reviews.filter(r => r.rating === star).length;
+    const pct = total ? Math.round(cnt / total * 100) : 0;
+    return `
+    <div style="display:flex;align-items:center;gap:.5rem;font-size:.72rem">
+      <span style="color:var(--amber);width:14px">${star}★</span>
+      <div style="flex:1;height:6px;background:var(--border2);border-radius:3px;overflow:hidden">
+        <div style="width:${pct}%;height:100%;background:var(--amber);border-radius:3px;transition:width .4s"></div>
+      </div>
+      <span style="color:var(--muted);width:26px;text-align:right">${cnt}</span>
+    </div>`;
+  }).join('');
+
+  // review list
+  const list = document.getElementById('modalReviewsList');
+  if (!reviews.length) {
+    list.innerHTML = `<div style="text-align:center;padding:2rem;color:var(--muted);font-family:var(--bn)">এখনো কোনো review নেই</div>`;
+  } else {
+    list.innerHTML = reviews.map(r => {
+      const date = r.createdAt?.toDate?.().toLocaleDateString('bn-BD') || '—';
+      return `
+      <div class="review-card">
+        <div style="flex:1">
+          <div style="display:flex;align-items:center;gap:.5rem;margin-bottom:.25rem;flex-wrap:wrap">
+            <span class="review-user">${r.userName || 'Student'}</span>
+            <div class="rating-stars">${starsHtml(r.rating)}</div>
+          </div>
+          ${r.review ? `<div class="review-text">${r.review}</div>` : ''}
+          <div class="review-date">🗓 ${date}</div>
+        </div>
+        <button class="btn btn-rose btn-sm" onclick="deleteReview('${r.id}','${r.courseId}')">🗑</button>
+      </div>`;
+    }).join('');
+  }
+
+  document.getElementById('modal-reviews').classList.add('open');
+}
+
+/* ── Delete Review ─────────────────────── */
+async function deleteReview(reviewId, courseId) {
+  if (!confirm('এই review মুছে দেবেন?')) return;
+  try {
+    await db.collection('ratings').doc(reviewId).delete();
+
+    // recalculate avg
+    const remaining = allReviews.filter(r => r.id !== reviewId && r.courseId === courseId);
+    const total = remaining.length;
+    const avg   = total ? Math.round(remaining.reduce((s,r) => s + r.rating, 0) / total * 10) / 10 : 0;
+    await db.collection('courses').doc(courseId).update({
+      avgRating:    avg || firebase.firestore.FieldValue.delete(),
+      totalRatings: total,
+    });
+
+    toast('✅ Review মুছে গেছে।', 'ok');
+    await loadAll();
+  } catch(e) {
+    toast('❌ সমস্যা হয়েছে: ' + e.message, 'err');
+  }
+}
+
+/* ── Certificates ──────────────────────── */
+function renderCertificates(certs) {
+  const uniqCourses  = new Set(certs.map(c => c.courseId)).size;
+  const uniqStudents = new Set(certs.map(c => c.userId)).size;
+  document.getElementById('csTotal').textContent       = certs.length;
+  document.getElementById('csUniqCourses').textContent = uniqCourses;
+  document.getElementById('csUniqStudents').textContent = uniqStudents;
+
+  // populate course filter
+  const sel  = document.getElementById('certCourseFilter');
+  const prev = sel.value;
+  sel.innerHTML = '<option value="all">সব কোর্স</option>' +
+    allCourses.map(c => `<option value="${c.id}">${c.title}</option>`).join('');
+  if (prev) sel.value = prev;
+
+  renderCertRows(certs);
+}
+
+function filterCerts() {
+  const courseId = document.getElementById('certCourseFilter').value;
+  const query    = document.getElementById('certSearch').value.trim().toLowerCase();
+  let filtered   = courseId === 'all' ? allCerts : allCerts.filter(c => c.courseId === courseId);
+  if (query) filtered = filtered.filter(c => (c.userName || '').toLowerCase().includes(query));
+  renderCertRows(filtered);
+}
+
+function renderCertRows(certs) {
+  const tbody = document.getElementById('certsTable');
+  if (!certs.length) {
+    tbody.innerHTML = `<tr><td colspan="5" style="text-align:center;padding:2rem;color:var(--muted)">কোনো সার্টিফিকেট নেই</td></tr>`;
+    return;
+  }
+  tbody.innerHTML = certs.map(c => {
+    const date = c.issuedAt?.toDate?.().toLocaleDateString('bn-BD', {
+      year:'numeric', month:'short', day:'numeric'
+    }) || '—';
+    const verifyUrl = `certificate.html?id=${c.certId || c.id}`;
+    return `
+    <tr>
+      <td data-label="Student">
+        <div style="font-weight:600;font-size:.88rem">${c.userName || '—'}</div>
+      </td>
+      <td data-label="কোর্স" style="font-size:.82rem;max-width:180px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${c.courseTitle || '—'}</td>
+      <td data-label="Certificate ID">
+        <span style="font-family:monospace;font-size:.75rem;color:var(--cyan)">${c.certId || c.id}</span>
+      </td>
+      <td data-label="ইস্যু তারিখ" style="color:var(--muted);font-size:.78rem">${date}</td>
+      <td data-label="Action">
+        <div style="display:flex;gap:.35rem;flex-wrap:wrap">
+          <a href="${verifyUrl}" target="_blank" class="btn btn-ghost btn-sm">🔗 Verify</a>
+          <button class="btn btn-rose btn-sm" onclick="revokeCert('${c.id}','${(c.userName||'').replace(/'/g,"\\'")}')">🗑 Revoke</button>
+        </div>
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+async function revokeCert(certId, userName) {
+  if (!confirm(`"${userName}" এর সার্টিফিকেট বাতিল করবেন? এটি আর যাচাই হবে না।`)) return;
+  try {
+    await db.collection('certificates').doc(certId).delete();
+    toast('✅ সার্টিফিকেট বাতিল করা হয়েছে।', 'ok');
+    await loadAll();
+  } catch(e) {
+    toast('❌ সমস্যা হয়েছে: ' + e.message, 'err');
+  }
+}
+
+/* ── Certificate Image Preview ────────── */
+function previewCertImg(inputId, imgId, previewId) {
+  const url = document.getElementById(inputId).value.trim();
+  const img  = document.getElementById(imgId);
+  const wrap = document.getElementById(previewId);
+  if (url) {
+    img.src = url;
+    img.onload  = () => wrap.style.display = 'block';
+    img.onerror = () => wrap.style.display = 'none';
+  } else {
+    wrap.style.display = 'none';
+  }
+}
+
+function toggleSignatureField() {
+  const val  = document.getElementById('cCertificate').value;
+  document.getElementById('signatureFieldWrap').style.display = val === 'true' ? 'block' : 'none';
+}
+
+/* ── Make Admin ────────────────────────── */
+async function makeAdmin(uid) {
+  if (!confirm('এই শিক্ষার্থীকে Admin করবেন? তিনি Admin Panel দেখতে পাবেন।')) return;
+  await db.collection('users').doc(uid).update({ role: 'admin' });
+  toast('✅ Admin করা হয়েছে!','ok');
+  await loadAll();
+}
+
+/* ── Page Navigation ───────────────────── */
+const pageTitles = {
+  dashboard:'Dashboard', courses:'কোর্স ম্যানেজমেন্ট',
+  notices:'নোটিশ বোর্ড', students:'শিক্ষার্থী',
+  payments:'Payments', reviews:'Reviews',
+  certificates:'Certificates', settings:'Site Settings'
+};
+function go(name, el) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.getElementById('page-'+name).classList.add('active');
+  document.querySelectorAll('.sb-btn[data-p]').forEach(b => b.classList.toggle('active', b.dataset.p===name));
+  document.getElementById('topbarTitle').textContent = pageTitles[name] || name;
+  closeSidebar();
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+
+/* ── Sidebar ───────────────────────────── */
+function toggleSidebar() {
+  document.getElementById('sidebar').classList.toggle('open');
+  document.getElementById('sbOverlay').classList.toggle('show');
+}
+function closeSidebar() {
+  document.getElementById('sidebar').classList.remove('open');
+  document.getElementById('sbOverlay').classList.remove('show');
+}
+
+/* ── Modal ─────────────────────────────── */
+function openModal(id) { document.getElementById('modal-'+id).classList.add('open'); }
+function closeModal(id) {
+  document.getElementById('modal-'+id).classList.remove('open');
+  /* reset lesson modal to add mode */
+  if (id === 'addLesson') {
+    document.getElementById('editLessonId').value = '';
+    document.getElementById('lessonModalTitle').textContent = '📹 লেসন যোগ করুন';
+    document.getElementById('btnAddLesson').textContent     = 'লেসন সেভ করুন';
+  }
+  /* clear msg */
+  const msg = document.getElementById('add'+id.charAt(0).toUpperCase()+id.slice(1)+'Msg');
+  if (msg) { msg.className = 'msg'; msg.textContent = ''; }
+}
+/* close on backdrop click */
+document.querySelectorAll('.modal-bg').forEach(bg =>
+  bg.addEventListener('click', e => { if (e.target===bg) bg.classList.remove('open'); })
+);
+
+/* ── Toast ─────────────────────────────── */
+function toast(msg, type='ok') {
+  const el = document.getElementById('toast');
+  el.textContent = msg; el.className = 'show ' + type;
+  setTimeout(() => el.classList.remove('show'), 3000);
+}
+
+/* ── showMsg ───────────────────────────── */
+function showMsg(el, type, text) {
+  el.className = 'msg ' + type; el.textContent = text;
+}
+
+/* ── Logout ────────────────────────────── */
+function doLogout() {
+  if (confirm('Logout করবেন?')) auth.signOut().then(() => location.href='index.html');
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,800 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title id="pageTitle">Legal — LMS</title>
+<meta name="description" content="Terms & Conditions, Privacy Policy, Refund Policy, Cookie Policy"/>
+<link rel="icon" id="favicon" href=""/>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;800;900&family=DM+Sans:wght@300;400;500;600&family=Hind+Siliguri:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#0070f3">
+<script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore-compat.js"></script>
+<script src="config.js"></script>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --ink:    #0A0A0F;
+  --paper:  #F5F3EE;
+  --cream:  #EDE9E0;
+  --accent: #C8A96E;
+  --blue:   #1B4FBE;
+  --muted:  #7A7570;
+  --border: rgba(10,10,15,.1);
+  --serif:  'Playfair Display', serif;
+  --sans:   'DM Sans', sans-serif;
+  --bn:     'Hind Siliguri', sans-serif;
+}
+
+html { scroll-behavior: smooth; }
+body {
+  font-family: var(--sans);
+  background: var(--paper);
+  color: var(--ink);
+  overflow-x: hidden;
+  opacity: 0; transition: opacity .4s;
+}
+body.ready { opacity: 1; }
+
+/* ── NAV ── */
+nav {
+  position: fixed; top: 0; left: 0; right: 0; z-index: 200;
+  padding: .85rem 2.5rem;
+  display: flex; align-items: center; justify-content: space-between;
+  background: rgba(245,243,238,.94);
+  backdrop-filter: blur(18px);
+  border-bottom: 1px solid var(--border);
+  transition: box-shadow .3s;
+}
+nav.scrolled { box-shadow: 0 4px 24px rgba(10,10,15,.08); }
+.nav-brand {
+  display: flex; align-items: center; gap: .7rem;
+  text-decoration: none; color: var(--ink);
+}
+.nav-logo { width: 38px; height: 38px; border-radius: 10px; object-fit: cover; display: none; }
+.nav-logo.show { display: block; }
+.nav-logo-fallback {
+  width: 38px; height: 38px; border-radius: 10px;
+  background: var(--ink);
+  display: flex; align-items: center; justify-content: center;
+  color: var(--accent); font-weight: 800; font-size: 1.1rem;
+  font-family: var(--serif); flex-shrink: 0;
+}
+.nav-name { font-family: var(--serif); font-size: 1.15rem; font-weight: 700; }
+.nav-links { display: flex; align-items: center; gap: 2rem; }
+.nav-links a {
+  color: var(--muted); text-decoration: none;
+  font-size: .88rem; font-weight: 500; transition: color .2s;
+  position: relative;
+}
+.nav-links a::after {
+  content: ''; position: absolute; bottom: -3px; left: 0;
+  width: 0; height: 1.5px; background: var(--ink); transition: width .22s;
+}
+.nav-links a:hover { color: var(--ink); }
+.nav-links a:hover::after { width: 100%; }
+.btn-nav {
+  padding: .5rem 1.4rem;
+  background: var(--ink); color: var(--paper) !important;
+  border-radius: 8px; font-weight: 600; font-size: .85rem;
+  transition: background .2s, transform .2s !important;
+}
+.btn-nav::after { display: none !important; }
+.btn-nav:hover { background: var(--blue) !important; transform: translateY(-1px); }
+.nav-hamburger {
+  display: none; flex-direction: column; justify-content: center;
+  gap: 5px; width: 40px; height: 40px; background: transparent;
+  border: 1.5px solid var(--border); border-radius: 10px;
+  cursor: pointer; padding: 0; z-index: 201;
+  transition: border-color .2s, background .2s;
+}
+.nav-hamburger:hover { border-color: var(--ink); background: var(--cream); }
+.nav-hamburger span {
+  display: block; width: 18px; height: 1.8px;
+  background: var(--ink); border-radius: 2px; margin: 0 auto;
+  transition: transform .3s cubic-bezier(.4,0,.2,1), opacity .2s, width .3s;
+  transform-origin: center;
+}
+.nav-hamburger.open span:nth-child(1) { transform: translateY(6.8px) rotate(45deg); }
+.nav-hamburger.open span:nth-child(2) { opacity: 0; width: 0; }
+.nav-hamburger.open span:nth-child(3) { transform: translateY(-6.8px) rotate(-45deg); }
+.nav-drawer {
+  display: none; position: fixed; inset: 0; z-index: 299; pointer-events: none;
+}
+.nav-drawer-backdrop {
+  position: absolute; inset: 0; background: rgba(10,10,15,.35);
+  backdrop-filter: blur(4px); opacity: 0; transition: opacity .3s;
+}
+.nav-drawer-panel {
+  position: absolute; top: 0; right: 0;
+  width: min(320px, 85vw); height: 100%;
+  background: var(--paper); border-left: 1px solid var(--border);
+  box-shadow: -8px 0 40px rgba(10,10,15,.12);
+  display: flex; flex-direction: column;
+  padding: 5.5rem 2rem 2rem;
+  transform: translateX(100%);
+  transition: transform .35s cubic-bezier(.4,0,.2,1); overflow-y: auto;
+}
+.nav-drawer.open { pointer-events: all; }
+.nav-drawer.open .nav-drawer-backdrop { opacity: 1; }
+.nav-drawer.open .nav-drawer-panel { transform: translateX(0); }
+.nav-drawer-links { display: flex; flex-direction: column; gap: .3rem; flex: 1; }
+.nav-drawer-links a {
+  display: flex; align-items: center; gap: .8rem;
+  padding: .9rem 1rem; border-radius: 10px;
+  color: var(--muted); text-decoration: none;
+  font-size: .95rem; font-weight: 500;
+  transition: background .2s, color .2s, padding-left .2s;
+}
+.nav-drawer-links a:hover { background: var(--cream); color: var(--ink); padding-left: 1.3rem; }
+.drawer-icon {
+  width: 32px; height: 32px; border-radius: 8px;
+  background: var(--cream);
+  display: flex; align-items: center; justify-content: center;
+  font-size: .85rem; flex-shrink: 0; transition: background .2s;
+}
+.nav-drawer-links a:hover .drawer-icon { background: #fff; }
+.drawer-login-btn {
+  display: block; width: 100%; padding: .9rem;
+  background: var(--ink); color: var(--paper);
+  border: none; border-radius: 12px;
+  font-size: .95rem; font-weight: 600; font-family: var(--sans);
+  text-align: center; text-decoration: none;
+  margin-top: 1.5rem; cursor: pointer;
+  transition: background .2s, transform .2s;
+}
+.drawer-login-btn:hover { background: var(--blue); transform: translateY(-1px); }
+.drawer-divider { height: 1px; background: var(--border); margin: 1.2rem 0; }
+.drawer-brand-bottom {
+  font-family: var(--serif); font-size: .78rem;
+  color: rgba(10,10,15,.22); text-align: center; padding-top: 1rem;
+}
+body.nav-open { overflow: hidden; }
+
+/* ── LEGAL PAGE LAYOUT ── */
+.legal-hero {
+  background: var(--ink);
+  color: var(--paper);
+  padding: 8rem 2.5rem 4rem;
+  text-align: center;
+}
+.legal-hero-eyebrow {
+  display: inline-flex; align-items: center; gap: .5rem;
+  background: rgba(200,169,110,.1); border: 1px solid rgba(200,169,110,.25);
+  padding: .3rem 1rem; border-radius: 20px;
+  font-size: .72rem; font-weight: 700;
+  letter-spacing: .1em; text-transform: uppercase;
+  color: var(--accent); margin-bottom: 1.4rem;
+}
+.legal-hero h1 {
+  font-family: var(--serif);
+  font-size: clamp(2rem, 4vw, 3.2rem);
+  font-weight: 900; line-height: 1.15;
+  margin-bottom: 1rem;
+}
+.legal-hero p {
+  font-family: var(--bn);
+  font-size: .95rem; color: rgba(255,255,255,.4);
+  max-width: 500px; margin: 0 auto 2rem;
+  line-height: 1.7;
+}
+.legal-updated {
+  font-size: .75rem; color: rgba(255,255,255,.25);
+  font-family: var(--bn);
+}
+
+/* Tab nav */
+.legal-tabs-wrap {
+  position: sticky; top: 64px; z-index: 99;
+  background: rgba(245,243,238,.96);
+  backdrop-filter: blur(16px);
+  border-bottom: 1px solid var(--border);
+  box-shadow: 0 2px 12px rgba(10,10,15,.06);
+}
+.legal-tabs {
+  max-width: 880px; margin: 0 auto;
+  display: flex; overflow-x: auto;
+  scrollbar-width: none;
+  padding: 0 1.5rem;
+}
+.legal-tabs::-webkit-scrollbar { display: none; }
+.legal-tab {
+  flex-shrink: 0;
+  padding: 1rem 1.4rem;
+  font-size: .85rem; font-weight: 600;
+  color: var(--muted);
+  cursor: pointer; border: none; background: none;
+  border-bottom: 2.5px solid transparent;
+  transition: color .2s, border-color .2s;
+  font-family: var(--sans);
+  white-space: nowrap;
+}
+.legal-tab:hover { color: var(--ink); }
+.legal-tab.active { color: var(--blue); border-bottom-color: var(--blue); }
+
+/* Content */
+.legal-body {
+  max-width: 880px; margin: 0 auto;
+  padding: 3rem 2.5rem 5rem;
+}
+.legal-section { display: none; }
+.legal-section.show {
+  display: block;
+  animation: fadeIn .3s ease;
+}
+@keyframes fadeIn { from { opacity:0; transform:translateY(8px); } to { opacity:1; transform:translateY(0); } }
+
+/* Section header */
+.ls-header {
+  display: flex; align-items: center; gap: 1rem;
+  margin-bottom: 2rem; padding-bottom: 1.4rem;
+  border-bottom: 1px solid var(--border);
+}
+.ls-icon {
+  width: 52px; height: 52px; border-radius: 14px;
+  background: var(--ink);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 1.5rem; flex-shrink: 0;
+}
+.ls-title { font-family: var(--serif); font-size: 1.8rem; font-weight: 800; line-height: 1.2; }
+.ls-date { font-size: .75rem; color: var(--muted); font-family: var(--bn); margin-top: .25rem; }
+
+/* Content typography */
+.legal-content h2 {
+  font-family: var(--serif); font-size: 1.2rem; font-weight: 800;
+  margin: 2.2rem 0 .7rem; color: var(--ink);
+}
+.legal-content h2:first-child { margin-top: 0; }
+.legal-content p {
+  font-family: var(--bn); font-size: .92rem; color: #3a3830;
+  line-height: 1.85; margin-bottom: 1rem;
+}
+.legal-content ul, .legal-content ol {
+  padding-left: 1.4rem; margin-bottom: 1rem;
+}
+.legal-content li {
+  font-family: var(--bn); font-size: .9rem; color: #3a3830;
+  line-height: 1.8; margin-bottom: .35rem;
+}
+.legal-content strong { color: var(--ink); font-weight: 700; }
+.legal-content a { color: var(--blue); text-decoration: underline; }
+
+/* Info box */
+.legal-box {
+  background: var(--cream); border: 1px solid var(--border);
+  border-left: 3px solid var(--accent);
+  border-radius: 10px; padding: 1rem 1.3rem;
+  margin: 1.5rem 0;
+  font-family: var(--bn); font-size: .88rem;
+  color: var(--muted); line-height: 1.7;
+}
+.legal-box.blue {
+  background: rgba(27,79,190,.04);
+  border-left-color: var(--blue); color: #2a3e7a;
+}
+.legal-box.green {
+  background: rgba(6,214,100,.05);
+  border-left-color: #22a86e; color: #1a5c3a;
+}
+.legal-box.red {
+  background: rgba(220,38,38,.04);
+  border-left-color: #dc2626; color: #7f1d1d;
+}
+
+/* ── FOOTER — same as index ── */
+.site-footer { background: var(--ink); color: var(--paper); font-family: var(--sans); }
+.sf-inner { max-width: 1280px; margin: 0 auto; padding: 5rem 2.5rem 0; }
+.sf-grid {
+  display: grid; grid-template-columns: 2fr 1fr 1fr 1fr 1.4fr;
+  gap: 3rem; padding-bottom: 4rem;
+  border-bottom: 1px solid rgba(255,255,255,.07);
+}
+.sf-logo-wrap { display: inline-flex; align-items: center; gap: .65rem; text-decoration: none; margin-bottom: 1.2rem; }
+.sf-logo-img { width: 36px; height: 36px; border-radius: 9px; object-fit: cover; }
+.sf-logo-fallback {
+  width: 36px; height: 36px; border-radius: 9px;
+  background: var(--accent);
+  display: flex; align-items: center; justify-content: center;
+  color: var(--ink); font-family: var(--serif);
+  font-size: 1.1rem; font-weight: 800; flex-shrink: 0;
+}
+.sf-app-name { font-family: var(--serif); font-size: 1.2rem; font-weight: 800; color: var(--paper); }
+.sf-desc { font-family: var(--bn); font-size: .85rem; color: rgba(255,255,255,.38); line-height: 1.85; margin-bottom: 1.8rem; max-width: 240px; }
+.sf-socials { display: flex; gap: .6rem; flex-wrap: wrap; }
+.sf-social {
+  width: 38px; height: 38px; border-radius: 9px;
+  border: 1px solid rgba(255,255,255,.1); background: rgba(255,255,255,.05);
+  display: flex; align-items: center; justify-content: center;
+  color: rgba(255,255,255,.45); text-decoration: none;
+  transition: background .22s, border-color .22s, color .22s, transform .22s; flex-shrink: 0;
+}
+.sf-social:hover { background: var(--accent); border-color: var(--accent); color: var(--ink); transform: translateY(-3px); }
+.sf-social--wa:hover { background: #25D366; border-color: #25D366; color: #fff; }
+.sf-col-title { font-size: .68rem; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: var(--accent); margin-bottom: 1.4rem; margin-top: 0; }
+.sf-links { list-style: none; display: flex; flex-direction: column; gap: .75rem; }
+.sf-links a { font-size: .85rem; color: rgba(255,255,255,.42); text-decoration: none; transition: color .2s, padding-left .2s; display: inline-flex; align-items: center; gap: .35rem; position: relative; }
+.sf-links a::before { content: ''; width: 0; height: 1px; background: var(--accent); transition: width .22s; display: inline-block; flex-shrink: 0; }
+.sf-links a:hover { color: var(--paper); padding-left: .25rem; }
+.sf-links a:hover::before { width: 10px; }
+.sf-contact-list { list-style: none; display: flex; flex-direction: column; gap: 1rem; }
+.sf-contact-list li { display: flex; align-items: flex-start; gap: .7rem; }
+.sf-contact-icon { color: var(--accent); flex-shrink: 0; margin-top: 2px; display: flex; }
+.sf-contact-text { font-family: var(--bn); font-size: .83rem; color: rgba(255,255,255,.42); text-decoration: none; line-height: 1.5; transition: color .2s; word-break: break-all; }
+a.sf-contact-text:hover { color: var(--paper); }
+.sf-trust { display: flex; align-items: center; gap: 2rem; padding: 1.8rem 0; border-bottom: 1px solid rgba(255,255,255,.07); flex-wrap: wrap; }
+.sf-trust-badge { display: flex; align-items: center; gap: .55rem; color: rgba(255,255,255,.3); font-size: .75rem; font-weight: 600; letter-spacing: .02em; }
+.sf-trust-badge svg { color: var(--accent); flex-shrink: 0; }
+.sf-bottom { border-top: 1px solid rgba(255,255,255,.05); background: rgba(0,0,0,.25); }
+.sf-bottom-inner { max-width: 1280px; margin: 0 auto; padding: 1.4rem 2.5rem; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: .8rem; }
+.sf-copy { font-family: var(--bn); font-size: .76rem; color: rgba(255,255,255,.22); margin: 0; }
+.sf-made { font-size: .76rem; color: rgba(255,255,255,.22); margin: 0; display: flex; align-items: center; gap: .3rem; flex-wrap: wrap; }
+.sf-heart { color: #e74c3c; animation: heartbeat 1.6s ease-in-out infinite; display: inline-block; }
+@keyframes heartbeat { 0%,100%{transform:scale(1)} 14%{transform:scale(1.25)} 28%{transform:scale(1)} 42%{transform:scale(1.15)} 70%{transform:scale(1)} }
+.sf-codemyst { color: var(--accent); text-decoration: none; font-weight: 600; transition: color .2s; }
+.sf-codemyst:hover { color: #fff; }
+
+/* ── Responsive ── */
+@media (max-width: 1100px) { .sf-grid { grid-template-columns: 2fr 1fr 1fr; gap: 2.5rem; } }
+@media (max-width: 900px) { nav { padding: .85rem 1.2rem; } .nav-links { display: none; } .nav-hamburger { display: flex; } .nav-drawer { display: block; } }
+@media (max-width: 768px) {
+  .sf-inner { padding: 4rem 1.5rem 0; }
+  .sf-grid { grid-template-columns: 1fr 1fr; gap: 2.5rem 2rem; }
+  .sf-brand { grid-column: 1 / -1; }
+  .legal-body { padding: 2rem 1.2rem 4rem; }
+  .legal-hero { padding: 7rem 1.2rem 3rem; }
+  .legal-tabs { padding: 0 .5rem; }
+}
+@media (max-width: 480px) {
+  .sf-inner { padding: 3rem 1.2rem 0; }
+  .sf-grid { grid-template-columns: 1fr; }
+  .sf-bottom-inner { padding: 1.2rem 1.2rem; }
+  .ls-title { font-size: 1.4rem; }
+}
+</style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav id="mainNav">
+  <a class="nav-brand" href="index.html">
+    <img class="nav-logo" id="navLogoImg" src="" alt="logo"/>
+    <div class="nav-logo-fallback" id="navLogoFallback">L</div>
+    <span class="nav-name" id="navName">LMS</span>
+  </a>
+  <div class="nav-links">
+    <a href="index.html">Home</a>
+    <a href="index.html#courses">Courses</a>
+    <a href="index.html#features">Features</a>
+    <a href="index.html" class="btn-nav">Login করুন</a>
+  </div>
+  <button class="nav-hamburger" id="hamburger" aria-label="Menu" aria-expanded="false">
+    <span></span><span></span><span></span>
+  </button>
+</nav>
+
+<!-- MOBILE DRAWER -->
+<div class="nav-drawer" id="navDrawer">
+  <div class="nav-drawer-backdrop" id="drawerBackdrop"></div>
+  <div class="nav-drawer-panel">
+    <nav class="nav-drawer-links">
+      <a href="index.html"><span class="drawer-icon">🏠</span>Home</a>
+      <a href="index.html#courses"><span class="drawer-icon">📚</span>Courses</a>
+      <a href="index.html#features"><span class="drawer-icon">⚡</span>Features</a>
+    </nav>
+    <div class="drawer-divider"></div>
+    <a href="index.html" class="drawer-login-btn">Login করুন →</a>
+    <div class="drawer-brand-bottom" id="drawerBrand">LMS</div>
+  </div>
+</div>
+
+<!-- HERO -->
+<div class="legal-hero">
+  <div class="legal-hero-eyebrow">📋 Legal Documents</div>
+  <h1>আমাদের নীতিমালা</h1>
+  <p>আমাদের সেবা ব্যবহার করার আগে নিচের নীতিমালাগুলো মনোযোগ দিয়ে পড়ুন।</p>
+  <div class="legal-updated">সর্বশেষ আপডেট: জুন ২০২৬</div>
+</div>
+
+<!-- TAB NAV -->
+<div class="legal-tabs-wrap">
+  <div class="legal-tabs" id="legalTabs">
+    <button class="legal-tab active" onclick="showSection('terms', this)">📄 Terms &amp; Conditions</button>
+    <button class="legal-tab"        onclick="showSection('privacy', this)">🔒 Privacy Policy</button>
+    <button class="legal-tab"        onclick="showSection('refund', this)">💰 Refund Policy</button>
+    <button class="legal-tab"        onclick="showSection('cookie', this)">🍪 Cookie Policy</button>
+  </div>
+</div>
+
+<!-- CONTENT -->
+<div class="legal-body">
+
+  <!-- ── TERMS & CONDITIONS ── -->
+  <div class="legal-section show" id="section-terms">
+    <div class="ls-header">
+      <div class="ls-icon">📄</div>
+      <div>
+        <div class="ls-title">Terms &amp; Conditions</div>
+        <div class="ls-date">কার্যকর তারিখ: জানুয়ারি ১, ২০২৬</div>
+      </div>
+    </div>
+    <div class="legal-content">
+      <div class="legal-box blue">এই প্ল্যাটফর্মে নিবন্ধন বা ব্যবহার করে আপনি এই শর্তাবলীতে সম্মত হচ্ছেন। সম্মত না হলে অনুগ্রহ করে সেবা ব্যবহার থেকে বিরত থাকুন।</div>
+
+      <h2>১. সেবার বিবরণ</h2>
+      <p>এই প্ল্যাটফর্ম একটি অনলাইন লার্নিং ম্যানেজমেন্ট সিস্টেম (LMS) যেখানে নিবন্ধিত শিক্ষার্থীরা বিভিন্ন কোর্সে অ্যাক্সেস পেতে পারেন। আমরা ভিডিও লেসন, কোর্স ম্যাটেরিয়াল এবং সার্টিফিকেট প্রদান করি।</p>
+
+      <h2>২. অ্যাকাউন্ট নিবন্ধন</h2>
+      <p>আমাদের সেবা ব্যবহার করতে আপনাকে একটি অ্যাকাউন্ট তৈরি করতে হবে। আপনি সম্মত হচ্ছেন যে:</p>
+      <ul>
+        <li>আপনি সঠিক ও সম্পূর্ণ তথ্য প্রদান করবেন</li>
+        <li>আপনার অ্যাকাউন্টের নিরাপত্তার দায়িত্ব আপনার</li>
+        <li>একটি ব্যক্তি একটিমাত্র অ্যাকাউন্ট ব্যবহার করতে পারবেন</li>
+        <li>আপনার বয়স কমপক্ষে ১৩ বছর হতে হবে</li>
+      </ul>
+
+      <h2>৩. কোর্স অ্যাক্সেস</h2>
+      <p>কোর্সে এনরোল করার পর আপনি নির্দিষ্ট সময়ের জন্য কোর্স কন্টেন্টে অ্যাক্সেস পাবেন। কোর্সের কন্টেন্ট ডাউনলোড বা শেয়ার করা নিষিদ্ধ।</p>
+
+      <h2>৪. নিষিদ্ধ কার্যক্রম</h2>
+      <p>নিম্নলিখিত কার্যক্রম সম্পূর্ণ নিষিদ্ধ:</p>
+      <ul>
+        <li>কোর্সের কন্টেন্ট তৃতীয় পক্ষের সাথে শেয়ার বা বিক্রি করা</li>
+        <li>প্ল্যাটফর্মের নিরাপত্তা ব্যবস্থা লঙ্ঘন করার চেষ্টা</li>
+        <li>অন্য ব্যবহারকারীদের হয়রানি করা</li>
+        <li>মিথ্যা বা বিভ্রান্তিমূলক তথ্য প্রদান</li>
+        <li>স্বয়ংক্রিয় পদ্ধতিতে সেবা অ্যাক্সেস করা</li>
+      </ul>
+
+      <h2>৫. মেধাস্বত্ব</h2>
+      <p>প্ল্যাটফর্মে প্রকাশিত সকল কন্টেন্ট, ভিডিও, লেখা এবং উপকরণ আমাদের মেধাস্বত্বের অধীন। কোনো কন্টেন্ট অনুমতি ছাড়া পুনরুৎপাদন, বিতরণ বা প্রকাশ করা যাবে না।</p>
+
+      <h2>৬. দায়বদ্ধতার সীমাবদ্ধতা</h2>
+      <p>আমরা প্ল্যাটফর্মের ত্রুটিহীন পরিষেবা নিশ্চিত করার চেষ্টা করি, তবে প্রযুক্তিগত সমস্যার কারণে সাময়িক বিঘ্নের জন্য আমরা দায়ী নই। কোর্স কন্টেন্টের ব্যবহারে উদ্ভূত যেকোনো ক্ষতির জন্য আমাদের দায়বদ্ধতা সীমিত।</p>
+
+      <h2>৭. শর্তাবলী পরিবর্তন</h2>
+      <p>আমরা যেকোনো সময় এই শর্তাবলী পরিবর্তন করার অধিকার রাখি। পরিবর্তনের পর প্ল্যাটফর্ম ব্যবহার অব্যাহত রাখলে আপনি নতুন শর্তে সম্মত বলে গণ্য হবেন।</p>
+
+      <h2>৮. যোগাযোগ</h2>
+      <p>এই শর্তাবলী সম্পর্কে কোনো প্রশ্ন থাকলে আমাদের সাথে যোগাযোগ করুন।</p>
+    </div>
+  </div>
+
+  <!-- ── PRIVACY POLICY ── -->
+  <div class="legal-section" id="section-privacy">
+    <div class="ls-header">
+      <div class="ls-icon">🔒</div>
+      <div>
+        <div class="ls-title">Privacy Policy</div>
+        <div class="ls-date">কার্যকর তারিখ: জানুয়ারি ১, ২০২৬</div>
+      </div>
+    </div>
+    <div class="legal-content">
+      <div class="legal-box blue">আপনার ব্যক্তিগত তথ্যের সুরক্ষা আমাদের কাছে সর্বোচ্চ অগ্রাধিকার। এই নীতি আপনাকে জানাবে আমরা কোন তথ্য সংগ্রহ করি এবং কীভাবে ব্যবহার করি।</div>
+
+      <h2>১. আমরা কোন তথ্য সংগ্রহ করি</h2>
+      <p>আমরা নিম্নলিখিত তথ্য সংগ্রহ করি:</p>
+      <ul>
+        <li><strong>নিবন্ধন তথ্য:</strong> নাম, ইমেইল, মোবাইল নম্বর</li>
+        <li><strong>পেমেন্ট তথ্য:</strong> লেনদেন আইডি, পেমেন্ট পদ্ধতি (কার্ড নম্বর সংরক্ষিত হয় না)</li>
+        <li><strong>ব্যবহারের তথ্য:</strong> কোর্স অগ্রগতি, লগইন সময়, ডিভাইসের তথ্য</li>
+        <li><strong>কুকি ডেটা:</strong> সেশন ও প্রেফারেন্স তথ্য</li>
+      </ul>
+
+      <h2>২. তথ্য ব্যবহারের উদ্দেশ্য</h2>
+      <p>আপনার তথ্য ব্যবহার করা হয়:</p>
+      <ul>
+        <li>অ্যাকাউন্ট ও কোর্স অ্যাক্সেস পরিচালনার জন্য</li>
+        <li>পেমেন্ট যাচাই ও এনরোলমেন্ট সম্পন্ন করতে</li>
+        <li>গুরুত্বপূর্ণ আপডেট ও নোটিশ পাঠাতে</li>
+        <li>সেবার মান উন্নত করতে</li>
+        <li>আইনি বাধ্যবাধকতা পূরণ করতে</li>
+      </ul>
+
+      <h2>৩. তথ্য সুরক্ষা</h2>
+      <p>আপনার তথ্য সুরক্ষায় আমরা ব্যবহার করি:</p>
+      <ul>
+        <li>SSL এনক্রিপশন দ্বারা ডেটা ট্রান্সফার</li>
+        <li>Firebase Authentication দ্বারা নিরাপদ লগইন</li>
+        <li>Firestore Security Rules দ্বারা ডেটাবেজ সুরক্ষা</li>
+      </ul>
+
+      <h2>৪. তৃতীয় পক্ষের সাথে তথ্য শেয়ার</h2>
+      <p>আমরা আপনার ব্যক্তিগত তথ্য কোনো তৃতীয় পক্ষের কাছে বিক্রি করি না। তবে নিম্নলিখিত ক্ষেত্রে তথ্য শেয়ার হতে পারে:</p>
+      <ul>
+        <li>আইনি কর্তৃপক্ষের বৈধ অনুরোধে</li>
+        <li>পেমেন্ট প্রসেসিং পার্টনারের সাথে (সীমিত)</li>
+        <li>Google Firebase (ডেটা স্টোরেজ ও অথেনটিকেশন)</li>
+      </ul>
+
+      <h2>৫. আপনার অধিকার</h2>
+      <p>আপনার তথ্য সংক্রান্ত আপনার অধিকার রয়েছে:</p>
+      <ul>
+        <li>আপনার সংরক্ষিত তথ্য দেখার অধিকার</li>
+        <li>তথ্য সংশোধনের অধিকার</li>
+        <li>অ্যাকাউন্ট মুছে দেওয়ার অনুরোধ করার অধিকার</li>
+        <li>মার্কেটিং ইমেইল থেকে আনসাবস্ক্রাইব করার অধিকার</li>
+      </ul>
+
+      <h2>৬. শিশুদের গোপনীয়তা</h2>
+      <p>আমাদের সেবা ১৩ বছরের কম বয়সী শিশুদের জন্য নয়। কোনো শিশুর তথ্য আমাদের কাছে এলে তা অবিলম্বে মুছে ফেলা হবে।</p>
+    </div>
+  </div>
+
+  <!-- ── REFUND POLICY ── -->
+  <div class="legal-section" id="section-refund">
+    <div class="ls-header">
+      <div class="ls-icon">💰</div>
+      <div>
+        <div class="ls-title">Refund Policy</div>
+        <div class="ls-date">কার্যকর তারিখ: জানুয়ারি ১, ২০২৬</div>
+      </div>
+    </div>
+    <div class="legal-content">
+      <div class="legal-box green">আমরা শিক্ষার্থীদের সন্তুষ্টিকে সর্বোচ্চ গুরুত্ব দিই। নিচের নির্দেশিকা অনুসরণ করে রিফান্ড অনুরোধ করুন।</div>
+
+      <h2>১. রিফান্ড যোগ্যতা</h2>
+      <p>নিম্নলিখিত শর্তে রিফান্ড পাওয়া যাবে:</p>
+      <ul>
+        <li><strong>৭ দিনের মধ্যে:</strong> পেমেন্টের ৭ দিনের মধ্যে আবেদন করলে সম্পূর্ণ রিফান্ড পাওয়া যাবে</li>
+        <li><strong>কোর্স না খোলা:</strong> কোর্সের কোনো লেসন না দেখলে ১৪ দিনের মধ্যে রিফান্ড পাওয়া যাবে</li>
+        <li><strong>প্রযুক্তিগত সমস্যা:</strong> আমাদের কারণে কোর্স অ্যাক্সেস না পেলে যেকোনো সময় রিফান্ড পাবেন</li>
+      </ul>
+
+      <h2>২. রিফান্ড পাওয়া যাবে না যখন</h2>
+      <div class="legal-box red">নিচের ক্ষেত্রে রিফান্ড প্রযোজ্য নয়।</div>
+      <ul>
+        <li>কোর্সের ৩০% এর বেশি সম্পন্ন হলে</li>
+        <li>পেমেন্টের ১৪ দিন পার হলে</li>
+        <li>কোর্সের সার্টিফিকেট ইতিমধ্যে ডাউনলোড করা হলে</li>
+        <li>ব্যবহারকারী নীতি লঙ্ঘনের কারণে অ্যাকাউন্ট বন্ধ হলে</li>
+      </ul>
+
+      <h2>৩. রিফান্ড প্রক্রিয়া</h2>
+      <p>রিফান্ড পেতে নিচের পদক্ষেপ অনুসরণ করুন:</p>
+      <ol>
+        <li>আমাদের সাথে যোগাযোগ করুন এবং আপনার অর্ডার তথ্য দিন</li>
+        <li>রিফান্ডের কারণ জানান</li>
+        <li>আমাদের টিম ৩ কার্যদিবসের মধ্যে যোগাযোগ করবে</li>
+        <li>অনুমোদিত হলে ৫–৭ কার্যদিবসের মধ্যে রিফান্ড প্রদান করা হবে</li>
+      </ol>
+
+      <h2>৪. রিফান্ড পদ্ধতি</h2>
+      <p>রিফান্ড মূল পেমেন্ট পদ্ধতিতে (bKash/Nagad/Rocket) প্রদান করা হবে। ব্যাংক ট্রান্সফারেও রিফান্ড নেওয়া সম্ভব।</p>
+
+      <h2>৫. আংশিক রিফান্ড</h2>
+      <p>কোর্সের ১৫%–৩০% সম্পন্ন হলে আংশিক রিফান্ড (৫০%) বিবেচনা করা হতে পারে। এটি সম্পূর্ণ আমাদের বিবেচনার উপর নির্ভরশীল।</p>
+    </div>
+  </div>
+
+  <!-- ── COOKIE POLICY ── -->
+  <div class="legal-section" id="section-cookie">
+    <div class="ls-header">
+      <div class="ls-icon">🍪</div>
+      <div>
+        <div class="ls-title">Cookie Policy</div>
+        <div class="ls-date">কার্যকর তারিখ: জানুয়ারি ১, ২০২৬</div>
+      </div>
+    </div>
+    <div class="legal-content">
+      <div class="legal-box">কুকি হলো ছোট টেক্সট ফাইল যা আপনার ব্রাউজারে সংরক্ষিত হয়। এটি আপনার ব্রাউজিং অভিজ্ঞতা উন্নত করতে সাহায্য করে।</div>
+
+      <h2>১. আমরা কোন কুকি ব্যবহার করি</h2>
+
+      <p><strong>অপরিহার্য কুকি (Essential Cookies)</strong></p>
+      <p>এই কুকিগুলো প্ল্যাটফর্ম সঠিকভাবে কাজ করার জন্য আবশ্যক। এগুলো ছাড়া লগইন বা কোর্স অ্যাক্সেস করা সম্ভব নয়।</p>
+      <ul>
+        <li><strong>Firebase Auth Token:</strong> আপনার লগইন সেশন বজায় রাখে</li>
+        <li><strong>Session Cookie:</strong> আপনার বর্তমান সেশনের তথ্য ধরে রাখে</li>
+      </ul>
+
+      <p><strong>কার্যকারিতা কুকি (Functional Cookies)</strong></p>
+      <p>এই কুকিগুলো আপনার পছন্দ মনে রাখে এবং ব্যক্তিগতকৃত অভিজ্ঞতা দেয়।</p>
+      <ul>
+        <li>ভাষার পছন্দ</li>
+        <li>থিম সেটিং (যদি প্রযোজ্য)</li>
+        <li>সর্বশেষ দেখা কোর্সের তথ্য</li>
+      </ul>
+
+      <p><strong>বিশ্লেষণ কুকি (Analytics Cookies)</strong></p>
+      <p>প্ল্যাটফর্মের ব্যবহার বিশ্লেষণ করতে এবং সেবা উন্নত করতে ব্যবহৃত হয়। এতে কোনো ব্যক্তিগত পরিচিতিমূলক তথ্য থাকে না।</p>
+
+      <h2>২. তৃতীয় পক্ষের কুকি</h2>
+      <p>আমরা নিম্নলিখিত তৃতীয় পক্ষের সেবা ব্যবহার করি যারা কুকি ব্যবহার করতে পারে:</p>
+      <ul>
+        <li><strong>Google Firebase:</strong> অথেনটিকেশন ও ডেটাবেজ সেবা</li>
+        <li><strong>Google Fonts:</strong> ওয়েবসাইটের ফন্ট লোড করতে</li>
+      </ul>
+
+      <h2>৩. কুকি নিয়ন্ত্রণ</h2>
+      <p>আপনি আপনার ব্রাউজার সেটিংস থেকে কুকি নিয়ন্ত্রণ করতে পারেন:</p>
+      <ul>
+        <li>সকল কুকি ব্লক করুন (তবে সেবা ব্যবহারে সমস্যা হতে পারে)</li>
+        <li>তৃতীয় পক্ষের কুকি ব্লক করুন</li>
+        <li>ব্রাউজার বন্ধ করলে কুকি মুছে ফেলার সেটিং করুন</li>
+      </ul>
+      <p>প্রধান ব্রাউজারগুলোতে কুকি ম্যানেজ করার পদ্ধতি: <a href="https://support.google.com/chrome/answer/95647" target="_blank" rel="noopener">Chrome</a>, <a href="https://support.mozilla.org/kb/cookies-information-websites-store-on-your-computer" target="_blank" rel="noopener">Firefox</a>, <a href="https://support.apple.com/guide/safari/sfri11471" target="_blank" rel="noopener">Safari</a>।</p>
+
+      <h2>৪. কুকি মেয়াদ</h2>
+      <ul>
+        <li><strong>সেশন কুকি:</strong> ব্রাউজার বন্ধ হলে মুছে যায়</li>
+        <li><strong>স্থায়ী কুকি:</strong> নির্ধারিত সময় পর্যন্ত (সর্বোচ্চ ১ বছর) থাকে</li>
+      </ul>
+
+      <h2>৫. নীতি পরিবর্তন</h2>
+      <p>আমরা এই কুকি নীতি যেকোনো সময় আপডেট করতে পারি। পরিবর্তন হলে এই পাতায় আপডেট তারিখ পরিবর্তন হবে।</p>
+    </div>
+  </div>
+
+</div><!-- /legal-body -->
+
+<!-- FOOTER -->
+<footer class="site-footer" id="siteFooter">
+  <div class="sf-inner">
+    <div class="sf-grid">
+      <div class="sf-col sf-brand">
+        <a href="index.html" class="sf-logo-wrap">
+          <img id="sfLogoImg" src="" alt="logo" class="sf-logo-img" style="display:none"/>
+          <div id="sfLogoFallback" class="sf-logo-fallback">L</div>
+          <span id="sfAppName" class="sf-app-name">LMS</span>
+        </a>
+        <p id="sfDesc" class="sf-desc">দক্ষ শিক্ষকদের সাথে অনলাইনে শিখুন।<br/>যেকোনো সময়, যেকোনো জায়গা থেকে।</p>
+        <div class="sf-socials">
+          <a id="sfFacebook" class="sf-social" href="#" target="_blank" rel="noopener">
+            <svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16"><path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z"/></svg>
+          </a>
+          <a id="sfYouTube" class="sf-social" href="#" target="_blank" rel="noopener">
+            <svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16"><path d="M22.54 6.42a2.78 2.78 0 0 0-1.95-1.96C18.88 4 12 4 12 4s-6.88 0-8.59.46a2.78 2.78 0 0 0-1.95 1.96A29 29 0 0 0 1 12a29 29 0 0 0 .46 5.58A2.78 2.78 0 0 0 3.41 19.6C5.12 20 12 20 12 20s6.88 0 8.59-.4a2.78 2.78 0 0 0 1.95-1.95A29 29 0 0 0 23 12a29 29 0 0 0-.46-5.58zM9.75 15.02V8.98L15.5 12l-5.75 3.02z"/></svg>
+          </a>
+          <a id="sfWhatsApp" class="sf-social sf-social--wa" href="#" target="_blank" rel="noopener">
+            <svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16"><path d="M17.47 14.38c-.29-.15-1.73-.85-2-.95s-.46-.15-.66.15-.75.95-.92 1.14-.34.22-.63.07a7.94 7.94 0 0 1-2.33-1.44 8.74 8.74 0 0 1-1.61-2c-.17-.3 0-.46.13-.6s.29-.35.44-.52a2 2 0 0 0 .29-.49.54.54 0 0 0 0-.52c-.07-.15-.66-1.58-.9-2.16s-.48-.49-.66-.5h-.56a1.07 1.07 0 0 0-.78.37A3.26 3.26 0 0 0 7 9.52a5.66 5.66 0 0 0 1.18 3c.15.2 2.1 3.2 5.1 4.49a17.25 17.25 0 0 0 1.7.63 4.1 4.1 0 0 0 1.88.12c.57-.09 1.73-.71 2-1.39a2.42 2.42 0 0 0 .17-1.39c-.06-.12-.25-.19-.54-.34zM12 2a10 10 0 0 0-8.67 14.94L2 22l5.25-1.38A10 10 0 1 0 12 2z"/></svg>
+          </a>
+        </div>
+      </div>
+      <div class="sf-col">
+        <h3 class="sf-col-title">Navigation</h3>
+        <ul class="sf-links">
+          <li><a href="index.html">Home</a></li>
+          <li><a href="index.html#courses">Courses</a></li>
+          <li><a href="index.html#features">Features</a></li>
+        </ul>
+      </div>
+      <div class="sf-col">
+        <h3 class="sf-col-title">Support</h3>
+        <ul class="sf-links">
+          <li><a href="contact.html">Contact Us</a></li>
+          <li><a href="faq.html">FAQ</a></li>
+        </ul>
+      </div>
+      <div class="sf-col">
+        <h3 class="sf-col-title">Legal</h3>
+        <ul class="sf-links">
+          <li><a href="#" onclick="showSection('terms',document.querySelectorAll('.legal-tab')[0]);scrollToTabs()">Terms &amp; Conditions</a></li>
+          <li><a href="#" onclick="showSection('privacy',document.querySelectorAll('.legal-tab')[1]);scrollToTabs()">Privacy Policy</a></li>
+          <li><a href="#" onclick="showSection('refund',document.querySelectorAll('.legal-tab')[2]);scrollToTabs()">Refund Policy</a></li>
+          <li><a href="#" onclick="showSection('cookie',document.querySelectorAll('.legal-tab')[3]);scrollToTabs()">Cookie Policy</a></li>
+        </ul>
+      </div>
+      <div class="sf-col">
+        <h3 class="sf-col-title">যোগাযোগ</h3>
+        <ul class="sf-contact-list">
+          <li>
+            <span class="sf-contact-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg></span>
+            <a id="sfEmail" href="mailto:" class="sf-contact-text">ইমেইল</a>
+          </li>
+          <li>
+            <span class="sf-contact-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.36 12a19.79 19.79 0 0 1-3-8.63A2 2 0 0 1 3.35 2h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 9.91a16 16 0 0 0 6.18 6.18l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg></span>
+            <a id="sfPhone" href="tel:" class="sf-contact-text">ফোন নম্বর</a>
+          </li>
+        </ul>
+      </div>
+    </div>
+    <div class="sf-trust">
+      <div class="sf-trust-badge"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg><span>SSL Secured</span></div>
+      <div class="sf-trust-badge"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg><span>১০০% মানের নিশ্চয়তা</span></div>
+      <div class="sf-trust-badge"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg><span>নিরাপদ পেমেন্ট</span></div>
+    </div>
+  </div>
+  <div class="sf-bottom">
+    <div class="sf-bottom-inner">
+      <p class="sf-copy" id="sfCopyright">© 2026 LMS. All rights reserved.</p>
+      <p class="sf-made">Made with <span class="sf-heart">♥</span> by <a href="https://codemyst.com" target="_blank" rel="noopener" class="sf-codemyst">CODEMYST</a></p>
+    </div>
+  </div>
+</footer>
+
+<script>
+   firebase.initializeApp(LMS_CONFIG.firebase);
+  const db   = firebase.firestore();
+  const auth = firebase.auth();
+/* ── Tab switching ── */
+function showSection(id, btn) {
+  document.querySelectorAll('.legal-section').forEach(s => s.classList.remove('show'));
+  document.querySelectorAll('.legal-tab').forEach(t => t.classList.remove('active'));
+  document.getElementById('section-' + id).classList.add('show');
+  if (btn) btn.classList.add('active');
+}
+
+function scrollToTabs() {
+  document.querySelector('.legal-tabs-wrap').scrollIntoView({ behavior: 'smooth' });
+}
+
+/* ── URL hash routing ── */
+function routeHash() {
+  const map = { '#terms':'terms', '#privacy':'privacy', '#refund':'refund', '#cookie':'cookie' };
+  const key = map[location.hash];
+  if (key) {
+    const idx = ['terms','privacy','refund','cookie'].indexOf(key);
+    showSection(key, document.querySelectorAll('.legal-tab')[idx]);
+  }
+}
+window.addEventListener('hashchange', routeHash);
+routeHash();
+
+/* ── Nav scroll shadow ── */
+window.addEventListener('scroll', () => {
+  document.getElementById('mainNav').classList.toggle('scrolled', scrollY > 10);
+}, { passive: true });
+
+/* ── Hamburger ── */
+const hamburger = document.getElementById('hamburger');
+const navDrawer  = document.getElementById('navDrawer');
+const backdrop   = document.getElementById('drawerBackdrop');
+hamburger.addEventListener('click', () => {
+  const open = navDrawer.classList.toggle('open');
+  hamburger.classList.toggle('open', open);
+  hamburger.setAttribute('aria-expanded', open);
+  document.body.classList.toggle('nav-open', open);
+});
+backdrop.addEventListener('click', () => {
+  navDrawer.classList.remove('open');
+  hamburger.classList.remove('open');
+  hamburger.setAttribute('aria-expanded', false);
+  document.body.classList.remove('nav-open');
+});
+
+/* ── Firebase siteSettings ── */
+firebase.auth().onAuthStateChanged(async () => {
+  try {
+    const snap = await firebase.firestore().collection('siteSettings').doc('main').get();
+    if (!snap.exists) { done(); return; }
+    const s = snap.data();
+    if (s.appName) {
+      document.getElementById('navName').textContent     = s.appName;
+      document.getElementById('sfAppName').textContent   = s.appName;
+      document.getElementById('drawerBrand').textContent = s.appName;
+      document.getElementById('sfCopyright').textContent = `© ${new Date().getFullYear()} ${s.appName}. All rights reserved.`;
+      document.title = `Legal — ${s.appName}`;
+    }
+    if (s.logoUrl) {
+      const imgs = [document.getElementById('navLogoImg'), document.getElementById('sfLogoImg')];
+      imgs.forEach(img => { if (img) { img.src = s.logoUrl; img.classList.add('show'); img.style.display = 'block'; } });
+      ['navLogoFallback','sfLogoFallback'].forEach(id => {
+        const el = document.getElementById(id); if (el) el.style.display = 'none';
+      });
+    } else {
+      const letter = (s.appName || 'L')[0].toUpperCase();
+      ['navLogoFallback','sfLogoFallback'].forEach(id => {
+        const el = document.getElementById(id); if (el) el.textContent = letter;
+      });
+    }
+    if (s.description)   document.getElementById('sfDesc').textContent      = s.description;
+    if (s.email)       { document.getElementById('sfEmail').href = 'mailto:' + s.email; document.getElementById('sfEmail').textContent = s.email; }
+    if (s.phone)       { document.getElementById('sfPhone').href = 'tel:' + s.phone; document.getElementById('sfPhone').textContent = s.phone; }
+    if (s.facebookUrl)   document.getElementById('sfFacebook').href  = s.facebookUrl;
+    if (s.youtubeUrl)    document.getElementById('sfYouTube').href   = s.youtubeUrl;
+    if (s.whatsappUrl)   document.getElementById('sfWhatsApp').href  = s.whatsappUrl;
+    if (s.primaryColor)  document.documentElement.style.setProperty('--blue', s.primaryColor);
+  } catch(e) { console.warn('Settings:', e); }
+  done();
+});
+
+function done() {
+  document.body.classList.add('ready');
+}
+</script>
+</body>
+</html>

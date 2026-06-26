@@ -1,0 +1,586 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0"/>
+<title>নোটিশ বোর্ড</title>
+<link rel="icon" id="favicon" href=""/>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=Hind+Siliguri:wght@400;500;600;700&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet"/>
+
+<script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore-compat.js"></script>
+<script src="config.js"></script>
+
+<style>
+/* ── TOKENS ───────────────────────────── */
+:root {
+  --bg:      #0D0F14;
+  --surface: #13161E;
+  --card:    #181C27;
+  --card2:   #1E2335;
+  --border:  rgba(255,255,255,.07);
+  --border2: rgba(255,255,255,.13);
+  --ink:     #ECEEF5;
+  --muted:   #6B7280;
+  --soft:    #9CA3AF;
+  --primary: #4361EE;
+  --cyan:    #06D6A0;
+  --amber:   #FFB703;
+  --rose:    #FB5607;
+  --bn: 'Hind Siliguri', sans-serif;
+  --en: 'Inter', sans-serif;
+  --r: 16px;
+  --bnav-h: 72px;
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; }
+body {
+  font-family: var(--bn);
+  background: var(--bg);
+  color: var(--ink);
+  min-height: 100vh;
+  max-width: 480px;
+  margin: 0 auto;
+  padding-bottom: calc(var(--bnav-h) + 1.5rem);
+  -webkit-font-smoothing: antialiased;
+}
+a { text-decoration: none; color: inherit; }
+button { font-family: var(--bn); cursor: pointer; border: none; background: none; }
+
+/* ── PAGE LOADER ──────────────────────── */
+#pageLoader {
+  position: fixed; inset: 0; z-index: 9999;
+  background: var(--bg);
+  display: flex; align-items: center; justify-content: center;
+  flex-direction: column; gap: 1rem;
+  transition: opacity .4s, visibility .4s;
+}
+#pageLoader.gone { opacity: 0; visibility: hidden; pointer-events: none; }
+.ld-logo {
+  width: 48px; height: 48px; border-radius: 13px;
+  background: var(--primary);
+  display: flex; align-items: center; justify-content: center;
+  font-family: var(--en); font-size: 1.4rem; font-weight: 800; color: #fff;
+  animation: ldPulse 1.4s ease-in-out infinite;
+}
+@keyframes ldPulse { 0%,100%{transform:scale(1)} 50%{transform:scale(.9);opacity:.7} }
+.ld-bar { width: 110px; height: 3px; background: var(--border2); border-radius: 10px; overflow: hidden; }
+.ld-fill { height: 100%; width: 40%; background: var(--primary); border-radius: 10px; animation: ldSlide 1.2s ease-in-out infinite; }
+@keyframes ldSlide { 0%{transform:translateX(-100%)} 100%{transform:translateX(350%)} }
+
+/* ── TOP BAR ──────────────────────────── */
+.topbar {
+  position: sticky; top: 0; z-index: 100;
+  background: rgba(13,15,20,.92);
+  backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+  border-bottom: 1px solid var(--border);
+  height: 58px;
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 0 1.1rem;
+}
+.topbar-left { display: flex; align-items: center; gap: .75rem; }
+.back-btn {
+  width: 36px; height: 36px; border-radius: 10px;
+  background: var(--card); border: 1px solid var(--border2);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 1rem; cursor: pointer;
+  transition: background .18s, border-color .18s;
+  text-decoration: none; color: var(--ink);
+  flex-shrink: 0;
+}
+.back-btn:hover { background: var(--card2); border-color: var(--primary); }
+.topbar-title {
+  font-family: var(--en); font-size: 1rem; font-weight: 700;
+}
+.notice-count-badge {
+  background: rgba(67,97,238,.18);
+  border: 1px solid rgba(67,97,238,.3);
+  color: #818CF8;
+  font-family: var(--en); font-size: .68rem; font-weight: 700;
+  padding: .18rem .55rem; border-radius: 20px;
+  display: none;
+}
+.notice-count-badge.show { display: inline-block; }
+
+/* ── SCROLL BODY ──────────────────────── */
+.scroll-body { padding: 1.1rem 1.1rem 0; }
+
+/* ── SEARCH BAR ───────────────────────── */
+.search-wrap {
+  position: relative; margin-bottom: 1.2rem;
+  animation: fadeUp .35s ease both;
+}
+.search-icon {
+  position: absolute; left: .9rem; top: 50%; transform: translateY(-50%);
+  font-size: .95rem; pointer-events: none; color: var(--muted);
+}
+.search-input {
+  width: 100%; padding: .72rem 1rem .72rem 2.6rem;
+  background: var(--card); border: 1px solid var(--border2);
+  border-radius: 12px; color: var(--ink);
+  font-family: var(--bn); font-size: .88rem;
+  outline: none; transition: border-color .2s;
+}
+.search-input:focus { border-color: var(--primary); }
+.search-input::placeholder { color: var(--muted); }
+
+/* ── FILTER TABS ──────────────────────── */
+.filter-tabs {
+  display: flex; gap: .5rem; margin-bottom: 1.1rem;
+  overflow-x: auto; padding-bottom: .2rem;
+  animation: fadeUp .35s ease .05s both;
+  scrollbar-width: none;
+}
+.filter-tabs::-webkit-scrollbar { display: none; }
+.tab-btn {
+  padding: .38rem .9rem; border-radius: 20px; flex-shrink: 0;
+  font-size: .75rem; font-weight: 600;
+  background: var(--card); border: 1px solid var(--border2);
+  color: var(--soft); cursor: pointer;
+  transition: background .18s, border-color .18s, color .18s;
+  font-family: var(--en);
+}
+.tab-btn.active {
+  background: rgba(67,97,238,.18);
+  border-color: rgba(67,97,238,.35);
+  color: #818CF8;
+}
+.tab-btn:hover:not(.active) { border-color: var(--border2); color: var(--ink); }
+
+/* ── NOTICE LIST ──────────────────────── */
+.notice-list {
+  display: flex; flex-direction: column; gap: .8rem;
+}
+
+/* ── NOTICE CARD ──────────────────────── */
+.notice-card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--r);
+  overflow: hidden;
+  transition: border-color .2s, transform .18s, box-shadow .18s;
+  animation: fadeUp .4s ease both;
+  cursor: pointer;
+}
+.notice-card:hover {
+  border-color: rgba(67,97,238,.35);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(0,0,0,.3);
+}
+.notice-card.expanded { border-color: rgba(67,97,238,.3); }
+
+/* top strip color by type */
+.notice-card::before {
+  content: ''; display: block; height: 3px;
+  background: var(--primary);
+  border-radius: var(--r) var(--r) 0 0;
+}
+.notice-card.type-important::before { background: var(--rose); }
+.notice-card.type-event::before     { background: var(--amber); }
+.notice-card.type-info::before      { background: var(--cyan); }
+.notice-card.type-general::before   { background: var(--primary); }
+
+/* card header row */
+.notice-head {
+  display: flex; align-items: flex-start; gap: .85rem;
+  padding: 1rem 1.1rem .85rem;
+}
+.notice-dot-wrap { padding-top: .3rem; flex-shrink: 0; }
+.notice-dot {
+  width: 9px; height: 9px; border-radius: 50%;
+  background: var(--cyan);
+  box-shadow: 0 0 7px var(--cyan);
+  animation: glowBlink 2.2s ease-in-out infinite;
+}
+.notice-dot.rose   { background: var(--rose);   box-shadow: 0 0 7px var(--rose); }
+.notice-dot.amber  { background: var(--amber);  box-shadow: 0 0 7px var(--amber); }
+.notice-dot.primary{ background: var(--primary); box-shadow: 0 0 7px var(--primary); }
+@keyframes glowBlink { 0%,100%{opacity:1} 50%{opacity:.4} }
+
+.notice-main { flex: 1; min-width: 0; }
+.notice-title {
+  font-family: var(--en); font-size: .92rem; font-weight: 700;
+  line-height: 1.4; color: var(--ink); margin-bottom: .3rem;
+}
+.notice-meta {
+  display: flex; align-items: center; gap: .5rem; flex-wrap: wrap;
+}
+.notice-date {
+  font-size: .7rem; color: var(--muted); font-family: var(--en);
+}
+.notice-type-tag {
+  font-size: .62rem; font-weight: 700;
+  padding: .12rem .5rem; border-radius: 20px;
+  text-transform: uppercase; letter-spacing: .06em;
+  font-family: var(--en);
+}
+.tag-important { background: rgba(251,86,7,.12);  color: #fb8c5a; border: 1px solid rgba(251,86,7,.2); }
+.tag-event     { background: rgba(255,183,3,.12); color: var(--amber); border: 1px solid rgba(255,183,3,.2); }
+.tag-info      { background: rgba(6,214,160,.1);  color: var(--cyan);  border: 1px solid rgba(6,214,160,.2); }
+.tag-general   { background: rgba(67,97,238,.12); color: #818CF8; border: 1px solid rgba(67,97,238,.2); }
+
+/* chevron toggle */
+.notice-toggle {
+  flex-shrink: 0; width: 28px; height: 28px; border-radius: 8px;
+  background: var(--surface); border: 1px solid var(--border2);
+  display: flex; align-items: center; justify-content: center;
+  font-size: .7rem; color: var(--muted);
+  transition: transform .25s, background .18s;
+  margin-top: .1rem;
+}
+.notice-card.expanded .notice-toggle { transform: rotate(180deg); background: rgba(67,97,238,.12); color: #818CF8; }
+
+/* body (expandable) */
+.notice-body-wrap {
+  max-height: 0; overflow: hidden;
+  transition: max-height .35s cubic-bezier(.4,0,.2,1), padding .3s;
+  padding: 0 1.1rem;
+}
+.notice-card.expanded .notice-body-wrap {
+  max-height: 600px;
+  padding: 0 1.1rem .9rem;
+}
+.notice-divider { height: 1px; background: var(--border); margin-bottom: .85rem; }
+.notice-body-text {
+  font-size: .83rem; color: var(--soft); line-height: 1.75;
+  white-space: pre-wrap; word-break: break-word;
+}
+/* image in notice */
+.notice-img {
+  width: 100%; border-radius: 10px; margin-top: .75rem;
+  object-fit: cover; max-height: 200px;
+  border: 1px solid var(--border);
+}
+/* link in notice */
+.notice-link {
+  display: inline-flex; align-items: center; gap: .35rem;
+  margin-top: .75rem;
+  font-size: .8rem; font-weight: 600; color: var(--primary);
+  background: rgba(67,97,238,.1); border: 1px solid rgba(67,97,238,.2);
+  padding: .4rem .85rem; border-radius: 8px;
+  transition: background .18s;
+}
+.notice-link:hover { background: rgba(67,97,238,.2); }
+
+/* ── SKELETON ─────────────────────────── */
+.sk-notice {
+  background: var(--card); border: 1px solid var(--border);
+  border-radius: var(--r); padding: 1rem 1.1rem;
+  display: flex; flex-direction: column; gap: .6rem;
+  overflow: hidden;
+}
+.sk-notice::before { content:''; display:block; height:3px; background: var(--border2); border-radius: 2px; margin-bottom: .2rem; }
+.sk-line {
+  height: 11px; border-radius: 6px;
+  background: linear-gradient(90deg, var(--card) 25%, rgba(255,255,255,.04) 50%, var(--card) 75%);
+  background-size: 200% 100%;
+  animation: skShim 1.3s ease-in-out infinite;
+}
+.sk-line.w80 { width: 80%; }
+.sk-line.w55 { width: 55%; height: 8px; }
+.sk-line.w35 { width: 35%; height: 7px; }
+@keyframes skShim { 0%{background-position:200% 0} 100%{background-position:-200% 0} }
+
+/* ── EMPTY STATE ──────────────────────── */
+.empty-state {
+  text-align: center; padding: 4rem 2rem;
+  color: var(--muted);
+}
+.empty-icon { font-size: 2.8rem; margin-bottom: .8rem; }
+.empty-title { font-family: var(--en); font-size: .95rem; font-weight: 700; margin-bottom: .3rem; color: var(--soft); }
+.empty-desc { font-size: .8rem; }
+
+/* ── BOTTOM NAV ───────────────────────── */
+.bnav {
+  position: fixed; bottom: .9rem;
+  left: 50%; transform: translateX(-50%);
+  z-index: 200;
+  width: calc(100% - 2rem); max-width: 444px;
+  height: 58px;
+  background: rgba(18,22,36,.75);
+  backdrop-filter: blur(28px) saturate(1.8);
+  -webkit-backdrop-filter: blur(28px) saturate(1.8);
+  border: 1px solid rgba(255,255,255,.09);
+  border-radius: 22px;
+  display: flex; align-items: center;
+  padding: 0 .4rem;
+  box-shadow: 0 8px 32px rgba(0,0,0,.5), inset 0 1px 0 rgba(255,255,255,.06);
+}
+.bnav-item {
+  flex: 1; display: flex; flex-direction: column; align-items: center;
+  justify-content: center; gap: .15rem;
+  cursor: pointer; border: none; background: none;
+  color: var(--muted); padding: .45rem .1rem;
+  border-radius: 14px;
+  transition: color .18s, background .18s;
+  text-decoration: none; font-family: var(--bn);
+  position: relative;
+}
+.bnav-item.active { color: var(--primary); }
+.bnav-item.active::before {
+  content: ''; position: absolute; top: 3px;
+  width: 20px; height: 3px; border-radius: 2px;
+  background: var(--primary); box-shadow: 0 0 8px var(--primary);
+}
+.bnav-item:hover:not(.active) { color: var(--soft); background: rgba(255,255,255,.04); }
+.bnav-icon  { font-size: 1.2rem; line-height: 1; }
+.bnav-label { font-size: .58rem; font-weight: 600; letter-spacing: .02em; white-space: nowrap; }
+
+/* ── ANIMATIONS ───────────────────────── */
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(10px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.notice-card:nth-child(2) { animation-delay: .05s; }
+.notice-card:nth-child(3) { animation-delay: .1s; }
+.notice-card:nth-child(4) { animation-delay: .15s; }
+.notice-card:nth-child(5) { animation-delay: .2s; }
+</style>
+</head>
+<body>
+
+<!-- LOADER -->
+<div id="pageLoader">
+  <div class="ld-logo" id="ldInitial">L</div>
+  <div class="ld-bar"><div class="ld-fill"></div></div>
+</div>
+
+<!-- TOP BAR -->
+<header class="topbar">
+  <div class="topbar-left">
+    <a class="back-btn" href="home.html" title="ফিরে যান">←</a>
+    <span class="topbar-title">📢 নোটিশ বোর্ড</span>
+    <span class="notice-count-badge" id="countBadge"></span>
+  </div>
+</header>
+
+<!-- SCROLL BODY -->
+<div class="scroll-body">
+
+  <!-- Search -->
+  <div class="search-wrap">
+    <span class="search-icon">🔍</span>
+    <input class="search-input" id="searchInput"
+           placeholder="নোটিশ খুঁজুন..." oninput="filterNotices()"/>
+  </div>
+
+  <!-- Filter tabs -->
+  <div class="filter-tabs" id="filterTabs">
+    <button class="tab-btn active" data-type="all" onclick="setTab(this)">সব</button>
+    <button class="tab-btn" data-type="important" onclick="setTab(this)">🔴 জরুরি</button>
+    <button class="tab-btn" data-type="event" onclick="setTab(this)">🟡 ইভেন্ট</button>
+    <button class="tab-btn" data-type="info" onclick="setTab(this)">🟢 তথ্য</button>
+    <button class="tab-btn" data-type="general" onclick="setTab(this)">🔵 সাধারণ</button>
+  </div>
+
+  <!-- Notice list -->
+  <div class="notice-list" id="noticeList">
+    <!-- skeleton -->
+    <div class="sk-notice">
+      <div class="sk-line w80"></div>
+      <div class="sk-line w55"></div>
+      <div class="sk-line w35"></div>
+    </div>
+    <div class="sk-notice">
+      <div class="sk-line w80"></div>
+      <div class="sk-line w55"></div>
+      <div class="sk-line w35"></div>
+    </div>
+    <div class="sk-notice">
+      <div class="sk-line w80"></div>
+      <div class="sk-line w55"></div>
+    </div>
+  </div>
+
+</div>
+
+<!-- BOTTOM NAV -->
+<nav class="bnav">
+  <a class="bnav-item" href="home.html">
+    <span class="bnav-icon">🏠</span>
+    <span class="bnav-label">হোম</span>
+  </a>
+  <a class="bnav-item" href="dashboard.html">
+    <span class="bnav-icon">📚</span>
+    <span class="bnav-label">সকল কোর্স</span>
+  </a>
+  <a class="bnav-item" href="dashboard.html#my">
+    <span class="bnav-icon">🎓</span>
+    <span class="bnav-label">আমার কোর্স</span>
+  </a>
+  <a class="bnav-item active" href="notish.html">
+    <span class="bnav-icon">📢</span>
+    <span class="bnav-label">নোটিশ</span>
+  </a>
+</nav>
+
+<script>
+firebase.initializeApp(LMS_CONFIG.firebase);
+const auth = firebase.auth();
+const db   = firebase.firestore();
+
+let allNotices   = [];   // raw from Firestore
+let activeType   = 'all';
+let searchQuery  = '';
+
+/* ── Type config ─────────────────────── */
+const TYPE_CONFIG = {
+  important: { label: 'জরুরি',   dotClass: 'rose',    tagClass: 'tag-important', cardClass: 'type-important' },
+  event:     { label: 'ইভেন্ট', dotClass: 'amber',   tagClass: 'tag-event',     cardClass: 'type-event'     },
+  info:      { label: 'তথ্য',    dotClass: '',        tagClass: 'tag-info',      cardClass: 'type-info'      },
+  general:   { label: 'সাধারণ', dotClass: 'primary', tagClass: 'tag-general',   cardClass: 'type-general'   },
+};
+
+/* ── Auth gate ───────────────────────── */
+auth.onAuthStateChanged(async user => {
+  if (!user) { window.location.href = 'index.html'; return; }
+  await loadSiteSettings();
+  await loadNotices();
+  document.getElementById('pageLoader').classList.add('gone');
+});
+
+/* ── Site Settings ───────────────────── */
+async function loadSiteSettings() {
+  try {
+    const snap = await db.collection('siteSettings').doc('main').get();
+    if (!snap.exists) return;
+    const s = snap.data();
+    if (s.appName)      document.getElementById('ldInitial').textContent = s.appName.charAt(0).toUpperCase();
+    if (s.faviconUrl)   document.getElementById('favicon').href = s.faviconUrl;
+    if (s.primaryColor) document.documentElement.style.setProperty('--primary', s.primaryColor);
+  } catch(e) { console.warn('Settings:', e); }
+}
+
+/* ── Load Notices ────────────────────── */
+async function loadNotices() {
+  try {
+    const snap = await db.collection('notices').orderBy('date', 'desc').limit(50).get();
+    allNotices = [];
+    snap.forEach(doc => allNotices.push({ id: doc.id, ...doc.data() }));
+
+    /* count badge */
+    const badge = document.getElementById('countBadge');
+    if (allNotices.length) {
+      badge.textContent = allNotices.length;
+      badge.classList.add('show');
+    }
+
+    render();
+  } catch(e) {
+    console.warn('Notices:', e);
+    document.getElementById('noticeList').innerHTML = `
+      <div class="empty-state">
+        <div class="empty-icon">⚠️</div>
+        <div class="empty-title">লোড হয়নি</div>
+        <div class="empty-desc">ইন্টারনেট কানেকশন চেক করুন</div>
+      </div>`;
+  }
+}
+
+/* ── Render ──────────────────────────── */
+function render() {
+  const q = searchQuery.trim().toLowerCase();
+
+  let filtered = allNotices.filter(n => {
+    const matchType = activeType === 'all' || (n.type || 'general') === activeType;
+    const matchSearch = !q ||
+      (n.title || '').toLowerCase().includes(q) ||
+      (n.body  || '').toLowerCase().includes(q);
+    return matchType && matchSearch;
+  });
+
+  const list = document.getElementById('noticeList');
+
+  if (!filtered.length) {
+    list.innerHTML = `
+      <div class="empty-state">
+        <div class="empty-icon">📭</div>
+        <div class="empty-title">কোনো নোটিশ নেই</div>
+        <div class="empty-desc">${q ? 'অনুসন্ধানে কিছু পাওয়া যায়নি' : 'এই ক্যাটাগরিতে কোনো নোটিশ নেই'}</div>
+      </div>`;
+    return;
+  }
+
+  list.innerHTML = filtered.map(n => noticeCardHTML(n)).join('');
+}
+
+/* ── Notice Card HTML ────────────────── */
+function noticeCardHTML(n) {
+  const type   = n.type || 'general';
+  const cfg    = TYPE_CONFIG[type] || TYPE_CONFIG.general;
+  const date   = n.date?.toDate?.().toLocaleDateString('bn-BD', {
+    year: 'numeric', month: 'long', day: 'numeric'
+  }) || '';
+
+  const imgHTML  = n.imageUrl
+    ? `<img class="notice-img" src="${n.imageUrl}" alt="নোটিশ ছবি" loading="lazy"/>`
+    : '';
+  const linkHTML = n.link
+    ? `<a class="notice-link" href="${n.link}" target="_blank" rel="noopener">🔗 আরও জানুন</a>`
+    : '';
+
+  const bodySection = (n.body || imgHTML || linkHTML)
+    ? `<div class="notice-body-wrap">
+         <div class="notice-divider"></div>
+         ${n.body ? `<div class="notice-body-text">${escapeHtml(n.body)}</div>` : ''}
+         ${imgHTML}
+         ${linkHTML}
+       </div>`
+    : '';
+
+  const hasBody = !!(n.body || n.imageUrl || n.link);
+
+  return `
+  <div class="notice-card ${cfg.cardClass}" id="nc-${n.id}" onclick="toggleCard('${n.id}', ${hasBody})">
+    <div class="notice-head">
+      <div class="notice-dot-wrap">
+        <div class="notice-dot ${cfg.dotClass}"></div>
+      </div>
+      <div class="notice-main">
+        <div class="notice-title">${escapeHtml(n.title)}</div>
+        <div class="notice-meta">
+          ${date ? `<span class="notice-date">🗓 ${date}</span>` : ''}
+          <span class="notice-type-tag ${cfg.tagClass}">${cfg.label}</span>
+        </div>
+      </div>
+      ${hasBody ? `<div class="notice-toggle">▾</div>` : ''}
+    </div>
+    ${bodySection}
+  </div>`;
+}
+
+/* ── Toggle card expand ──────────────── */
+function toggleCard(id, hasBody) {
+  if (!hasBody) return;
+  const card = document.getElementById('nc-' + id);
+  card.classList.toggle('expanded');
+}
+
+/* ── Filter tab ──────────────────────── */
+function setTab(btn) {
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  activeType = btn.dataset.type;
+  render();
+}
+
+/* ── Search ──────────────────────────── */
+function filterNotices() {
+  searchQuery = document.getElementById('searchInput').value;
+  render();
+}
+
+/* ── Escape HTML helper ──────────────── */
+function escapeHtml(str) {
+  return String(str)
+    .replace(/&/g,'&amp;')
+    .replace(/</g,'&lt;')
+    .replace(/>/g,'&gt;')
+    .replace(/"/g,'&quot;');
+}
+</script>
+</body>
+</html>

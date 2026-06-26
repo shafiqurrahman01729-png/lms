@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Certificate Verification</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;800;900&family=DM+Sans:wght@400;500;600;700&family=Hind+Siliguri:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+<script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore-compat.js"></script>
+<script src="config.js"></script>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+:root {
+  --ink: #0A0A0F; --paper: #F5F3EE; --cream: #EDE9E0;
+  --accent: #C8A96E; --blue: #1B4FBE; --muted: #7A7570;
+  --border: rgba(10,10,15,.1);
+  --serif: 'Playfair Display',serif;
+  --sans: 'DM Sans',sans-serif;
+  --bn: 'Hind Siliguri',sans-serif;
+}
+html { scroll-behavior:smooth; }
+body {
+  font-family: var(--sans);
+  background: var(--ink);
+  color: #ECEEF5;
+  min-height: 100vh;
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  padding: 2rem 1rem;
+}
+
+/* loader */
+.vfy-loader {
+  display: flex; flex-direction: column;
+  align-items: center; gap: 1rem;
+  font-family: var(--bn); color: rgba(255,255,255,.4);
+  font-size: .9rem;
+}
+.spinner {
+  width: 40px; height: 40px;
+  border: 3px solid rgba(200,169,110,.15);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: spin .8s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* status badges */
+.vfy-status {
+  display: inline-flex; align-items: center; gap: .5rem;
+  padding: .4rem 1rem; border-radius: 20px;
+  font-size: .8rem; font-weight: 700;
+  margin-bottom: 1.5rem;
+}
+.vfy-status.valid {
+  background: rgba(6,214,160,.1); color: #06D6A0;
+  border: 1px solid rgba(6,214,160,.2);
+}
+.vfy-status.invalid {
+  background: rgba(251,86,7,.1); color: #fb8c5a;
+  border: 1px solid rgba(251,86,7,.2);
+}
+
+/* certificate card */
+.cert-wrap {
+  width: 100%; max-width: 680px;
+  animation: popUp .5s cubic-bezier(.34,1.56,.64,1) both;
+}
+@keyframes popUp {
+  from { opacity:0; transform:scale(.94) translateY(20px); }
+  to   { opacity:1; transform:scale(1) translateY(0); }
+}
+
+.cert-card {
+  background: linear-gradient(135deg,#1a1506 0%,#2a2208 50%,#1a1506 100%);
+  border: 2.5px solid var(--accent);
+  border-radius: 20px; padding: 3rem 2.5rem;
+  text-align: center; position: relative; overflow: hidden;
+  margin-bottom: 1.5rem;
+  box-shadow: 0 32px 80px rgba(0,0,0,.5), 0 0 0 1px rgba(200,169,110,.1);
+}
+.cert-card::before {
+  content:''; position:absolute; inset:10px;
+  border:1px solid rgba(200,169,110,.15); border-radius:14px; pointer-events:none;
+}
+.cert-corner { position:absolute; font-size:1.6rem; opacity:.25; }
+.cert-corner.tl{top:14px;left:18px;}
+.cert-corner.tr{top:14px;right:18px;}
+.cert-corner.bl{bottom:14px;left:18px;}
+.cert-corner.br{bottom:14px;right:18px;}
+
+.cert-logo {
+  width: 64px; height: 64px; border-radius: 14px;
+  background: rgba(200,169,110,.12);
+  border: 1.5px solid rgba(200,169,110,.25);
+  display: flex; align-items: center; justify-content: center;
+  margin: 0 auto 1rem; overflow: hidden;
+}
+.cert-logo img { width:100%; height:100%; object-fit:cover; border-radius:12px; }
+.cert-logo-letter { font-size:1.8rem; font-weight:800; color:var(--accent); }
+
+.cert-school { font-size:.72rem; font-weight:700; letter-spacing:.18em; text-transform:uppercase; color:var(--accent); margin-bottom:.8rem; opacity:.8; }
+.cert-heading { font-family:var(--serif); font-size:clamp(1.4rem,3vw,2rem); font-weight:900; color:#f5e6c0; margin-bottom:.5rem; }
+.cert-certify { font-size:.8rem; color:rgba(245,230,192,.4); font-family:var(--bn); margin-bottom:.8rem; }
+.cert-name { font-family:var(--serif); font-size:clamp(1.8rem,4vw,2.8rem); font-weight:900; color:var(--accent); margin-bottom:.5rem; }
+.cert-course-label { font-size:.78rem; color:rgba(245,230,192,.4); font-family:var(--bn); margin-bottom:.4rem; }
+.cert-course { font-size:clamp(1rem,2vw,1.3rem); font-weight:700; color:#f5e6c0; line-height:1.4; margin-bottom:1.5rem; }
+
+.cert-divider {
+  height:1px; margin-bottom:1.5rem;
+  background: linear-gradient(90deg,transparent,rgba(200,169,110,.3),transparent);
+}
+.cert-meta { display:flex; justify-content:space-between; align-items:flex-end; flex-wrap:wrap; gap:1rem; }
+.cert-meta-col { text-align:center; }
+.cert-meta-label { font-size:.65rem; font-weight:700; letter-spacing:.1em; text-transform:uppercase; color:rgba(245,230,192,.3); margin-bottom:.3rem; }
+.cert-meta-val { font-size:.9rem; font-weight:700; color:rgba(245,230,192,.8); }
+.cert-seal {
+  width:52px; height:52px; border-radius:50%;
+  border:1.5px solid rgba(200,169,110,.35);
+  background:rgba(200,169,110,.07);
+  display:flex; align-items:center; justify-content:center;
+  font-size:1.4rem; margin:0 auto;
+}
+.cert-id {
+  margin-top:1.5rem; font-family:monospace;
+  font-size:.7rem; color:rgba(200,169,110,.45);
+  letter-spacing:.06em;
+}
+
+/* verify footer */
+.vfy-footer {
+  text-align:center;
+}
+.vfy-badge {
+  display:inline-flex; align-items:center; gap:.5rem;
+  background:rgba(6,214,160,.08); border:1px solid rgba(6,214,160,.15);
+  color:#06D6A0; border-radius:10px; padding:.6rem 1.2rem;
+  font-size:.82rem; font-weight:700; margin-bottom:1rem;
+}
+.vfy-url {
+  font-family:monospace; font-size:.72rem; color:rgba(255,255,255,.25);
+  word-break:break-all; margin-bottom:1.5rem;
+}
+.btn-back {
+  display:inline-flex; align-items:center; gap:.4rem;
+  background:rgba(200,169,110,.1); border:1px solid rgba(200,169,110,.2);
+  color:var(--accent); border-radius:10px;
+  padding:.6rem 1.4rem; font-size:.85rem; font-weight:700;
+  font-family:var(--sans); cursor:pointer; text-decoration:none;
+  transition:background .2s;
+}
+.btn-back:hover { background:rgba(200,169,110,.2); }
+
+/* not found state */
+.vfy-notfound {
+  text-align:center; max-width:400px;
+  animation: popUp .4s ease both;
+}
+.vfy-notfound .icon { font-size:3.5rem; margin-bottom:1rem; }
+.vfy-notfound h2 { font-family:var(--serif); font-size:1.6rem; margin-bottom:.6rem; color:#f5e6c0; }
+.vfy-notfound p { font-family:var(--bn); color:rgba(255,255,255,.4); font-size:.9rem; line-height:1.7; }
+
+@media(max-width:520px){
+  .cert-card { padding:2rem 1.2rem; }
+  .cert-meta { justify-content:center; }
+}
+</style>
+</head>
+<body>
+
+<div id="vfyLoader" class="vfy-loader">
+  <div class="spinner"></div>
+  <span>সার্টিফিকেট যাচাই হচ্ছে...</span>
+</div>
+
+<div id="vfyValid" style="display:none; width:100%; max-width:680px;">
+  <div style="text-align:center; margin-bottom:1rem">
+    <div class="vfy-status valid">✅ এই সার্টিফিকেটটি বৈধ</div>
+  </div>
+
+  <div class="cert-wrap">
+    <div class="cert-card" id="certCard">
+      <span class="cert-corner tl">✦</span>
+      <span class="cert-corner tr">✦</span>
+      <span class="cert-corner bl">✦</span>
+      <span class="cert-corner br">✦</span>
+
+      <div class="cert-logo" id="certLogo">
+        <span class="cert-logo-letter" id="certLogoLetter">L</span>
+      </div>
+      <div class="cert-school" id="certSchool">LMS Academy</div>
+      <div class="cert-heading">Certificate of Completion</div>
+      <div class="cert-certify">এই সার্টিফিকেট প্রদান করা হচ্ছে</div>
+      <div class="cert-name" id="certName">—</div>
+      <div class="cert-course-label">সফলভাবে সম্পন্ন করেছেন</div>
+      <div class="cert-course" id="certCourse">—</div>
+      <div class="cert-divider"></div>
+      <div class="cert-meta">
+        <div class="cert-meta-col">
+          <div class="cert-meta-label">Instructor</div>
+          <div class="cert-meta-val" id="certInstructor">—</div>
+        </div>
+        <div class="cert-meta-col">
+          <div class="cert-seal">🎓</div>
+        </div>
+        <div class="cert-meta-col">
+          <div class="cert-meta-label">Issue Date</div>
+          <div class="cert-meta-val" id="certDate">—</div>
+        </div>
+      </div>
+      <div class="cert-id" id="certId">—</div>
+    </div>
+
+    <div class="vfy-footer">
+      <div class="vfy-badge">🔒 Verified by <span id="vfySchool" style="margin-left:.3rem">LMS</span></div>
+      <div class="vfy-url" id="vfyUrl"></div>
+      <a href="index.html" class="btn-back">← মূল পেজে ফিরে যান</a>
+    </div>
+  </div>
+</div>
+
+<div id="vfyInvalid" style="display:none">
+  <div class="vfy-notfound">
+    <div class="icon">❌</div>
+    <h2>সার্টিফিকেট পাওয়া যায়নি</h2>
+    <p>এই Certificate ID টি বৈধ নয় অথবা মুছে ফেলা হয়েছে।<br/>সঠিক লিংক ব্যবহার করুন।</p>
+    <br/>
+    <a href="index.html" class="btn-back">← মূল পেজে ফিরে যান</a>
+  </div>
+</div>
+
+<script>
+(async () => {
+  // স্ক্রিনশটের গাইডলাইন অনুযায়ী Firebase ইনিশিয়েলাইজেশন চেক
+  if (!firebase.apps.length) {
+    if (typeof LMS_CONFIG !== 'undefined' && LMS_CONFIG.firebase) {
+      firebase.initializeApp(LMS_CONFIG.firebase);
+    } else {
+      console.error("Firebase Configuration (LMS_CONFIG) পাওয়া যায়নি! config.js চেক করুন।");
+    }
+  }
+
+  const params = new URLSearchParams(location.search);
+  const certId = params.get('id');
+
+  if (!certId) { showInvalid(); return; }
+
+  try {
+    // load site settings
+    const settSnap = await firebase.firestore().collection('siteSettings').doc('main').get();
+    const s = settSnap.exists ? settSnap.data() : {};
+    const appName = s.appName || 'LMS Academy';
+
+    document.getElementById('certSchool').textContent  = appName;
+    document.getElementById('vfySchool').textContent   = appName;
+    document.getElementById('vfyUrl').textContent      = location.href;
+
+    if (s.logoUrl) {
+      document.getElementById('certLogo').innerHTML = `<img src="${s.logoUrl}" alt="logo"/>`;
+    } else {
+      document.getElementById('certLogoLetter').textContent = appName[0].toUpperCase();
+    }
+    if (s.primaryColor) {
+      document.documentElement.style.setProperty('--accent', s.primaryColor);
+    }
+
+    // load certificate
+    const snap = await firebase.firestore().collection('certificates').doc(certId).get();
+    if (!snap.exists) { showInvalid(); return; }
+
+    const c = snap.data();
+    const date = c.issuedAt?.toDate?.().toLocaleDateString('bn-BD', {
+      year:'numeric', month:'long', day:'numeric'
+    }) || '—';
+
+    document.getElementById('certName').textContent       = c.userName || '—';
+    document.getElementById('certCourse').textContent     = c.courseTitle || '—';
+    document.getElementById('certInstructor').textContent = c.instructor || 'Admin';
+    document.getElementById('certDate').textContent       = date;
+    document.getElementById('certId').textContent         = c.certId || certId;
+
+    document.getElementById('vfyLoader').style.display  = 'none';
+    document.getElementById('vfyValid').style.display   = 'block';
+    document.title = `Certificate — ${c.userName}`;
+
+  } catch(e) {
+    console.error(e); showInvalid();
+  }
+})();
+
+function showInvalid() {
+  document.getElementById('vfyLoader').style.display  = 'none';
+  document.getElementById('vfyInvalid').style.display = 'block';
+}
+</script>
+</body>
+</html>

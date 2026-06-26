@@ -1,0 +1,23 @@
+{
+  "short_name": "Codemyst",
+  "name": "Codemyst Academy",
+  "icons": [
+    {
+      "src": "icon.png",
+      "type": "image/png",
+      "sizes": "192x192",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "icon.png",
+      "type": "image/png",
+      "sizes": "512x512",
+      "purpose": "any maskable"
+    }
+  ],
+  "start_url": ".",
+  "background_color": "#0A0A0F",
+  "theme_color": "#0070f3",
+  "display": "standalone",
+  "orientation": "portrait"
+}

@@ -1,0 +1,907 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>প্রোফাইল</title>
+<link rel="icon" id="favicon" href=""/>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=Cabinet+Grotesk:wght@400;500;600;700;800&family=Hind+Siliguri:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+<script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore-compat.js"></script>
+<!-- ⚠️ CONFIG — শুধু এই ফাইলটি পরিবর্তন করুন নতুন client এর জন্য -->
+<script src="config.js"></script>
+<style>
+/* ═══════════════════════════════════════
+   TOKENS
+═══════════════════════════════════════ */
+:root {
+  --bg:       #0D0F14;
+  --surface:  #13161E;
+  --card:     #181C27;
+  --border:   rgba(255,255,255,.07);
+  --border2:  rgba(255,255,255,.12);
+  --ink:      #ECEEF5;
+  --muted:    #6B7280;
+  --soft:     #9CA3AF;
+  --primary:  #4361EE;
+  --primary2: #3A56E4;
+  --cyan:     #06D6A0;
+  --amber:    #FFB703;
+  --rose:     #FB5607;
+  --sidebar-w: 260px;
+  --top-h:    64px;
+  --font:     'Cabinet Grotesk', sans-serif;
+  --bn:       'Hind Siliguri', sans-serif;
+  --radius:   14px;
+  --shadow:   0 4px 24px rgba(0,0,0,.35);
+}
+
+/* ═══════════════════════════════════════
+   RESET
+═══════════════════════════════════════ */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; }
+body {
+  font-family: var(--font);
+  background: var(--bg);
+  color: var(--ink);
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+a { text-decoration: none; color: inherit; }
+button { font-family: var(--font); }
+img { display: block; }
+
+/* ═══════════════════════════════════════
+   LOADER
+═══════════════════════════════════════ */
+#pageLoader {
+  position: fixed; inset: 0; z-index: 9999;
+  background: var(--bg);
+  display: flex; align-items: center; justify-content: center;
+  flex-direction: column; gap: 1rem;
+  transition: opacity .4s, visibility .4s;
+}
+#pageLoader.gone { opacity: 0; visibility: hidden; }
+.ld-logo {
+  width: 52px; height: 52px; border-radius: 14px;
+  background: var(--primary);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 1.5rem; font-weight: 800; color: #fff;
+  animation: pulse 1.4s ease-in-out infinite;
+}
+@keyframes pulse {
+  0%,100% { transform: scale(1); opacity: 1; }
+  50%      { transform: scale(.92); opacity: .7; }
+}
+.ld-bar {
+  width: 120px; height: 3px;
+  background: var(--border2); border-radius: 10px; overflow: hidden;
+}
+.ld-fill {
+  height: 100%; width: 40%;
+  background: var(--primary);
+  border-radius: 10px;
+  animation: slide 1.2s ease-in-out infinite;
+}
+@keyframes slide {
+  0%   { transform: translateX(-100%); }
+  100% { transform: translateX(350%); }
+}
+
+/* ═══════════════════════════════════════
+   LAYOUT SHELL
+═══════════════════════════════════════ */
+.shell { display: flex; min-height: 100vh; }
+
+/* ═══════════════════════════════════════
+   SIDEBAR
+═══════════════════════════════════════ */
+.sidebar {
+  width: var(--sidebar-w);
+  background: var(--surface);
+  border-right: 1px solid var(--border);
+  height: 100vh; position: fixed;
+  top: 0; left: 0; z-index: 200;
+  display: flex; flex-direction: column;
+  padding: 0 0 1rem;
+  transition: transform .3s cubic-bezier(.4,0,.2,1);
+}
+.sb-brand {
+  display: flex; align-items: center; gap: .75rem;
+  padding: 1.1rem 1.25rem;
+  border-bottom: 1px solid var(--border);
+  min-height: var(--top-h);
+}
+.sb-brand-logo {
+  width: 36px; height: 36px; border-radius: 10px;
+  object-fit: cover; flex-shrink: 0;
+}
+.sb-brand-fallback {
+  width: 36px; height: 36px; border-radius: 10px;
+  background: var(--primary); flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  font-weight: 800; font-size: .95rem; color: #fff;
+}
+.sb-brand-name {
+  font-size: .95rem; font-weight: 700;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.sb-nav { flex: 1; padding: 1rem .75rem; overflow-y: auto; }
+.sb-section-label {
+  font-size: .68rem; font-weight: 700; letter-spacing: .09em;
+  text-transform: uppercase; color: var(--muted);
+  padding: .6rem .6rem .4rem;
+  margin-top: .6rem;
+}
+.sb-item {
+  display: flex; align-items: center; gap: .8rem;
+  padding: .65rem .9rem; border-radius: 10px;
+  font-size: .88rem; font-weight: 500; color: var(--soft);
+  cursor: pointer; transition: all .18s;
+  margin-bottom: 2px; border: none; background: none;
+  width: 100%; text-align: left;
+}
+.sb-item:hover { background: rgba(255,255,255,.05); color: var(--ink); }
+.sb-item.active {
+  background: rgba(67,97,238,.15);
+  color: var(--primary);
+  font-weight: 600;
+}
+.sb-item .sb-icon { font-size: 1rem; flex-shrink: 0; width: 20px; text-align: center; }
+.sb-user {
+  margin: 0 .75rem .25rem;
+  padding: .85rem 1rem;
+  background: var(--card); border: 1px solid var(--border);
+  border-radius: 12px; display: flex; align-items: center; gap: .75rem;
+}
+.sb-avatar {
+  width: 34px; height: 34px; border-radius: 50%;
+  background: linear-gradient(135deg, var(--primary), var(--cyan));
+  display: flex; align-items: center; justify-content: center;
+  font-weight: 800; font-size: .85rem; flex-shrink: 0; overflow:hidden;
+}
+.sb-avatar img { width:100%; height:100%; object-fit:cover; }
+.sb-user-name { font-size: .82rem; font-weight: 600; line-height: 1.2; }
+.sb-user-role { font-size: .7rem; color: var(--muted); }
+.sb-logout-btn {
+  margin: 0 .75rem; padding: .55rem;
+  background: rgba(251,86,7,.1);
+  border: 1px solid rgba(251,86,7,.2);
+  color: #FB8C5A; border-radius: 10px;
+  font-size: .8rem; font-weight: 600; cursor: pointer;
+  transition: background .2s; width: calc(100% - 1.5rem);
+}
+.sb-logout-btn:hover { background: rgba(251,86,7,.2); }
+.sb-overlay {
+  display: none; position: fixed; inset: 0; z-index: 199;
+  background: rgba(0,0,0,.55); backdrop-filter: blur(2px);
+}
+.sb-overlay.show { display: block; }
+
+/* ═══════════════════════════════════════
+   TOP BAR
+═══════════════════════════════════════ */
+.topbar {
+  position: fixed; top: 0;
+  left: var(--sidebar-w); right: 0; z-index: 100;
+  height: var(--top-h);
+  background: rgba(13,15,20,.85);
+  backdrop-filter: blur(16px);
+  border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 0 2rem;
+}
+.topbar-left { display: flex; align-items: center; gap: 1rem; }
+.menu-toggle {
+  display: none; background: none; border: none;
+  color: var(--ink); font-size: 1.3rem; cursor: pointer;
+  padding: .3rem;
+}
+.back-link {
+  display: flex; align-items: center; gap: .4rem;
+  font-size: .85rem; color: var(--soft); font-weight: 500;
+}
+.back-link:hover { color: var(--ink); }
+.topbar-right { display: flex; align-items: center; gap: .75rem; }
+.topbar-avatar {
+  width: 34px; height: 34px; border-radius: 50%;
+  background: linear-gradient(135deg, var(--primary), var(--cyan));
+  display: flex; align-items: center; justify-content: center;
+  font-weight: 800; font-size: .85rem; overflow:hidden;
+}
+.topbar-avatar img { width:100%; height:100%; object-fit:cover; }
+
+/* ═══════════════════════════════════════
+   MAIN CONTENT
+═══════════════════════════════════════ */
+.main { margin-left: var(--sidebar-w); padding-top: var(--top-h); min-height: 100vh; flex: 1; }
+.content { padding: 2rem; max-width: 800px; }
+.page-header { margin-bottom: 1.6rem; }
+.page-header h1 { font-size: 1.5rem; font-weight: 800; margin-bottom: .3rem; }
+.page-header p { font-family: var(--bn); color: var(--muted); font-size: .85rem; }
+
+/* ═══════════════════════════════════════
+   PROFILE HERO
+═══════════════════════════════════════ */
+.profile-hero {
+  background: var(--card); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 1.5rem;
+  display: flex; align-items: center; gap: 1.2rem;
+  margin-bottom: 1.6rem; flex-wrap: wrap;
+}
+.profile-avatar-lg {
+  width: 72px; height: 72px; border-radius: 50%;
+  background: linear-gradient(135deg, var(--primary), var(--cyan));
+  display: flex; align-items: center; justify-content: center;
+  font-size: 1.6rem; font-weight: 800; flex-shrink: 0; overflow: hidden;
+}
+.profile-avatar-lg img { width: 100%; height: 100%; object-fit: cover; }
+.profile-hero-info { flex: 1; min-width: 0; }
+.profile-hero-info h2 {
+  font-size: 1.15rem; font-weight: 800; margin-bottom: .2rem;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.p-email { font-size: .82rem; color: var(--muted); margin-bottom: .5rem; word-break: break-all; }
+.profile-hero-meta { display: flex; gap: .6rem; flex-wrap: wrap; align-items: center; }
+.role-badge {
+  background: rgba(67,97,238,.15); color: var(--primary);
+  font-size: .68rem; font-weight: 700; padding: .2rem .65rem;
+  border-radius: 20px; border: 1px solid rgba(67,97,238,.2);
+  text-transform: capitalize;
+}
+.join-badge { font-size: .72rem; color: var(--muted); font-family: var(--bn); }
+
+/* ═══════════════════════════════════════
+   STAT CARDS (mini)
+═══════════════════════════════════════ */
+.stat-grid-sm {
+  display: grid; grid-template-columns: repeat(2, 1fr);
+  gap: 1rem; margin-bottom: 1.6rem;
+}
+.stat-card-sm {
+  background: var(--card); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 1.1rem 1.3rem;
+  display: flex; align-items: center; gap: .9rem;
+}
+.stat-card-sm .ic { font-size: 1.5rem; }
+.stat-card-sm .val { font-size: 1.4rem; font-weight: 800; line-height: 1; }
+.stat-card-sm .lbl { font-size: .72rem; color: var(--muted); font-family: var(--bn); margin-top: .15rem; }
+
+/* ═══════════════════════════════════════
+   CARD SECTIONS / FORMS
+═══════════════════════════════════════ */
+.card-section {
+  background: var(--card); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 1.4rem;
+  margin-bottom: 1.4rem;
+}
+.card-section h3 {
+  font-size: .95rem; font-weight: 700;
+  margin-bottom: 1.1rem; display: flex; align-items: center; gap: .5rem;
+}
+.form-group { margin-bottom: 1rem; }
+.form-label {
+  font-size: .72rem; font-weight: 700; color: var(--muted);
+  text-transform: uppercase; letter-spacing: .07em;
+  margin-bottom: .45rem; display: block;
+}
+.form-input {
+  width: 100%; padding: .75rem 1rem;
+  background: var(--surface); border: 1.5px solid var(--border);
+  border-radius: 10px; color: var(--ink);
+  font-size: .9rem; font-family: var(--font);
+  outline: none; transition: border-color .2s;
+}
+.form-input:focus { border-color: var(--primary); }
+.form-input:disabled { opacity: .55; cursor: not-allowed; }
+.form-input::placeholder { color: var(--muted); }
+.form-hint { font-size: .72rem; color: var(--muted); font-family: var(--bn); margin-top: .35rem; }
+.btn-save {
+  padding: .7rem 1.5rem; background: var(--primary); color: #fff;
+  border: none; border-radius: 10px; font-size: .85rem; font-weight: 700;
+  font-family: var(--font); cursor: pointer;
+  transition: background .2s, transform .15s;
+}
+.btn-save:hover { background: var(--primary2); transform: translateY(-1px); }
+.btn-save:disabled { opacity: .5; cursor: not-allowed; transform: none; }
+.form-msg {
+  margin-top: .8rem; padding: .55rem 1rem; border-radius: 8px;
+  font-size: .82rem; font-family: var(--bn); display: none;
+}
+.form-msg.ok  { background: rgba(6,214,160,.1); color: var(--cyan); border: 1px solid rgba(6,214,160,.2); display: block; }
+.form-msg.err { background: rgba(251,86,7,.1); color: #fb8c5a; border: 1px solid rgba(251,86,7,.2); display: block; }
+
+/* ═══════════════════════════════════════
+   MENU LIST
+═══════════════════════════════════════ */
+.menu-list { display: flex; flex-direction: column; gap: .6rem; }
+.menu-item {
+  display: flex; align-items: center; gap: .9rem;
+  padding: .9rem 1.1rem; background: var(--surface);
+  border: 1px solid var(--border); border-radius: 12px;
+  cursor: pointer; transition: border-color .2s, background .2s;
+  width: 100%; text-align: left; color: var(--ink); font-size: .88rem;
+}
+.menu-item:hover { border-color: var(--border2); background: rgba(255,255,255,.03); }
+.menu-icon { font-size: 1.2rem; width: 26px; text-align: center; flex-shrink: 0; }
+.menu-label { flex: 1; font-weight: 600; }
+.menu-arrow { color: var(--muted); font-size: .9rem; }
+.menu-item.danger { border-color: rgba(251,86,7,.18); }
+.menu-item.danger .menu-label { color: #fb8c5a; }
+
+/* ═══════════════════════════════════════
+   TRANSACTIONS
+═══════════════════════════════════════ */
+.txn-list { display: flex; flex-direction: column; gap: .7rem; }
+.txn-item {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 12px; padding: .9rem 1.1rem;
+  display: flex; justify-content: space-between; align-items: center;
+  gap: 1rem; flex-wrap: wrap;
+}
+.txn-info { flex: 1; min-width: 160px; }
+.txn-course { font-size: .85rem; font-weight: 700; margin-bottom: .2rem; }
+.txn-meta { font-size: .72rem; color: var(--muted); font-family: var(--bn); }
+.txn-right { text-align: right; }
+.txn-amount { font-size: .95rem; font-weight: 800; color: var(--amber); margin-bottom: .3rem; }
+.txn-status {
+  font-size: .64rem; font-weight: 700; padding: .18rem .55rem;
+  border-radius: 20px; text-transform: uppercase; letter-spacing: .04em;
+}
+.txn-status.pending  { background: rgba(255,183,3,.12); color: var(--amber); border: 1px solid rgba(255,183,3,.2); }
+.txn-status.approved { background: rgba(6,214,160,.1);  color: var(--cyan);  border: 1px solid rgba(6,214,160,.2); }
+.txn-status.rejected { background: rgba(251,86,7,.1);   color: #fb8c5a;      border: 1px solid rgba(251,86,7,.2); }
+
+/* ═══════════════════════════════════════
+   EMPTY STATE / SKELETON
+═══════════════════════════════════════ */
+.empty {
+  text-align: center; padding: 2.5rem 1.5rem;
+  background: var(--surface); border: 1px dashed var(--border2);
+  border-radius: var(--radius);
+}
+.empty-icon { font-size: 2.2rem; margin-bottom: .6rem; }
+.empty-title { font-size: .9rem; font-weight: 700; margin-bottom: .3rem; }
+.empty-desc { font-size: .8rem; color: var(--muted); font-family: var(--bn); }
+.skeleton {
+  background: linear-gradient(90deg, var(--card) 25%, rgba(255,255,255,.04) 50%, var(--card) 75%);
+  background-size: 200% 100%; animation: shimmer 1.4s infinite; border-radius: 10px;
+}
+@keyframes shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+.sk-txn { height: 56px; border-radius: 12px; }
+
+/* ═══════════════════════════════════════
+   MOBILE BOTTOM NAV
+═══════════════════════════════════════ */
+.bottom-nav {
+  display: none; position: fixed; bottom: 0; left: 0; right: 0; z-index: 20;
+  background: var(--surface); border-top: 1px solid var(--border);
+  padding: .5rem 0 calc(.5rem + env(safe-area-inset-bottom));
+}
+.bnav-items { display: flex; }
+.bnav-item {
+  flex: 1; display: flex; flex-direction: column; align-items: center; gap: .2rem;
+  padding: .4rem; cursor: pointer; border: none; background: none;
+  color: var(--muted); font-size: .62rem; transition: color .18s;
+}
+.bnav-item.active { color: var(--primary); }
+.bnav-icon { font-size: 1.2rem; }
+
+/* ═══════════════════════════════════════
+   RESPONSIVE
+═══════════════════════════════════════ */
+@media (max-width: 768px) {
+  .sidebar { transform: translateX(-100%); box-shadow: none; }
+  .sidebar.open { transform: translateX(0); box-shadow: 8px 0 32px rgba(0,0,0,.4); }
+  .topbar { left: 0; }
+  .main { margin-left: 0; }
+  .menu-toggle { display: flex; }
+  .bottom-nav { display: block; }
+  .content { padding: 1.5rem 1.5rem 5rem; }
+  .back-link span.back-text { display: none; }
+}
+@media (max-width: 520px) {
+  .content { padding: 1rem 1rem 5rem; }
+  .topbar { padding: 0 1rem; }
+  .stat-grid-sm { grid-template-columns: 1fr 1fr; }
+  .profile-hero { padding: 1.2rem; }
+}
+</style>
+</head>
+<body>
+
+<!-- ──────── LOADER ──────── -->
+<div id="pageLoader">
+  <div class="ld-logo" id="loaderInitial">L</div>
+  <div class="ld-bar"><div class="ld-fill"></div></div>
+</div>
+
+<div class="shell">
+
+<!-- ══════════════════════════════════
+     SIDEBAR
+══════════════════════════════════ -->
+<aside class="sidebar" id="sidebar">
+  <div class="sb-brand">
+    <img class="sb-brand-logo" id="sbLogoImg" src="" alt="" style="display:none"/>
+    <div class="sb-brand-fallback" id="sbLogoFallback">L</div>
+    <span class="sb-brand-name" id="sbAppName">LMS</span>
+  </div>
+
+  <nav class="sb-nav">
+    <div class="sb-section-label">Main</div>
+    <a class="sb-item" href="dashboard.html">
+      <span class="sb-icon">🏠</span> ড্যাশবোর্ড
+    </a>
+    <a class="sb-item" href="dashboard.html">
+      <span class="sb-icon">📚</span> সব কোর্স
+    </a>
+    <a class="sb-item" href="dashboard.html">
+      <span class="sb-icon">📖</span> আমার কোর্স
+    </a>
+    <a class="sb-item" href="dashboard.html">
+      <span class="sb-icon">📢</span> নোটিশ বোর্ড
+    </a>
+    <a class="sb-item active" href="profile.html">
+      <span class="sb-icon">👤</span> প্রোফাইল
+    </a>
+
+    <div class="sb-section-label">অন্যান্য</div>
+    <a class="sb-item" href="certificate.html">
+      <span class="sb-icon">📜</span> সার্টিফিকেট
+    </a>
+    <a class="sb-item" href="setting.html">
+      <span class="sb-icon">⚙️</span> সেটিংস
+    </a>
+    <a class="sb-item" href="support.html">
+      <span class="sb-icon">🆘</span> সাপোর্ট
+    </a>
+    <a class="sb-item" href="legal.html">
+      <span class="sb-icon">⚖️</span> লিগ্যাল
+    </a>
+  </nav>
+
+  <div class="sb-user">
+    <div class="sb-avatar" id="sbAvatarBottom">?</div>
+    <div>
+      <div class="sb-user-name" id="sbUserNameBottom">—</div>
+      <div class="sb-user-role">Student</div>
+    </div>
+  </div>
+  <button class="sb-logout-btn" onclick="doLogout()">🚪 Logout</button>
+</aside>
+
+<div class="sb-overlay" id="sbOverlay" onclick="closeSidebar()"></div>
+
+<!-- ══════════════════════════════════
+     TOP BAR
+══════════════════════════════════ -->
+<header class="topbar">
+  <div class="topbar-left">
+    <button class="menu-toggle" onclick="toggleSidebar()">☰</button>
+    <a class="back-link" href="dashboard.html">
+      <span>←</span><span class="back-text">ড্যাশবোর্ড</span>
+    </a>
+  </div>
+  <div class="topbar-right">
+    <div class="topbar-avatar" id="topAvatar">?</div>
+  </div>
+</header>
+
+<!-- ══════════════════════════════════
+     MAIN CONTENT
+══════════════════════════════════ -->
+<main class="main">
+<div class="content">
+
+  <div class="page-header">
+    <h1>👤 প্রোফাইল</h1>
+    <p>আপনার অ্যাকাউন্ট তথ্য পরিচালনা করুন</p>
+  </div>
+
+  <!-- ── Profile Hero ── -->
+  <div class="profile-hero">
+    <div class="profile-avatar-lg" id="pfAvatarWrap">
+      <img id="pfAvatarImg" src="" alt="" style="display:none"/>
+      <span id="pfAvatarLetter">?</span>
+    </div>
+    <div class="profile-hero-info">
+      <h2 id="pfName">—</h2>
+      <div class="p-email" id="pfEmail">—</div>
+      <div class="profile-hero-meta">
+        <span class="role-badge" id="pfRole">Student</span>
+        <span class="join-badge" id="pfJoined"></span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Mini stats ── -->
+  <div class="stat-grid-sm">
+    <div class="stat-card-sm">
+      <span class="ic">📚</span>
+      <div>
+        <div class="val" id="sPfEnrolled">—</div>
+        <div class="lbl">এনরোল্ড কোর্স</div>
+      </div>
+    </div>
+    <div class="stat-card-sm">
+      <span class="ic">📜</span>
+      <div>
+        <div class="val" id="sPfCerts">—</div>
+        <div class="lbl">সার্টিফিকেট</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Account Info Form ── -->
+  <div class="card-section">
+    <h3>✏️ অ্যাকাউন্ট তথ্য</h3>
+
+    <div class="form-group">
+      <label class="form-label">নাম</label>
+      <input class="form-input" id="inputName" placeholder="আপনার নাম"/>
+    </div>
+
+    <div class="form-group">
+      <label class="form-label">ইমেইল</label>
+      <input class="form-input" id="inputEmail" disabled/>
+      <div class="form-hint">লগইন ইমেইল পরিবর্তনযোগ্য নয়</div>
+    </div>
+
+    <div class="form-group">
+      <label class="form-label">ফোন নম্বর</label>
+      <input class="form-input" id="inputPhone" type="tel" placeholder="01XXXXXXXXX"/>
+    </div>
+
+    <div class="form-group">
+      <label class="form-label">প্রোফাইল ছবির URL</label>
+      <input class="form-input" id="inputAvatar" placeholder="https://example.com/photo.jpg"/>
+      <div class="form-hint">ছবি লিংক না থাকলে নামের প্রথম অক্ষর দেখাবে</div>
+    </div>
+
+    <button class="btn-save" id="btnSaveProfile" onclick="saveProfile()">💾 সেভ করুন</button>
+    <div class="form-msg" id="profileMsg"></div>
+  </div>
+
+  <!-- ── Change Password ── -->
+  <div class="card-section">
+    <h3>🔒 পাসওয়ার্ড পরিবর্তন</h3>
+
+    <div class="form-group">
+      <label class="form-label">বর্তমান পাসওয়ার্ড</label>
+      <input class="form-input" id="curPass" type="password" placeholder="••••••••"/>
+    </div>
+    <div class="form-group">
+      <label class="form-label">নতুন পাসওয়ার্ড</label>
+      <input class="form-input" id="newPass" type="password" placeholder="কমপক্ষে ৬ ক্যারেক্টার"/>
+    </div>
+    <div class="form-group">
+      <label class="form-label">নতুন পাসওয়ার্ড আবার লিখুন</label>
+      <input class="form-input" id="newPass2" type="password" placeholder="••••••••"/>
+    </div>
+
+    <button class="btn-save" id="btnChangePass" onclick="changePassword()">🔒 পাসওয়ার্ড পরিবর্তন করুন</button>
+    <div class="form-msg" id="passMsg"></div>
+  </div>
+
+  <!-- ── Transaction History ── -->
+  <div class="card-section">
+    <h3>💳 লেনদেনের ইতিহাস</h3>
+    <div class="txn-list" id="txnList">
+      <div class="sk-txn skeleton"></div>
+      <div class="sk-txn skeleton"></div>
+    </div>
+  </div>
+
+  <!-- ── More menu ── -->
+  <div class="card-section">
+    <h3>আরও</h3>
+    <div class="menu-list">
+      <a class="menu-item" href="certificate.html">
+        <span class="menu-icon">📜</span>
+        <span class="menu-label">সার্টিফিকেট</span>
+        <span class="menu-arrow">›</span>
+      </a>
+      <a class="menu-item" href="setting.html">
+        <span class="menu-icon">⚙️</span>
+        <span class="menu-label">সেটিংস</span>
+        <span class="menu-arrow">›</span>
+      </a>
+      <a class="menu-item" href="support.html">
+        <span class="menu-icon">🆘</span>
+        <span class="menu-label">সাপোর্ট</span>
+        <span class="menu-arrow">›</span>
+      </a>
+      <a class="menu-item" href="legal.html">
+        <span class="menu-icon">⚖️</span>
+        <span class="menu-label">লিগ্যাল</span>
+        <span class="menu-arrow">›</span>
+      </a>
+      <button class="menu-item danger" onclick="doLogout()">
+        <span class="menu-icon">🚪</span>
+        <span class="menu-label">লগ আউট</span>
+      </button>
+    </div>
+  </div>
+
+</div>
+</main>
+
+</div>
+
+<!-- ══════════════════════════════════
+     MOBILE BOTTOM NAV
+══════════════════════════════════ -->
+<nav class="bottom-nav">
+  <div class="bnav-items">
+    <a class="bnav-item" href="dashboard.html">
+      <span class="bnav-icon">🏠</span>হোম
+    </a>
+    <a class="bnav-item" href="dashboard.html">
+      <span class="bnav-icon">📚</span>কোর্স
+    </a>
+    <a class="bnav-item" href="dashboard.html">
+      <span class="bnav-icon">📢</span>নোটিশ
+    </a>
+    <a class="bnav-item active" href="profile.html">
+      <span class="bnav-icon">👤</span>প্রোফাইল
+    </a>
+  </div>
+</nav>
+
+<!-- ══════════════════════════════════
+     FIREBASE + APP LOGIC
+══════════════════════════════════ -->
+<script>
+/* ── Firebase Init (config.js থেকে) ── */
+firebase.initializeApp(LMS_CONFIG.firebase);
+const auth = firebase.auth();
+const db   = firebase.firestore();
+
+/* ── State ── */
+let currentUser = null;
+let userDoc     = null;
+
+/* ── Boot ── */
+auth.onAuthStateChanged(async user => {
+  if (!user) { window.location.href = 'index.html'; return; }
+  currentUser = user;
+
+  const snap = await db.collection('users').doc(user.uid).get();
+  if (snap.exists) {
+    userDoc = snap.data();
+    if (userDoc.role === 'admin') { window.location.href = 'admin.html'; return; }
+  } else {
+    userDoc = { name: user.displayName || 'Student', email: user.email || '', enrolledCourses: [], role: 'student' };
+  }
+
+  await loadSiteSettings();
+  fillProfileUI();
+  await Promise.all([loadCertCount(), loadTransactions()]);
+
+  document.getElementById('pageLoader').classList.add('gone');
+});
+
+/* ── Site Settings (brand) ── */
+async function loadSiteSettings() {
+  try {
+    const snap = await db.collection('siteSettings').doc('main').get();
+    if (!snap.exists) return;
+    const s = snap.data();
+    const appName = s.appName || 'LMS';
+    document.getElementById('sbAppName').textContent      = appName;
+    document.getElementById('loaderInitial').textContent   = appName.charAt(0).toUpperCase();
+    document.getElementById('sbLogoFallback').textContent  = appName.charAt(0).toUpperCase();
+    if (s.logoUrl) {
+      const img = document.getElementById('sbLogoImg');
+      img.src = s.logoUrl; img.style.display = 'block';
+      document.getElementById('sbLogoFallback').style.display = 'none';
+    }
+    if (s.faviconUrl) document.getElementById('favicon').href = s.faviconUrl;
+    if (s.primaryColor) document.documentElement.style.setProperty('--primary', s.primaryColor);
+  } catch(e) { console.warn('Settings:', e); }
+}
+
+/* ── Fill UI from userDoc ── */
+function fillProfileUI() {
+  const name    = userDoc.name || currentUser.displayName || 'Student';
+  const email   = userDoc.email || currentUser.email || '';
+  const phone   = userDoc.phone || '';
+  const avatar  = userDoc.avatarUrl || '';
+  const role    = userDoc.role || 'student';
+  const initial = name.charAt(0).toUpperCase();
+
+  /* sidebar + topbar avatars */
+  setAvatar(document.getElementById('sbAvatarBottom'), avatar, initial);
+  setAvatar(document.getElementById('topAvatar'), avatar, initial);
+  document.getElementById('sbUserNameBottom').textContent = name;
+
+  /* hero */
+  document.getElementById('pfName').textContent  = name;
+  document.getElementById('pfEmail').textContent = email;
+  document.getElementById('pfRole').textContent   = role === 'admin' ? 'Admin' : 'Student';
+  setHeroAvatar(avatar, initial);
+
+  if (userDoc.createdAt && userDoc.createdAt.toDate) {
+    const d = userDoc.createdAt.toDate();
+    document.getElementById('pfJoined').textContent = 'যোগদান: ' + formatDate(d);
+  }
+
+  /* stats */
+  document.getElementById('sPfEnrolled').textContent = (userDoc.enrolledCourses || []).length;
+
+  /* form inputs */
+  document.getElementById('inputName').value   = name;
+  document.getElementById('inputEmail').value  = email;
+  document.getElementById('inputPhone').value  = phone;
+  document.getElementById('inputAvatar').value = avatar;
+}
+
+function setAvatar(el, url, initial) {
+  el.innerHTML = '';
+  if (url) {
+    const img = document.createElement('img');
+    img.src = url; img.alt = '';
+    img.onerror = () => { el.innerHTML = initial; };
+    el.appendChild(img);
+  } else {
+    el.textContent = initial;
+  }
+}
+function setHeroAvatar(url, initial) {
+  const img = document.getElementById('pfAvatarImg');
+  const letter = document.getElementById('pfAvatarLetter');
+  if (url) {
+    img.src = url;
+    img.style.display = 'block';
+    letter.style.display = 'none';
+    img.onerror = () => { img.style.display = 'none'; letter.style.display = 'block'; letter.textContent = initial; };
+  } else {
+    img.style.display = 'none';
+    letter.style.display = 'block';
+    letter.textContent = initial;
+  }
+}
+
+function formatDate(d) {
+  const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  return d.getDate() + ' ' + months[d.getMonth()] + ' ' + d.getFullYear();
+}
+
+/* ── Certificate count ── */
+async function loadCertCount() {
+  try {
+    const snap = await db.collection('certificates').where('userId','==',currentUser.uid).get();
+    document.getElementById('sPfCerts').textContent = snap.size;
+  } catch(e) {
+    document.getElementById('sPfCerts').textContent = '0';
+  }
+}
+
+/* ── Save Profile (name / phone / avatar) ── */
+async function saveProfile() {
+  const btn  = document.getElementById('btnSaveProfile');
+  const name = document.getElementById('inputName').value.trim();
+  const phone = document.getElementById('inputPhone').value.trim();
+  const avatarUrl = document.getElementById('inputAvatar').value.trim();
+
+  if (!name) { showMsg('profileMsg', 'err', '❌ নাম খালি রাখা যাবে না'); return; }
+
+  btn.disabled = true; btn.textContent = 'সেভ হচ্ছে...';
+  try {
+    await db.collection('users').doc(currentUser.uid).set({ name, phone, avatarUrl }, { merge: true });
+    userDoc.name = name; userDoc.phone = phone; userDoc.avatarUrl = avatarUrl;
+    fillProfileUI();
+    showMsg('profileMsg', 'ok', '✅ প্রোফাইল আপডেট হয়েছে');
+  } catch(e) {
+    console.error(e);
+    showMsg('profileMsg', 'err', '❌ সমস্যা হয়েছে, আবার চেষ্টা করুন');
+  }
+  btn.disabled = false; btn.textContent = '💾 সেভ করুন';
+}
+
+/* ── Change Password ── */
+async function changePassword() {
+  const btn = document.getElementById('btnChangePass');
+  const cur = document.getElementById('curPass').value;
+  const np  = document.getElementById('newPass').value;
+  const np2 = document.getElementById('newPass2').value;
+
+  if (!cur || !np || !np2) { showMsg('passMsg', 'err', '❌ সব ফিল্ড পূরণ করুন'); return; }
+  if (np.length < 6) { showMsg('passMsg', 'err', '❌ নতুন পাসওয়ার্ড কমপক্ষে ৬ ক্যারেক্টার হতে হবে'); return; }
+  if (np !== np2) { showMsg('passMsg', 'err', '❌ নতুন পাসওয়ার্ড দুটি মিলছে না'); return; }
+
+  btn.disabled = true; btn.textContent = 'পরিবর্তন হচ্ছে...';
+  try {
+    const cred = firebase.auth.EmailAuthProvider.credential(currentUser.email, cur);
+    await currentUser.reauthenticateWithCredential(cred);
+    await currentUser.updatePassword(np);
+    showMsg('passMsg', 'ok', '✅ পাসওয়ার্ড পরিবর্তন হয়েছে');
+    document.getElementById('curPass').value = '';
+    document.getElementById('newPass').value = '';
+    document.getElementById('newPass2').value = '';
+  } catch(e) {
+    console.error(e);
+    let msg = '❌ সমস্যা হয়েছে, আবার চেষ্টা করুন';
+    if (e.code === 'auth/wrong-password') msg = '❌ বর্তমান পাসওয়ার্ড ভুল';
+    if (e.code === 'auth/weak-password')  msg = '❌ পাসওয়ার্ড দুর্বল, আরেকটু জটিল দিন';
+    if (e.code === 'auth/too-many-requests') msg = '❌ অনেকবার চেষ্টা হয়েছে, পরে আবার চেষ্টা করুন';
+    showMsg('passMsg', 'err', msg);
+  }
+  btn.disabled = false; btn.textContent = '🔒 পাসওয়ার্ড পরিবর্তন করুন';
+}
+
+function showMsg(id, type, text) {
+  const el = document.getElementById(id);
+  el.className = 'form-msg ' + type;
+  el.textContent = text;
+}
+
+/* ── Transaction History ── */
+async function loadTransactions() {
+  const wrap = document.getElementById('txnList');
+  try {
+    const snap = await db.collection('payments')
+      .where('userId','==',currentUser.uid)
+      .orderBy('submittedAt','desc')
+      .get();
+
+    if (snap.empty) {
+      wrap.innerHTML = emptyState('💳', 'কোনো লেনদেন নেই', 'আপনার পেমেন্ট হিস্টোরি এখানে দেখা যাবে');
+      return;
+    }
+
+    wrap.innerHTML = snap.docs.map(doc => {
+      const p = doc.data();
+      const status = p.status || 'pending';
+      const statusLabel = status === 'approved' ? 'অনুমোদিত' : status === 'rejected' ? 'বাতিল' : 'পেন্ডিং';
+      let dateStr = '—';
+      if (p.submittedAt && p.submittedAt.toDate) dateStr = formatDate(p.submittedAt.toDate());
+      return `
+        <div class="txn-item">
+          <div class="txn-info">
+            <div class="txn-course">${p.courseTitle || 'কোর্স'}</div>
+            <div class="txn-meta">${p.method || ''} · TrxID: ${p.transactionId || '—'} · ${dateStr}</div>
+          </div>
+          <div class="txn-right">
+            <div class="txn-amount">৳${p.amount || 0}</div>
+            <span class="txn-status ${status}">${statusLabel}</span>
+          </div>
+        </div>`;
+    }).join('');
+  } catch(e) {
+    console.error(e);
+    wrap.innerHTML = emptyState('⚠️', 'লোড করা যায়নি', 'লেনদেনের তথ্য আনতে সমস্যা হয়েছে');
+  }
+}
+
+function emptyState(icon, title, desc) {
+  return `<div class="empty">
+    <div class="empty-icon">${icon}</div>
+    <div class="empty-title">${title}</div>
+    <div class="empty-desc">${desc}</div>
+  </div>`;
+}
+
+/* ── Sidebar Toggle ── */
+function toggleSidebar() {
+  document.getElementById('sidebar').classList.toggle('open');
+  document.getElementById('sbOverlay').classList.toggle('show');
+}
+function closeSidebar() {
+  document.getElementById('sidebar').classList.remove('open');
+  document.getElementById('sbOverlay').classList.remove('show');
+}
+
+/* ── Logout ── */
+function doLogout() {
+  if (confirm('Logout করবেন?')) {
+    auth.signOut().then(() => window.location.href = 'index.html');
+  }
+}
+</script>
+</body>
+</html>

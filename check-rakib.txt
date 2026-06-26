@@ -1,0 +1,12 @@
+admin.html:
+
+Course modal এ Certificate "হ্যাঁ" select করলে Signature URL field দেখাবে, "না" করলে লুকাবে
+Live preview — URL দিলে signature দেখাবে
+courses/{id}.signatureUrl Firestore এ save হবে
+
+dashboard.html:
+
+PNG বাদ — শুধু PDF + Verification Link
+Certificate layout: বাম → Date, মাঝে → 🎓 Seal, ডান → Signature image → Instructor নাম → "Instructor" label
+Per-course signature — course.signatureUrl আগে দেখবে, না থাকলে global certSignatureUrl fallback
+PDF date English (en-GB format: "8 June 2026")

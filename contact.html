@@ -1,0 +1,619 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Contact Us | LMS Platform</title>
+  <meta name="description" content="Get in touch with LMS Platform">
+
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;800;900&family=DM+Sans:wght@300;400;500;600&family=Hind+Siliguri:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    :root {
+      --ink: #0A0A0F;
+      --paper: #F5F3EE;
+      --cream: #EDE9E0;
+      --accent: #C8A96E;
+      --blue: #1B4FBE;
+      --muted: #7A7570;
+      --border: rgba(10,10,15,.1);
+      --serif: 'Playfair Display', serif;
+      --sans: 'DM Sans', sans-serif;
+      --bn: 'Hind Siliguri', sans-serif;
+    }
+
+    body {
+      font-family: var(--sans);
+      background: var(--paper);
+      color: var(--ink);
+      line-height: 1.5;
+    }
+
+    /* Navigation */
+    nav {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      z-index: 200;
+      padding: 0.85rem 2.5rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: rgba(245, 243, 238, 0.94);
+      backdrop-filter: blur(18px);
+      border-bottom: 1px solid var(--border);
+    }
+    .nav-brand {
+      display: flex;
+      align-items: center;
+      gap: 0.7rem;
+      text-decoration: none;
+      color: var(--ink);
+    }
+    .nav-logo-fallback {
+      width: 38px;
+      height: 38px;
+      border-radius: 10px;
+      background: var(--ink);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--accent);
+      font-weight: 800;
+      font-size: 1.1rem;
+      font-family: var(--serif);
+    }
+    .nav-name {
+      font-family: var(--serif);
+      font-size: 1.15rem;
+      font-weight: 700;
+    }
+    .nav-links {
+      display: flex;
+      align-items: center;
+      gap: 2rem;
+    }
+    .nav-links a {
+      color: var(--muted);
+      text-decoration: none;
+      font-size: 0.88rem;
+      font-weight: 500;
+      transition: color 0.2s;
+    }
+    .nav-links a:hover {
+      color: var(--ink);
+    }
+    .nav-links .active-page {
+      color: var(--ink);
+    }
+    .btn-nav {
+      padding: 0.5rem 1.4rem;
+      background: var(--ink);
+      color: var(--paper) !important;
+      border-radius: 8px;
+      font-weight: 600;
+    }
+    .nav-hamburger {
+      display: none;
+      flex-direction: column;
+      gap: 5px;
+      width: 40px;
+      height: 40px;
+      background: transparent;
+      border: 1.5px solid var(--border);
+      border-radius: 10px;
+      cursor: pointer;
+    }
+    .nav-hamburger span {
+      display: block;
+      width: 18px;
+      height: 1.8px;
+      background: var(--ink);
+      margin: 0 auto;
+    }
+    .nav-drawer {
+      display: none;
+      position: fixed;
+      inset: 0;
+      z-index: 299;
+      pointer-events: none;
+    }
+    .nav-drawer-backdrop {
+      position: absolute;
+      inset: 0;
+      background: rgba(10, 10, 15, 0.35);
+      backdrop-filter: blur(4px);
+      opacity: 0;
+      transition: opacity 0.3s;
+    }
+    .nav-drawer-panel {
+      position: absolute;
+      top: 0;
+      right: 0;
+      width: min(320px, 85vw);
+      height: 100%;
+      background: var(--paper);
+      padding: 5.5rem 2rem 2rem;
+      transform: translateX(100%);
+      transition: transform 0.35s;
+    }
+    .nav-drawer.open {
+      pointer-events: all;
+    }
+    .nav-drawer.open .nav-drawer-backdrop {
+      opacity: 1;
+    }
+    .nav-drawer.open .nav-drawer-panel {
+      transform: translateX(0);
+    }
+    .nav-drawer-links {
+      display: flex;
+      flex-direction: column;
+      gap: 0.3rem;
+    }
+    .nav-drawer-links a {
+      display: flex;
+      align-items: center;
+      gap: 0.8rem;
+      padding: 0.9rem 1rem;
+      border-radius: 10px;
+      color: var(--muted);
+      text-decoration: none;
+    }
+    .nav-drawer-links a:hover {
+      background: var(--cream);
+      color: var(--ink);
+    }
+    .drawer-icon {
+      width: 32px;
+      height: 32px;
+      border-radius: 8px;
+      background: var(--cream);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .drawer-login-btn {
+      display: block;
+      width: 100%;
+      padding: 0.9rem;
+      background: var(--ink);
+      color: var(--paper);
+      border-radius: 12px;
+      text-align: center;
+      text-decoration: none;
+      margin-top: 1.5rem;
+    }
+    .drawer-divider {
+      height: 1px;
+      background: var(--border);
+      margin: 1.2rem 0;
+    }
+    @media (max-width: 900px) {
+      nav { padding: 0.85rem 1.2rem; }
+      .nav-links { display: none; }
+      .nav-hamburger { display: flex; }
+      .nav-drawer { display: block; }
+    }
+    body.nav-open { overflow: hidden; }
+
+    /* Main Content */
+    .contact-main {
+      padding-top: 85px;
+    }
+    .contact-container {
+      max-width: 1280px;
+      margin: 0 auto;
+      padding: 1rem 2rem 5rem;
+    }
+    .contact-hero {
+      text-align: center;
+      margin-bottom: 3rem;
+    }
+    .contact-hero h1 {
+      font-family: var(--serif);
+      font-size: clamp(2rem, 5vw, 3.2rem);
+      font-weight: 800;
+      margin-bottom: 1rem;
+    }
+    .contact-hero p {
+      font-family: var(--bn);
+      color: var(--muted);
+      max-width: 580px;
+      margin: 0 auto;
+    }
+    .contact-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 3rem;
+    }
+    .contact-info, .contact-form-card {
+      background: white;
+      border-radius: 28px;
+      border: 1px solid var(--border);
+      padding: 2rem;
+      box-shadow: 0 12px 28px rgba(0,0,0,0.03);
+    }
+    .info-title, .form-title {
+      font-family: var(--serif);
+      font-size: 1.7rem;
+      font-weight: 800;
+      margin-bottom: 0.5rem;
+    }
+    .info-sub, .form-sub {
+      font-family: var(--bn);
+      font-size: 0.9rem;
+      color: var(--muted);
+      margin-bottom: 2rem;
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 1rem;
+    }
+    .contact-detail-list {
+      list-style: none;
+      margin-bottom: 2rem;
+    }
+    .contact-detail-list li {
+      display: flex;
+      align-items: flex-start;
+      gap: 1rem;
+      margin-bottom: 1.8rem;
+    }
+    .contact-icon {
+      width: 44px;
+      height: 44px;
+      background: var(--cream);
+      border-radius: 14px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      color: var(--blue);
+      font-size: 1.3rem;
+    }
+    .detail-text h4 {
+      font-size: 1rem;
+      font-weight: 700;
+      margin-bottom: 0.2rem;
+    }
+    .detail-text p, .detail-text a {
+      font-family: var(--bn);
+      font-size: 0.9rem;
+      color: var(--muted);
+      text-decoration: none;
+    }
+    .detail-text a:hover {
+      color: var(--blue);
+    }
+    .form-group {
+      margin-bottom: 1.3rem;
+    }
+    .form-group label {
+      display: block;
+      font-size: 0.8rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 0.4rem;
+    }
+    .form-group input,
+    .form-group select,
+    .form-group textarea {
+      width: 100%;
+      padding: 0.8rem 1rem;
+      border: 1.5px solid var(--border);
+      border-radius: 14px;
+      font-family: var(--bn);
+      font-size: 0.9rem;
+      background: var(--paper);
+      outline: none;
+    }
+    .form-group input:focus,
+    .form-group select:focus,
+    .form-group textarea:focus {
+      border-color: var(--blue);
+      background: white;
+    }
+    .btn-submit {
+      width: 100%;
+      background: var(--ink);
+      color: var(--paper);
+      border: none;
+      padding: 0.9rem;
+      border-radius: 14px;
+      font-weight: 700;
+      font-size: 1rem;
+      font-family: var(--sans);
+      cursor: pointer;
+      transition: background 0.2s, transform 0.15s;
+    }
+    .btn-submit:hover {
+      background: var(--blue);
+      transform: translateY(-2px);
+    }
+    .info-note {
+      background: var(--cream);
+      padding: 1rem;
+      border-radius: 14px;
+      margin-top: 1.5rem;
+      font-family: var(--bn);
+      font-size: 0.8rem;
+      color: var(--muted);
+      text-align: center;
+    }
+    .social-icons {
+      display: flex;
+      gap: 0.8rem;
+      margin-top: 1rem;
+    }
+    .social-icon {
+      width: 40px;
+      height: 40px;
+      background: var(--cream);
+      border-radius: 12px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--ink);
+      text-decoration: none;
+      font-size: 1.2rem;
+      transition: 0.2s;
+    }
+    .social-icon:hover {
+      background: var(--accent);
+      transform: translateY(-3px);
+    }
+    .map-placeholder {
+      margin-top: 3rem;
+      background: var(--cream);
+      border-radius: 24px;
+      height: 260px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-direction: column;
+      gap: 0.5rem;
+      color: var(--muted);
+    }
+    .site-footer {
+      background: var(--ink);
+      color: var(--paper);
+      margin-top: 2rem;
+      padding: 3rem 2rem 1rem;
+      text-align: center;
+    }
+    .footer-links {
+      display: flex;
+      justify-content: center;
+      gap: 2rem;
+      flex-wrap: wrap;
+      margin-bottom: 1.5rem;
+    }
+    .footer-links a {
+      color: rgba(255,255,255,0.5);
+      text-decoration: none;
+      font-size: 0.85rem;
+    }
+    .footer-links a:hover {
+      color: var(--accent);
+    }
+    @media (max-width: 768px) {
+      .contact-grid { grid-template-columns: 1fr; gap: 2rem; }
+      .contact-container { padding: 0 1.2rem 4rem; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- Navigation -->
+<nav id="mainNav">
+  <a class="nav-brand" href="index.html">
+    <div class="nav-logo-fallback">L</div>
+    <span class="nav-name">LMS Platform</span>
+  </a>
+  <div class="nav-links">
+    <a href="index.html">Home</a>
+    <a href="index.html#courses">Courses</a>
+    <a href="about.html">About</a>
+    <a href="contact.html" class="active-page">Contact</a>
+    <a href="index.html#auth" class="btn-nav">Login করুন</a>
+  </div>
+  <button class="nav-hamburger" id="navHamburger">
+    <span></span><span></span><span></span>
+  </button>
+</nav>
+
+<!-- Mobile Drawer -->
+<div class="nav-drawer" id="navDrawer">
+  <div class="nav-drawer-backdrop" id="drawerBackdrop"></div>
+  <div class="nav-drawer-panel">
+    <div class="nav-drawer-links">
+      <a href="index.html"><span class="drawer-icon">🏠</span> Home</a>
+      <a href="index.html#courses"><span class="drawer-icon">📚</span> Courses</a>
+      <a href="about.html"><span class="drawer-icon">ℹ️</span> About</a>
+      <a href="contact.html" class="active-page"><span class="drawer-icon">📞</span> Contact</a>
+      <div class="drawer-divider"></div>
+      <a href="index.html#auth" class="drawer-login-btn">Login করুন →</a>
+    </div>
+  </div>
+</div>
+
+<main class="contact-main">
+  <div class="contact-container">
+    <div class="contact-hero">
+      <h1>আমাদের সাথে যোগাযোগ করুন</h1>
+      <p>নিচের ফর্মটি পূরণ করুন। আপনার ইমেইল অ্যাপ খুলে যাবে — শুধু Send বাটন ক্লিক করলেই চলে যাবে।</p>
+    </div>
+
+    <div class="contact-grid">
+      <!-- Left: Contact Info -->
+      <div class="contact-info">
+        <div class="info-title">যোগাযোগের তথ্য</div>
+        <div class="info-sub">আমরা শুনতে চাই আপনার মতামত</div>
+        <ul class="contact-detail-list">
+          <li>
+            <div class="contact-icon">📞</div>
+            <div class="detail-text"><h4>ফোন</h4><a href="tel:+880123456789">+880 1234 56789</a></div>
+          </li>
+          <li>
+            <div class="contact-icon">✉️</div>
+            <div class="detail-text"><h4>ইমেইল</h4><a href="mailto:support@lmsplatform.com">support@lmsplatform.com</a></div>
+          </li>
+          <li>
+            <div class="contact-icon">📍</div>
+            <div class="detail-text"><h4>ঠিকানা</h4><p>ধানমন্ডি, ঢাকা - ১২০৫</p></div>
+          </li>
+        </ul>
+        <div class="social-icons">
+          <a href="#" class="social-icon">📘</a>
+          <a href="#" class="social-icon">📺</a>
+          <a href="#" class="social-icon">💬</a>
+        </div>
+        <div class="info-note">
+          💡 "বার্তা পাঠান" ক্লিক করলে আপনার ইমেইল অ্যাপ খুলবে। সেখানে আপনার ইমেইল অ্যাড্রেস আগে থেকেই থাকবে। শুধু Send করুন।
+        </div>
+      </div>
+
+      <!-- Right: Simple Mailto Form (No Auto-fill) -->
+      <div class="contact-form-card">
+        <div class="form-title">বার্তা পাঠান</div>
+        <div class="form-sub">আপনার ইমেইল অ্যাপে চলে যাবে</div>
+        
+        <form id="contactMailtoForm">
+          <div class="form-group">
+            <label>আপনার নাম</label>
+            <input type="text" id="senderName" placeholder="পূর্ণ নাম" required>
+          </div>
+          <div class="form-group">
+            <label>আপনার ইমেইল</label>
+            <input type="email" id="senderEmail" placeholder="you@example.com" required>
+          </div>
+          <div class="form-group">
+            <label>বিষয়</label>
+            <select id="mailSubject">
+              <option value="সাধারণ প্রশ্ন">সাধারণ প্রশ্ন</option>
+              <option value="কারিগরি সহায়তা">কারিগরি সহায়তা</option>
+              <option value="কোর্স ফিডব্যাক">কোর্স ফিডব্যাক</option>
+              <option value="পার্টনারশিপ">পার্টনারশিপ</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>বার্তা</label>
+            <textarea rows="5" id="mailBody" placeholder="আপনার বার্তা লিখুন..." required></textarea>
+          </div>
+          <button type="submit" class="btn-submit" id="sendMailBtn">
+            📧 বার্তা পাঠান (ইমেইল অ্যাপ খুলবে)
+          </button>
+        </form>
+        <div id="mailtoMessage" style="margin-top:1rem; font-size:0.8rem; text-align:center;"></div>
+      </div>
+    </div>
+
+    <div class="map-placeholder">
+      <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+      <p>📍 ঢাকা, বাংলাদেশ — আমাদের প্রধান কার্যালয়</p>
+    </div>
+  </div>
+</main>
+
+<footer class="site-footer">
+  <div class="footer-links">
+    <a href="index.html">Home</a>
+    <a href="index.html#courses">Courses</a>
+    <a href="about.html">About</a>
+    <a href="legal.html">Terms & Privacy</a>
+  </div>
+  <p>© 2026 LMS Platform. All rights reserved. Made with ♥ in Bangladesh</p>
+</footer>
+
+<script>
+  // ──────────────────────────────────────────────
+  // Simple mailto: form handler (NO AUTO-FILL, NO FIREBASE)
+  // ──────────────────────────────────────────────
+  const nameInput = document.getElementById('senderName');
+  const emailInput = document.getElementById('senderEmail');
+  const subjectSelect = document.getElementById('mailSubject');
+  const messageInput = document.getElementById('mailBody');
+  const form = document.getElementById('contactMailtoForm');
+  const msgDiv = document.getElementById('mailtoMessage');
+
+  form.addEventListener('submit', (e) => {
+    e.preventDefault();
+
+    const name = nameInput.value.trim();
+    const email = emailInput.value.trim();
+    const subject = subjectSelect.value;
+    const message = messageInput.value.trim();
+
+    // Validation
+    if (!name) {
+      msgDiv.innerHTML = '❌ দয়া করে আপনার নাম লিখুন';
+      msgDiv.style.color = '#B91C1C';
+      setTimeout(() => msgDiv.innerHTML = '', 3000);
+      return;
+    }
+    if (!email || !email.includes('@')) {
+      msgDiv.innerHTML = '❌ সঠিক ইমেইল ঠিকানা দিন';
+      msgDiv.style.color = '#B91C1C';
+      setTimeout(() => msgDiv.innerHTML = '', 3000);
+      return;
+    }
+    if (!message) {
+      msgDiv.innerHTML = '❌ দয়া করে বার্তা লিখুন';
+      msgDiv.style.color = '#B91C1C';
+      setTimeout(() => msgDiv.innerHTML = '', 3000);
+      return;
+    }
+
+    // Prepare email body (will be pre-filled in email client)
+    const fullBody = `নাম: ${name}\nইমেইল: ${email}\n\nবার্তা:\n${message}\n\n——\nLMS Contact Form থেকে পাঠানো`;
+    
+    // Recipient email (your support email)
+    const toEmail = 'support@lmsplatform.com';
+    
+    // Create mailto: link
+    const mailtoLink = `mailto:${toEmail}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(fullBody)}`;
+    
+    // Show success message
+    msgDiv.innerHTML = '📨 আপনার ইমেইল অ্যাপ খোলা হচ্ছে... সেখানে Send বাটন ক্লিক করুন!';
+    msgDiv.style.color = '#2B6E2B';
+    
+    // Open default email client
+    window.location.href = mailtoLink;
+    
+    // Optional: Clear message after few seconds
+    setTimeout(() => {
+      msgDiv.innerHTML = '';
+    }, 5000);
+  });
+
+  // Mobile navigation drawer
+  const hamburger = document.getElementById('navHamburger');
+  const drawer = document.getElementById('navDrawer');
+  const backdrop = document.getElementById('drawerBackdrop');
+
+  function openDrawer() {
+    drawer.classList.add('open');
+    hamburger.classList.add('open');
+    document.body.classList.add('nav-open');
+  }
+  function closeDrawer() {
+    drawer.classList.remove('open');
+    hamburger.classList.remove('open');
+    document.body.classList.remove('nav-open');
+  }
+  hamburger?.addEventListener('click', () => drawer.classList.contains('open') ? closeDrawer() : openDrawer());
+  backdrop?.addEventListener('click', closeDrawer);
+  document.addEventListener('keydown', e => { if (e.key === 'Escape' && drawer?.classList.contains('open')) closeDrawer(); });
+  drawer?.querySelectorAll('a').forEach(link => link.addEventListener('click', closeDrawer));
+</script>
+</body>
+</html>
