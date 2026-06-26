@@ -1,0 +1,1774 @@
+<!DOCTYPE html>
+<html lang="bn" data-theme="dark">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Settings — EduBD</title>
+
+<!-- Font Awesome -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css"/>
+<!-- Google Fonts -->
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Hind+Siliguri:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+
+<!-- Firebase SDKs -->
+<script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore-compat.js"></script>
+
+<script src="config.js"></script>
+
+<style>
+/* ════════════════════════════════════════════
+   DESIGN TOKENS — Next.js / Vercel aesthetic
+════════════════════════════════════════════ */
+:root {
+  /* Typography */
+  --font:   'Inter', sans-serif;
+  --font-bn: 'Hind Siliguri', sans-serif;
+
+  /* Radii */
+  --r-sm: 6px;
+  --r-md: 10px;
+  --r-lg: 14px;
+  --r-xl: 18px;
+
+  /* Transitions */
+  --tx: .18s cubic-bezier(.4,0,.2,1);
+
+  /* Sidebar */
+  --sb-w: 240px;
+  --tb-h: 56px;
+}
+
+/* ── DARK THEME (default) ─────────── */
+[data-theme="dark"] {
+  --bg:        #0a0a0a;
+  --bg2:       #111111;
+  --surface:   #161616;
+  --card:      #1c1c1c;
+  --card2:     #222222;
+  --border:    rgba(255,255,255,.08);
+  --border2:   rgba(255,255,255,.13);
+  --border3:   rgba(255,255,255,.20);
+  --ink:       #ededed;
+  --ink2:      #a1a1aa;
+  --ink3:      #71717a;
+  --primary:   #ffffff;
+  --primary-bg: rgba(255,255,255,.06);
+  --primary-bg2: rgba(255,255,255,.10);
+  --accent:    #3b82f6;
+  --accent-bg: rgba(59,130,246,.12);
+  --success:   #22c55e;
+  --success-bg: rgba(34,197,94,.1);
+  --warn:      #f59e0b;
+  --warn-bg:   rgba(245,158,11,.1);
+  --danger:    #ef4444;
+  --danger-bg: rgba(239,68,68,.1);
+  --danger-border: rgba(239,68,68,.2);
+  --shadow:    0 1px 3px rgba(0,0,0,.5), 0 4px 16px rgba(0,0,0,.3);
+  --shadow-lg: 0 8px 40px rgba(0,0,0,.6);
+  --overlay:   rgba(0,0,0,.75);
+}
+
+/* ── LIGHT THEME ──────────────────── */
+[data-theme="light"] {
+  --bg:        #fafafa;
+  --bg2:       #f4f4f5;
+  --surface:   #ffffff;
+  --card:      #ffffff;
+  --card2:     #f4f4f5;
+  --border:    rgba(0,0,0,.07);
+  --border2:   rgba(0,0,0,.11);
+  --border3:   rgba(0,0,0,.18);
+  --ink:       #09090b;
+  --ink2:      #52525b;
+  --ink3:      #a1a1aa;
+  --primary:   #09090b;
+  --primary-bg: rgba(0,0,0,.05);
+  --primary-bg2: rgba(0,0,0,.08);
+  --accent:    #2563eb;
+  --accent-bg: rgba(37,99,235,.08);
+  --success:   #16a34a;
+  --success-bg: rgba(22,163,74,.08);
+  --warn:      #d97706;
+  --warn-bg:   rgba(217,119,6,.08);
+  --danger:    #dc2626;
+  --danger-bg: rgba(220,38,38,.07);
+  --danger-border: rgba(220,38,38,.18);
+  --shadow:    0 1px 3px rgba(0,0,0,.08), 0 4px 12px rgba(0,0,0,.04);
+  --shadow-lg: 0 8px 40px rgba(0,0,0,.12);
+  --overlay:   rgba(0,0,0,.5);
+}
+
+/* ════════════════════════════════════════════
+   RESET
+════════════════════════════════════════════ */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; }
+body {
+  font-family: var(--font);
+  background: var(--bg);
+  color: var(--ink);
+  min-height: 100vh;
+  overflow-x: hidden;
+  transition: background var(--tx), color var(--tx);
+  font-size: 14px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+a { text-decoration: none; color: inherit; }
+button { font-family: var(--font); cursor: pointer; }
+img { display: block; }
+input, textarea, select { font-family: var(--font); }
+
+/* ════════════════════════════════════════════
+   SHELL
+════════════════════════════════════════════ */
+.shell { display: flex; min-height: 100vh; }
+
+/* ════════════════════════════════════════════
+   SIDEBAR
+════════════════════════════════════════════ */
+.sidebar {
+  width: var(--sb-w);
+  background: var(--surface);
+  border-right: 1px solid var(--border);
+  height: 100vh; position: fixed;
+  top: 0; left: 0; z-index: 200;
+  display: flex; flex-direction: column;
+  transition: transform var(--tx), background var(--tx), border-color var(--tx);
+}
+.sb-top {
+  display: flex; align-items: center; gap: 10px;
+  padding: 0 16px;
+  height: var(--tb-h);
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+.sb-logo {
+  width: 28px; height: 28px; border-radius: 6px;
+  background: var(--ink);
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+}
+.sb-logo i { color: var(--bg); font-size: 13px; }
+.sb-brand-txt { font-size: 14px; font-weight: 700; letter-spacing: -.02em; }
+
+.sb-nav { flex: 1; overflow-y: auto; padding: 8px; }
+.sb-group-label {
+  font-size: 11px; font-weight: 600; letter-spacing: .06em;
+  text-transform: uppercase; color: var(--ink3);
+  padding: 14px 8px 6px;
+}
+.sb-item {
+  display: flex; align-items: center; gap: 10px;
+  padding: 7px 10px; border-radius: var(--r-sm);
+  font-size: 13.5px; font-weight: 500; color: var(--ink2);
+  cursor: pointer; transition: all var(--tx);
+  border: none; background: none; width: 100%; text-align: left;
+  margin-bottom: 1px;
+}
+.sb-item:hover { background: var(--primary-bg); color: var(--ink); }
+.sb-item.active {
+  background: var(--primary-bg2); color: var(--ink);
+  font-weight: 600;
+}
+.sb-item i { width: 16px; text-align: center; font-size: 13px; flex-shrink: 0; }
+.sb-badge {
+  margin-left: auto; font-size: 10px; font-weight: 700;
+  background: var(--danger); color: #fff;
+  padding: 1px 6px; border-radius: 10px;
+}
+
+.sb-bottom {
+  padding: 8px; border-top: 1px solid var(--border);
+  flex-shrink: 0;
+}
+.sb-user {
+  display: flex; align-items: center; gap: 10px;
+  padding: 8px 10px; border-radius: var(--r-sm);
+  cursor: pointer; transition: background var(--tx);
+}
+.sb-user:hover { background: var(--primary-bg); }
+.sb-avatar {
+  width: 30px; height: 30px; border-radius: 50%; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 12px; font-weight: 700; color: #fff;
+  overflow: hidden; background: linear-gradient(135deg,#3b82f6,#8b5cf6);
+}
+.sb-avatar img { width: 100%; height: 100%; object-fit: cover; }
+.sb-user-info { flex: 1; min-width: 0; }
+.sb-user-name { font-size: 13px; font-weight: 600; line-height: 1.2; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.sb-user-email { font-size: 11px; color: var(--ink3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.sb-user-chevron { color: var(--ink3); font-size: 11px; flex-shrink: 0; }
+
+/* sidebar overlay */
+.sb-overlay {
+  display: none; position: fixed; inset: 0; z-index: 199;
+  background: var(--overlay); backdrop-filter: blur(2px);
+}
+.sb-overlay.show { display: block; }
+
+/* ════════════════════════════════════════════
+   TOPBAR
+════════════════════════════════════════════ */
+.topbar {
+  position: fixed; top: 0;
+  left: var(--sb-w); right: 0; z-index: 100;
+  height: var(--tb-h);
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 0 24px;
+  transition: background var(--tx), border-color var(--tx);
+}
+.tb-left { display: flex; align-items: center; gap: 12px; }
+.menu-toggle {
+  display: none; background: none; border: none;
+  color: var(--ink); font-size: 16px; padding: 6px;
+  border-radius: var(--r-sm); transition: background var(--tx);
+}
+.menu-toggle:hover { background: var(--primary-bg); }
+.tb-breadcrumb { display: flex; align-items: center; gap: 6px; font-size: 13px; color: var(--ink2); }
+.tb-breadcrumb a { color: var(--ink2); transition: color var(--tx); }
+.tb-breadcrumb a:hover { color: var(--ink); }
+.tb-breadcrumb .sep { color: var(--ink3); font-size: 11px; }
+.tb-breadcrumb .current { color: var(--ink); font-weight: 600; }
+.tb-right { display: flex; align-items: center; gap: 8px; }
+.tb-icon-btn {
+  width: 32px; height: 32px; border-radius: var(--r-sm);
+  background: none; border: 1px solid var(--border2);
+  color: var(--ink2); font-size: 13px;
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer; transition: all var(--tx);
+}
+.tb-icon-btn:hover { background: var(--primary-bg); color: var(--ink); border-color: var(--border3); }
+
+/* ════════════════════════════════════════════
+   MAIN
+════════════════════════════════════════════ */
+.main {
+  margin-left: var(--sb-w);
+  padding-top: var(--tb-h);
+  min-height: 100vh; flex: 1;
+}
+.content-wrap {
+  display: grid;
+  grid-template-columns: 200px 1fr;
+  min-height: calc(100vh - var(--tb-h));
+}
+
+/* ── Settings Sidenav ─────────── */
+.settings-nav {
+  border-right: 1px solid var(--border);
+  padding: 20px 8px;
+  position: sticky; top: var(--tb-h);
+  height: calc(100vh - var(--tb-h));
+  overflow-y: auto;
+  transition: border-color var(--tx);
+}
+.sn-label {
+  font-size: 11px; font-weight: 600; letter-spacing: .06em;
+  text-transform: uppercase; color: var(--ink3);
+  padding: 10px 8px 6px;
+}
+.sn-item {
+  display: flex; align-items: center; gap: 9px;
+  padding: 7px 10px; border-radius: var(--r-sm);
+  font-size: 13px; font-weight: 500; color: var(--ink2);
+  cursor: pointer; transition: all var(--tx);
+  border: none; background: none; width: 100%; text-align: left;
+  margin-bottom: 1px;
+}
+.sn-item:hover { background: var(--primary-bg); color: var(--ink); }
+.sn-item.active { background: var(--primary-bg2); color: var(--ink); font-weight: 600; }
+.sn-item i { width: 14px; text-align: center; font-size: 12px; }
+
+/* ── Settings Content ─────────── */
+.settings-body { padding: 32px; max-width: 640px; }
+
+/* ════════════════════════════════════════════
+   SECTION
+════════════════════════════════════════════ */
+.settings-section { display: none; }
+.settings-section.active {
+  display: block;
+  animation: fadeUp .2s ease both;
+}
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.section-header { margin-bottom: 24px; }
+.section-header h2 {
+  font-size: 18px; font-weight: 700; letter-spacing: -.03em;
+  margin-bottom: 4px;
+}
+.section-header p { font-size: 13px; color: var(--ink2); }
+
+/* ════════════════════════════════════════════
+   CARD
+════════════════════════════════════════════ */
+.card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+  overflow: hidden;
+  margin-bottom: 16px;
+  transition: background var(--tx), border-color var(--tx);
+  box-shadow: var(--shadow);
+}
+.card-header {
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; gap: 10px;
+}
+.card-icon {
+  width: 28px; height: 28px; border-radius: var(--r-sm);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 12px; flex-shrink: 0;
+}
+.card-icon.blue   { background: var(--accent-bg); color: var(--accent); }
+.card-icon.green  { background: var(--success-bg); color: var(--success); }
+.card-icon.amber  { background: var(--warn-bg); color: var(--warn); }
+.card-icon.danger { background: var(--danger-bg); color: var(--danger); }
+.card-icon.neutral { background: var(--primary-bg2); color: var(--ink); }
+.card-title { font-size: 13.5px; font-weight: 600; }
+.card-subtitle { font-size: 12px; color: var(--ink3); margin-top: 1px; }
+.card-body { padding: 20px; }
+.card-body + .card-body { padding-top: 0; }
+.card-footer {
+  padding: 14px 20px;
+  border-top: 1px solid var(--border);
+  display: flex; align-items: center; gap: 10px;
+  background: var(--bg2);
+  transition: background var(--tx);
+}
+
+/* ════════════════════════════════════════════
+   FORM ELEMENTS
+════════════════════════════════════════════ */
+.field { margin-bottom: 16px; }
+.field:last-child { margin-bottom: 0; }
+.field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.field-label {
+  display: block; font-size: 12px; font-weight: 600;
+  color: var(--ink2); margin-bottom: 6px; letter-spacing: .01em;
+}
+.field-label .required { color: var(--danger); margin-left: 2px; }
+.field-input {
+  width: 100%; padding: 8px 11px;
+  background: var(--bg2); border: 1px solid var(--border2);
+  border-radius: var(--r-sm); color: var(--ink);
+  font-size: 13.5px; outline: none;
+  transition: border-color var(--tx), box-shadow var(--tx), background var(--tx);
+}
+.field-input:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(59,130,246,.15);
+  background: var(--surface);
+}
+.field-input:read-only {
+  color: var(--ink3); cursor: not-allowed;
+  background: var(--card2);
+}
+.field-input.error { border-color: var(--danger); box-shadow: 0 0 0 3px rgba(239,68,68,.12); }
+.field-hint { font-size: 12px; color: var(--ink3); margin-top: 5px; }
+.field-hint.error-msg { color: var(--danger); display: none; }
+.field-hint.error-msg.show { display: block; }
+textarea.field-input { resize: vertical; min-height: 80px; line-height: 1.5; }
+
+/* Avatar Picker */
+.avatar-picker { display: flex; align-items: flex-start; gap: 16px; }
+.avatar-preview {
+  width: 64px; height: 64px; border-radius: 50%;
+  border: 2px solid var(--border2);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 22px; font-weight: 700; color: #fff;
+  background: linear-gradient(135deg,#3b82f6,#8b5cf6);
+  flex-shrink: 0; overflow: hidden; position: relative;
+}
+.avatar-preview img { width: 100%; height: 100%; object-fit: cover; }
+.avatar-preview .avatar-initials { position: absolute; }
+.avatar-form { flex: 1; }
+.avatar-url-row { display: flex; gap: 8px; }
+.avatar-url-row .field-input { flex: 1; }
+.btn-sm {
+  padding: 7px 14px; border-radius: var(--r-sm);
+  font-size: 12.5px; font-weight: 600; border: none;
+  transition: all var(--tx); white-space: nowrap;
+  display: inline-flex; align-items: center; gap: 6px;
+}
+
+/* ════════════════════════════════════════════
+   BUTTONS
+════════════════════════════════════════════ */
+.btn {
+  padding: 8px 16px; border-radius: var(--r-sm);
+  font-size: 13px; font-weight: 600; border: none;
+  transition: all var(--tx);
+  display: inline-flex; align-items: center; gap: 7px;
+  cursor: pointer;
+}
+.btn-default {
+  background: var(--ink); color: var(--bg);
+}
+.btn-default:hover { opacity: .88; }
+.btn-outline {
+  background: none; color: var(--ink);
+  border: 1px solid var(--border2);
+}
+.btn-outline:hover { background: var(--primary-bg); border-color: var(--border3); }
+.btn-ghost {
+  background: var(--primary-bg); color: var(--ink2);
+  border: 1px solid var(--border);
+}
+.btn-ghost:hover { background: var(--primary-bg2); color: var(--ink); }
+.btn-danger {
+  background: var(--danger-bg); color: var(--danger);
+  border: 1px solid var(--danger-border);
+}
+.btn-danger:hover { background: var(--danger); color: #fff; }
+.btn-danger-solid { background: var(--danger); color: #fff; border: none; }
+.btn-danger-solid:hover { opacity: .88; }
+.btn-accent { background: var(--accent); color: #fff; border: none; }
+.btn-accent:hover { opacity: .88; }
+.btn[disabled] { opacity: .45; cursor: not-allowed; pointer-events: none; }
+.btn-loading i { animation: spin .7s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ════════════════════════════════════════════
+   TOGGLE SWITCH
+════════════════════════════════════════════ */
+.toggle-row {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 13px 0;
+}
+.toggle-row:not(:last-child) { border-bottom: 1px solid var(--border); }
+.toggle-info { flex: 1; padding-right: 16px; }
+.toggle-label { font-size: 13.5px; font-weight: 500; margin-bottom: 2px; }
+.toggle-desc { font-size: 12px; color: var(--ink3); }
+.toggle-switch { position: relative; flex-shrink: 0; }
+.toggle-switch input { display: none; }
+.toggle-track {
+  display: block; width: 38px; height: 22px; border-radius: 11px;
+  background: var(--border2); cursor: pointer;
+  transition: background var(--tx);
+  position: relative;
+}
+.toggle-switch input:checked + .toggle-track { background: var(--accent); }
+.toggle-track::after {
+  content: '';
+  position: absolute; top: 3px; left: 3px;
+  width: 16px; height: 16px; border-radius: 50%;
+  background: #fff;
+  transition: transform var(--tx);
+  box-shadow: 0 1px 4px rgba(0,0,0,.25);
+}
+.toggle-switch input:checked + .toggle-track::after { transform: translateX(16px); }
+
+/* ════════════════════════════════════════════
+   THEME SELECTOR
+════════════════════════════════════════════ */
+.theme-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+.theme-opt {
+  border: 2px solid var(--border);
+  border-radius: var(--r-md); padding: 12px 10px;
+  cursor: pointer; transition: all var(--tx);
+  text-align: center; background: var(--card2);
+  position: relative;
+}
+.theme-opt:hover { border-color: var(--border3); }
+.theme-opt.selected { border-color: var(--accent); background: var(--accent-bg); }
+.theme-opt.selected::after {
+  content: '\f00c';
+  font-family: 'Font Awesome 6 Free'; font-weight: 900;
+  position: absolute; top: 8px; right: 8px;
+  font-size: 10px; color: var(--accent);
+}
+.theme-preview {
+  width: 100%; height: 48px; border-radius: var(--r-sm);
+  margin-bottom: 8px; overflow: hidden; position: relative;
+}
+.tp-dark  { background: #0a0a0a; border: 1px solid rgba(255,255,255,.08); }
+.tp-dark .tp-bar  { background: #161616; width: 100%; height: 14px; border-bottom: 1px solid rgba(255,255,255,.06); }
+.tp-dark .tp-body { padding: 6px 6px; display: flex; gap: 4px; }
+.tp-dark .tp-card { background: #1c1c1c; border-radius: 3px; flex: 1; height: 18px; }
+.tp-light { background: #fafafa; border: 1px solid rgba(0,0,0,.07); }
+.tp-light .tp-bar  { background: #fff; width: 100%; height: 14px; border-bottom: 1px solid rgba(0,0,0,.06); }
+.tp-light .tp-body { padding: 6px 6px; display: flex; gap: 4px; }
+.tp-light .tp-card { background: #fff; border: 1px solid rgba(0,0,0,.07); border-radius: 3px; flex: 1; height: 18px; }
+.tp-system { background: linear-gradient(90deg,#0a0a0a 50%,#fafafa 50%); border: 1px solid var(--border); }
+.tp-system .tp-bar { background: linear-gradient(90deg,#161616 50%,#fff 50%); width: 100%; height: 14px; }
+.tp-system .tp-body { padding: 6px; display: flex; gap: 4px; }
+.tp-system .tp-c1 { background: #1c1c1c; border-radius: 3px; flex: 1; height: 18px; }
+.tp-system .tp-c2 { background: #fff; border: 1px solid rgba(0,0,0,.07); border-radius: 3px; flex: 1; height: 18px; }
+.theme-opt-label { font-size: 12px; font-weight: 600; color: var(--ink2); }
+
+/* ════════════════════════════════════════════
+   LANGUAGE SELECTOR
+════════════════════════════════════════════ */
+.lang-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.lang-opt {
+  display: flex; align-items: center; gap: 10px;
+  padding: 12px 14px; border-radius: var(--r-md);
+  border: 2px solid var(--border); cursor: pointer;
+  transition: all var(--tx); background: var(--card2);
+}
+.lang-opt:hover { border-color: var(--border3); }
+.lang-opt.selected { border-color: var(--accent); background: var(--accent-bg); }
+.lang-flag { font-size: 22px; line-height: 1; flex-shrink: 0; }
+.lang-info { flex: 1; min-width: 0; }
+.lang-name { font-size: 13px; font-weight: 600; }
+.lang-native { font-size: 11px; color: var(--ink3); }
+.lang-check {
+  width: 18px; height: 18px; border-radius: 50%;
+  border: 2px solid var(--border2);
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0; font-size: 9px; color: transparent;
+  transition: all var(--tx);
+}
+.lang-opt.selected .lang-check {
+  background: var(--accent); border-color: var(--accent);
+  color: #fff;
+}
+
+/* ════════════════════════════════════════════
+   PASSWORD STRENGTH
+════════════════════════════════════════════ */
+.pw-strength { display: flex; gap: 4px; margin-top: 6px; }
+.pw-bar {
+  flex: 1; height: 3px; border-radius: 2px;
+  background: var(--border2); transition: background .3s;
+}
+.pw-bar.weak   { background: var(--danger); }
+.pw-bar.medium { background: var(--warn); }
+.pw-bar.strong { background: var(--success); }
+.pw-label { font-size: 11px; margin-top: 4px; color: var(--ink3); transition: color .3s; }
+.pw-label.weak   { color: var(--danger); }
+.pw-label.medium { color: var(--warn); }
+.pw-label.strong { color: var(--success); }
+
+/* ════════════════════════════════════════════
+   DANGER ZONE CARD
+════════════════════════════════════════════ */
+.danger-card {
+  background: var(--card);
+  border: 1px solid var(--danger-border);
+  border-radius: var(--r-lg);
+  overflow: hidden;
+  margin-bottom: 16px;
+  box-shadow: var(--shadow);
+}
+.danger-row {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 16px 20px; gap: 16px;
+}
+.danger-row:not(:last-child) { border-bottom: 1px solid var(--danger-border); }
+.danger-info .danger-title { font-size: 13.5px; font-weight: 600; margin-bottom: 3px; }
+.danger-info .danger-desc { font-size: 12px; color: var(--ink3); font-family: var(--font-bn); }
+
+/* Firebase badge */
+.firebase-badge {
+  display: inline-flex; align-items: center; gap: 5px;
+  font-size: 11px; font-weight: 600; padding: 3px 8px;
+  border-radius: 20px;
+  background: rgba(255,160,0,.1);
+  border: 1px solid rgba(255,160,0,.2);
+  color: #FF9500;
+}
+
+/* ════════════════════════════════════════════
+   MODAL
+════════════════════════════════════════════ */
+.modal-overlay {
+  display: none; position: fixed; inset: 0; z-index: 800;
+  background: var(--overlay); backdrop-filter: blur(6px);
+  align-items: center; justify-content: center; padding: 16px;
+}
+.modal-overlay.show { display: flex; animation: fadeOv .18s ease; }
+@keyframes fadeOv { from { opacity: 0; } to { opacity: 1; } }
+
+.modal {
+  background: var(--card); border: 1px solid var(--border2);
+  border-radius: var(--r-xl); width: 100%; max-width: 420px;
+  max-height: 90vh; overflow-y: auto;
+  box-shadow: var(--shadow-lg);
+  animation: popUp .22s cubic-bezier(.34,1.56,.64,1) both;
+}
+@keyframes popUp {
+  from { opacity: 0; transform: scale(.94) translateY(12px); }
+  to   { opacity: 1; transform: scale(1) translateY(0); }
+}
+.modal-header {
+  padding: 20px 20px 0;
+  display: flex; align-items: flex-start; justify-content: space-between; gap: 12px;
+}
+.modal-header h3 { font-size: 16px; font-weight: 700; letter-spacing: -.02em; }
+.modal-header p  { font-size: 13px; color: var(--ink2); margin-top: 4px; }
+.modal-close {
+  width: 28px; height: 28px; border-radius: var(--r-sm);
+  background: var(--primary-bg); border: none; color: var(--ink2);
+  font-size: 12px; display: flex; align-items: center; justify-content: center;
+  cursor: pointer; transition: all var(--tx); flex-shrink: 0;
+}
+.modal-close:hover { background: var(--primary-bg2); color: var(--ink); }
+.modal-body { padding: 20px; }
+.modal-footer {
+  padding: 0 20px 20px;
+  display: flex; justify-content: flex-end; gap: 8px;
+}
+
+/* ════════════════════════════════════════════
+   TOAST
+════════════════════════════════════════════ */
+.toast-stack {
+  position: fixed; bottom: 20px; right: 20px;
+  z-index: 9999; display: flex; flex-direction: column; gap: 8px;
+  align-items: flex-end;
+}
+.toast {
+  display: flex; align-items: center; gap: 10px;
+  background: var(--card); border: 1px solid var(--border2);
+  border-radius: var(--r-md); padding: 10px 14px;
+  font-size: 13px; font-weight: 500;
+  box-shadow: var(--shadow-lg);
+  transform: translateX(120%); opacity: 0;
+  transition: all .3s cubic-bezier(.34,1.56,.64,1);
+  min-width: 220px; max-width: 320px;
+}
+.toast.show { transform: translateX(0); opacity: 1; }
+.toast-icon { font-size: 14px; flex-shrink: 0; }
+.toast.success .toast-icon { color: var(--success); }
+.toast.error .toast-icon { color: var(--danger); }
+.toast.info .toast-icon { color: var(--accent); }
+.toast.warn .toast-icon { color: var(--warn); }
+
+/* ════════════════════════════════════════════
+   RESPONSIVE
+════════════════════════════════════════════ */
+@media (max-width: 900px) {
+  .settings-nav { display: none; }
+  .content-wrap { grid-template-columns: 1fr; }
+  .settings-body { padding: 20px; max-width: 100%; }
+  .section-tabs {
+    display: flex; overflow-x: auto; gap: 4px;
+    padding: 12px 20px 0; border-bottom: 1px solid var(--border);
+  }
+  .section-tab {
+    white-space: nowrap; padding: 7px 12px;
+    border-radius: var(--r-sm); font-size: 12.5px; font-weight: 500;
+    color: var(--ink2); border: none; background: none; cursor: pointer;
+    transition: all var(--tx);
+  }
+  .section-tab.active { background: var(--primary-bg2); color: var(--ink); font-weight: 600; }
+}
+@media (min-width: 901px) { .section-tabs { display: none; } }
+@media (max-width: 768px) {
+  .sidebar { transform: translateX(-100%); }
+  .sidebar.open { transform: translateX(0); }
+  .topbar { left: 0; }
+  .menu-toggle { display: flex; }
+  .main { margin-left: 0; }
+  .field-row { grid-template-columns: 1fr; }
+  .theme-grid { grid-template-columns: 1fr 1fr; }
+  .toast-stack { bottom: 16px; right: 12px; left: 12px; align-items: stretch; }
+  .toast { max-width: 100%; }
+}
+@media (max-width: 480px) {
+  .lang-grid { grid-template-columns: 1fr; }
+  .theme-grid { grid-template-columns: repeat(3,1fr); gap: 6px; }
+  .avatar-picker { flex-direction: column; }
+}
+</style>
+</head>
+<body>
+
+<!-- Sidebar Overlay -->
+<div class="sb-overlay" id="sbOverlay" onclick="closeSidebar()"></div>
+
+<!-- ════ SIDEBAR ════ -->
+<aside class="sidebar" id="sidebar">
+  <div class="sb-top">
+    <div class="sb-logo"><i class="fa-solid fa-graduation-cap"></i></div>
+    <span class="sb-brand-txt">EduBD</span>
+  </div>
+
+  <nav class="sb-nav">
+    <div class="sb-group-label" data-i18n="nav_main">Main</div>
+    <button class="sb-item" onclick="nav('dashboard.html')">
+      <i class="fa-solid fa-house"></i>
+      <span data-i18n="nav_home">হোম</span>
+    </button>
+    <button class="sb-item">
+      <i class="fa-solid fa-book-open"></i>
+      <span data-i18n="nav_courses">আমার কোর্স</span>
+    </button>
+    <button class="sb-item">
+      <i class="fa-solid fa-magnifying-glass"></i>
+      <span data-i18n="nav_explore">সব কোর্স</span>
+    </button>
+    <button class="sb-item">
+      <i class="fa-solid fa-bell"></i>
+      <span data-i18n="nav_notice">নোটিশ</span>
+      <span class="sb-badge">3</span>
+    </button>
+
+    <div class="sb-group-label" data-i18n="nav_account">Account</div>
+    <button class="sb-item" onclick="nav('profile.html')">
+      <i class="fa-solid fa-circle-user"></i>
+      <span data-i18n="nav_profile">প্রোফাইল</span>
+    </button>
+    <button class="sb-item active">
+      <i class="fa-solid fa-gear"></i>
+      <span data-i18n="nav_settings">সেটিংস</span>
+    </button>
+    <button class="sb-item">
+      <i class="fa-solid fa-trophy"></i>
+      <span data-i18n="nav_certs">সার্টিফিকেট</span>
+    </button>
+  </nav>
+
+  <div class="sb-bottom">
+    <div class="sb-user" onclick="nav('profile.html')">
+      <div class="sb-avatar" id="sbAvatar">
+        <img src="" id="sbAvatarImg" style="display:none"/>
+        <span id="sbAvatarInitials">?</span>
+      </div>
+      <div class="sb-user-info">
+        <div class="sb-user-name" id="sbName">লোড হচ্ছে...</div>
+        <div class="sb-user-email" id="sbEmail"></div>
+      </div>
+      <i class="fa-solid fa-chevron-right sb-user-chevron"></i>
+    </div>
+  </div>
+</aside>
+
+<!-- ════ TOPBAR ════ -->
+<header class="topbar">
+  <div class="tb-left">
+    <button class="menu-toggle" onclick="toggleSidebar()"><i class="fa-solid fa-bars"></i></button>
+    <div class="tb-breadcrumb">
+      <a href="dashboard.html" data-i18n="nav_home">হোম</a>
+      <i class="fa-solid fa-chevron-right sep"></i>
+      <span class="current" data-i18n="nav_settings">সেটিংস</span>
+    </div>
+  </div>
+  <div class="tb-right">
+    <button class="tb-icon-btn" title="Theme toggle" onclick="quickToggleTheme()">
+      <i class="fa-solid fa-circle-half-stroke" id="tbThemeIcon"></i>
+    </button>
+    <button class="tb-icon-btn" title="Notifications">
+      <i class="fa-solid fa-bell"></i>
+    </button>
+  </div>
+</header>
+
+<!-- ════ MAIN ════ -->
+<main class="main">
+
+  <!-- Mobile Tabs -->
+  <div class="section-tabs" id="mobileTabs">
+    <button class="section-tab active" onclick="switchSection('profile',this)" data-i18n="sec_profile">প্রোফাইল</button>
+    <button class="section-tab" onclick="switchSection('appearance',this)" data-i18n="sec_appearance">থিম</button>
+    <button class="section-tab" onclick="switchSection('language',this)" data-i18n="sec_language">ভাষা</button>
+    <button class="section-tab" onclick="switchSection('security',this)" data-i18n="sec_security">নিরাপত্তা</button>
+    <button class="section-tab" onclick="switchSection('danger',this)" data-i18n="sec_danger">Danger Zone</button>
+  </div>
+
+  <div class="content-wrap">
+
+    <!-- ── Settings Sidenav ── -->
+    <nav class="settings-nav">
+      <div class="sn-label" data-i18n="sec_account">Account</div>
+      <button class="sn-item active" onclick="switchSection('profile',this)">
+        <i class="fa-solid fa-user"></i>
+        <span data-i18n="sec_profile">প্রোফাইল তথ্য</span>
+      </button>
+      <button class="sn-item" onclick="switchSection('appearance',this)">
+        <i class="fa-solid fa-palette"></i>
+        <span data-i18n="sec_appearance">থিম ও ডিজাইন</span>
+      </button>
+      <button class="sn-item" onclick="switchSection('language',this)">
+        <i class="fa-solid fa-globe"></i>
+        <span data-i18n="sec_language">ভাষা</span>
+      </button>
+      <div class="sn-label" data-i18n="sec_security_group">Security</div>
+      <button class="sn-item" onclick="switchSection('security',this)">
+        <i class="fa-solid fa-lock"></i>
+        <span data-i18n="sec_security">পাসওয়ার্ড ও নিরাপত্তা</span>
+      </button>
+      <div class="sn-label" data-i18n="sec_danger_group">Danger</div>
+      <button class="sn-item" onclick="switchSection('danger',this)" style="color:var(--danger)">
+        <i class="fa-solid fa-triangle-exclamation"></i>
+        <span data-i18n="sec_danger">Danger Zone</span>
+      </button>
+    </nav>
+
+    <!-- ── Settings Body ── -->
+    <div class="settings-body">
+
+      <!-- ════ SECTION: PROFILE ════ -->
+      <div class="settings-section active" id="sec-profile">
+        <div class="section-header">
+          <h2 data-i18n="sec_profile">প্রোফাইল তথ্য</h2>
+          <p data-i18n="sec_profile_desc">আপনার নাম, ছবি ও ব্যক্তিগত তথ্য আপডেট করুন।</p>
+        </div>
+
+        <!-- Avatar -->
+        <div class="card">
+          <div class="card-header">
+            <div class="card-icon blue"><i class="fa-solid fa-image"></i></div>
+            <div>
+              <div class="card-title" data-i18n="avatar_title">প্রোফাইল ছবি</div>
+              <div class="card-subtitle" data-i18n="avatar_sub">লিংক দিয়ে ছবি যোগ করুন</div>
+            </div>
+          </div>
+          <div class="card-body">
+            <div class="avatar-picker">
+              <div class="avatar-preview" id="avatarPreview">
+                <img src="" id="avatarPreviewImg" style="display:none"/>
+                <span class="avatar-initials" id="avatarInitials">?</span>
+              </div>
+              <div class="avatar-form">
+                <label class="field-label" data-i18n="avatar_url_label">ছবির URL</label>
+                <div class="avatar-url-row">
+                  <input class="field-input" type="url" id="avatarUrlInput"
+                    placeholder="https://example.com/photo.jpg"
+                    oninput="previewAvatar(this.value)"/>
+                  <button class="btn btn-outline btn-sm" onclick="applyAvatar()">
+                    <i class="fa-solid fa-check"></i>
+                    <span data-i18n="btn_apply">প্রয়োগ</span>
+                  </button>
+                </div>
+                <p class="field-hint" style="margin-top:6px" data-i18n="avatar_hint">
+                  JPG, PNG বা WebP ফরম্যাট সমর্থিত। ছবি publicly accessible হতে হবে।
+                </p>
+                <button class="btn btn-ghost btn-sm" style="margin-top:10px" onclick="removeAvatar()">
+                  <i class="fa-solid fa-xmark"></i>
+                  <span data-i18n="btn_remove_photo">ছবি সরিয়ে নিন</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Personal Info -->
+        <div class="card">
+          <div class="card-header">
+            <div class="card-icon neutral"><i class="fa-solid fa-pen-to-square"></i></div>
+            <div>
+              <div class="card-title" data-i18n="info_title">ব্যক্তিগত তথ্য</div>
+              <div class="card-subtitle">
+                <span class="firebase-badge">
+                  <i class="fa-solid fa-fire-flame-curved"></i> Firestore
+                </span>
+              </div>
+            </div>
+          </div>
+          <div class="card-body">
+            <div class="field-row field">
+              <div class="field">
+                <label class="field-label" data-i18n="label_name">পূর্ণ নাম <span class="required">*</span></label>
+                <input class="field-input" type="text" id="inputName" value=""
+                  placeholder="আপনার নাম লিখুন"/>
+                <p class="field-hint error-msg" id="nameErr" data-i18n="err_name_required">নাম খালি রাখা যাবে না।</p>
+              </div>
+              <div class="field">
+                <label class="field-label" data-i18n="label_phone">ফোন নম্বর</label>
+                <input class="field-input" type="tel" id="inputPhone" value=""
+                  placeholder="01XXXXXXXXX"/>
+              </div>
+            </div>
+            <div class="field">
+              <label class="field-label" data-i18n="label_email">ইমেইল</label>
+              <input class="field-input" type="email" value="" readonly id="inputEmail"/>
+              <p class="field-hint" data-i18n="email_readonly_hint">ইমেইল Firebase Auth-এ লক করা আছে।</p>
+            </div>
+            <div class="field">
+              <label class="field-label" data-i18n="label_bio">সংক্ষিপ্ত বায়ো</label>
+              <textarea class="field-input" id="inputBio"
+                placeholder="নিজের সম্পর্কে কিছু লিখুন..."></textarea>
+            </div>
+          </div>
+          <div class="card-footer">
+            <button class="btn btn-default" onclick="saveProfile()">
+              <i class="fa-solid fa-floppy-disk"></i>
+              <span data-i18n="btn_save_changes">পরিবর্তন সেভ করুন</span>
+            </button>
+            <button class="btn btn-ghost" onclick="resetProfile()" data-i18n="btn_cancel">বাতিল</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- ════ SECTION: APPEARANCE ════ -->
+      <div class="settings-section" id="sec-appearance">
+        <div class="section-header">
+          <h2 data-i18n="sec_appearance">থিম ও ডিজাইন</h2>
+          <p data-i18n="sec_appearance_desc">আপনার পছন্দের থিম বেছে নিন।</p>
+        </div>
+
+        <div class="card">
+          <div class="card-header">
+            <div class="card-icon neutral"><i class="fa-solid fa-moon"></i></div>
+            <div>
+              <div class="card-title" data-i18n="theme_title">Theme</div>
+              <div class="card-subtitle" data-i18n="theme_sub">ডার্ক, লাইট বা সিস্টেম থিম বেছে নিন</div>
+            </div>
+          </div>
+          <div class="card-body">
+            <div class="theme-grid">
+              <div class="theme-opt selected" id="themeOptDark" onclick="setTheme('dark')">
+                <div class="theme-preview tp-dark">
+                  <div class="tp-bar"></div>
+                  <div class="tp-body"><div class="tp-card"></div><div class="tp-card"></div></div>
+                </div>
+                <div class="theme-opt-label" data-i18n="theme_dark">Dark</div>
+              </div>
+              <div class="theme-opt" id="themeOptLight" onclick="setTheme('light')">
+                <div class="theme-preview tp-light">
+                  <div class="tp-bar"></div>
+                  <div class="tp-body"><div class="tp-card"></div><div class="tp-card"></div></div>
+                </div>
+                <div class="theme-opt-label" data-i18n="theme_light">Light</div>
+              </div>
+              <div class="theme-opt" id="themeOptSystem" onclick="setTheme('system')">
+                <div class="theme-preview tp-system">
+                  <div class="tp-bar"></div>
+                  <div class="tp-body"><div class="tp-c1"></div><div class="tp-c2"></div></div>
+                </div>
+                <div class="theme-opt-label" data-i18n="theme_system">System</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-header">
+            <div class="card-icon neutral"><i class="fa-solid fa-sliders"></i></div>
+            <div><div class="card-title" data-i18n="display_title">Display Preferences</div></div>
+          </div>
+          <div class="card-body" style="padding-bottom:0">
+            <div class="toggle-row">
+              <div class="toggle-info">
+                <div class="toggle-label" data-i18n="toggle_animations">Animations</div>
+                <div class="toggle-desc" data-i18n="toggle_animations_desc">পেজ ট্রানজিশন ও মাইক্রো-ইন্টারঅ্যাকশন দেখান</div>
+              </div>
+              <label class="toggle-switch">
+                <input type="checkbox" checked id="toggleAnimations" onchange="handleToggle('animations',this.checked)"/>
+                <span class="toggle-track"></span>
+              </label>
+            </div>
+            <div class="toggle-row">
+              <div class="toggle-info">
+                <div class="toggle-label" data-i18n="toggle_compact">Compact Mode</div>
+                <div class="toggle-desc" data-i18n="toggle_compact_desc">কম স্পেস ব্যবহার করে বেশি কনটেন্ট দেখান</div>
+              </div>
+              <label class="toggle-switch">
+                <input type="checkbox" id="toggleCompact" onchange="handleToggle('compact',this.checked)"/>
+                <span class="toggle-track"></span>
+              </label>
+            </div>
+            <div class="toggle-row">
+              <div class="toggle-info">
+                <div class="toggle-label" data-i18n="toggle_sidebar_labels">Sidebar Labels</div>
+                <div class="toggle-desc" data-i18n="toggle_sidebar_labels_desc">Sidebar-এ টেক্সট লেবেল দেখান</div>
+              </div>
+              <label class="toggle-switch">
+                <input type="checkbox" checked id="toggleSidebarLabels" onchange="handleToggle('sidebarLabels',this.checked)"/>
+                <span class="toggle-track"></span>
+              </label>
+            </div>
+          </div>
+          <div class="card-footer">
+            <button class="btn btn-default" onclick="saveAppearance()">
+              <i class="fa-solid fa-floppy-disk"></i>
+              <span data-i18n="btn_save_changes">পরিবর্তন সেভ করুন</span>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- ════ SECTION: LANGUAGE ════ -->
+      <div class="settings-section" id="sec-language">
+        <div class="section-header">
+          <h2 data-i18n="sec_language">ভাষা নির্বাচন</h2>
+          <p data-i18n="sec_language_desc">আপনার পছন্দের ভাষায় ইন্টারফেস দেখুন।</p>
+        </div>
+
+        <div class="card">
+          <div class="card-header">
+            <div class="card-icon blue"><i class="fa-solid fa-globe"></i></div>
+            <div>
+              <div class="card-title" data-i18n="lang_title">Interface Language</div>
+              <div class="card-subtitle" data-i18n="lang_sub">UI ভাষা পরিবর্তন করুন</div>
+            </div>
+          </div>
+          <div class="card-body">
+            <div class="lang-grid">
+              <div class="lang-opt selected" id="langOptBn" onclick="setLanguage('bn')">
+                <div class="lang-flag">🇧🇩</div>
+                <div class="lang-info">
+                  <div class="lang-name">Bangla</div>
+                  <div class="lang-native">বাংলা</div>
+                </div>
+                <div class="lang-check"><i class="fa-solid fa-check"></i></div>
+              </div>
+              <div class="lang-opt" id="langOptEn" onclick="setLanguage('en')">
+                <div class="lang-flag">🇬🇧</div>
+                <div class="lang-info">
+                  <div class="lang-name">English</div>
+                  <div class="lang-native">English</div>
+                </div>
+                <div class="lang-check"><i class="fa-solid fa-check"></i></div>
+              </div>
+            </div>
+            <p class="field-hint" style="margin-top:12px" data-i18n="lang_hint">
+              ভাষা পরিবর্তন করলে পেজ রিলোড হবে।
+            </p>
+          </div>
+          <div class="card-footer">
+            <button class="btn btn-default" onclick="applyLanguage()">
+              <i class="fa-solid fa-language"></i>
+              <span data-i18n="btn_apply_lang">ভাষা প্রয়োগ করুন</span>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- ════ SECTION: SECURITY ════ -->
+      <div class="settings-section" id="sec-security">
+        <div class="section-header">
+          <h2 data-i18n="sec_security">পাসওয়ার্ড ও নিরাপত্তা</h2>
+          <p data-i18n="sec_security_desc">আপনার অ্যাকাউন্ট সুরক্ষিত রাখুন।</p>
+        </div>
+
+        <!-- Change Password -->
+        <div class="card">
+          <div class="card-header">
+            <div class="card-icon amber"><i class="fa-solid fa-key"></i></div>
+            <div>
+              <div class="card-title" data-i18n="pw_title">পাসওয়ার্ড পরিবর্তন</div>
+              <div class="card-subtitle">
+                <span class="firebase-badge">
+                  <i class="fa-solid fa-fire-flame-curved"></i> Firebase Auth
+                </span>
+              </div>
+            </div>
+          </div>
+          <div class="card-body">
+            <div class="field">
+              <label class="field-label" data-i18n="label_current_pw">বর্তমান পাসওয়ার্ড <span class="required">*</span></label>
+              <div style="position:relative">
+                <input class="field-input" type="password" id="currentPw"
+                  placeholder="••••••••" style="padding-right:38px"/>
+                <button onclick="togglePw('currentPw',this)"
+                  style="position:absolute;right:10px;top:50%;transform:translateY(-50%);background:none;border:none;color:var(--ink3);font-size:13px;cursor:pointer">
+                  <i class="fa-solid fa-eye"></i>
+                </button>
+              </div>
+            </div>
+            <div class="field">
+              <label class="field-label" data-i18n="label_new_pw">নতুন পাসওয়ার্ড <span class="required">*</span></label>
+              <div style="position:relative">
+                <input class="field-input" type="password" id="newPw"
+                  placeholder="••••••••" oninput="checkStrength(this.value)"
+                  style="padding-right:38px"/>
+                <button onclick="togglePw('newPw',this)"
+                  style="position:absolute;right:10px;top:50%;transform:translateY(-50%);background:none;border:none;color:var(--ink3);font-size:13px;cursor:pointer">
+                  <i class="fa-solid fa-eye"></i>
+                </button>
+              </div>
+              <div class="pw-strength" id="pwStrengthBars">
+                <div class="pw-bar" id="pb1"></div>
+                <div class="pw-bar" id="pb2"></div>
+                <div class="pw-bar" id="pb3"></div>
+                <div class="pw-bar" id="pb4"></div>
+              </div>
+              <div class="pw-label" id="pwLabel" data-i18n="pw_min">কমপক্ষে ৮ অক্ষর, ১টি বড় হাতের অক্ষর ও সংখ্যা দিন</div>
+            </div>
+            <div class="field">
+              <label class="field-label" data-i18n="label_confirm_pw">পাসওয়ার্ড নিশ্চিত করুন <span class="required">*</span></label>
+              <input class="field-input" type="password" id="confirmPw" placeholder="••••••••"/>
+              <p class="field-hint error-msg" id="pwMatchErr" data-i18n="err_pw_mismatch">পাসওয়ার্ড মিলছে না।</p>
+            </div>
+          </div>
+          <div class="card-footer">
+            <button class="btn btn-default" onclick="changePassword()">
+              <i class="fa-solid fa-shield-halved"></i>
+              <span data-i18n="btn_update_pw">পাসওয়ার্ড আপডেট করুন</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Session / Notifications -->
+        <div class="card">
+          <div class="card-header">
+            <div class="card-icon green"><i class="fa-solid fa-bell"></i></div>
+            <div><div class="card-title" data-i18n="notif_title">Notifications</div></div>
+          </div>
+          <div class="card-body" style="padding-bottom:0">
+            <div class="toggle-row">
+              <div class="toggle-info">
+                <div class="toggle-label" data-i18n="notif_email">ইমেইল নোটিফিকেশন</div>
+                <div class="toggle-desc" data-i18n="notif_email_desc">কোর্স আপডেট ও অফার ইমেইলে পাঠান</div>
+              </div>
+              <label class="toggle-switch">
+                <input type="checkbox" checked onchange="handleToggle('emailNotif',this.checked)"/>
+                <span class="toggle-track"></span>
+              </label>
+            </div>
+            <div class="toggle-row">
+              <div class="toggle-info">
+                <div class="toggle-label" data-i18n="notif_push">Push Notifications</div>
+                <div class="toggle-desc" data-i18n="notif_push_desc">ব্রাউজারে তাৎক্ষণিক নোটিফিকেশন</div>
+              </div>
+              <label class="toggle-switch">
+                <input type="checkbox" onchange="handleToggle('pushNotif',this.checked)"/>
+                <span class="toggle-track"></span>
+              </label>
+            </div>
+          </div>
+          <div class="card-footer">
+            <button class="btn btn-default" onclick="showToast('নোটিফিকেশন সেটিংস সেভ হয়েছে!','success','fa-bell')">
+              <i class="fa-solid fa-floppy-disk"></i>
+              <span data-i18n="btn_save_changes">সেভ করুন</span>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- ════ SECTION: DANGER ZONE ════ -->
+      <div class="settings-section" id="sec-danger">
+        <div class="section-header">
+          <h2 style="color:var(--danger)" data-i18n="sec_danger">Danger Zone</h2>
+          <p data-i18n="sec_danger_desc">এই সেকশনের অ্যাকশনগুলো অপরিবর্তনযোগ্য।</p>
+        </div>
+
+        <div class="danger-card">
+          <div class="danger-row">
+            <div class="danger-info">
+              <div class="danger-title" data-i18n="logout_title">
+                <i class="fa-solid fa-right-from-bracket" style="margin-right:6px;color:var(--warn)"></i>
+                লগআউট
+              </div>
+              <div class="danger-desc" data-i18n="logout_desc">এই ডিভাইস থেকে সাইন আউট হবে।</div>
+            </div>
+            <button class="btn btn-ghost" onclick="doLogout()">
+              <i class="fa-solid fa-right-from-bracket"></i>
+              <span data-i18n="btn_logout">লগআউট</span>
+            </button>
+          </div>
+
+          <div class="danger-row">
+            <div class="danger-info">
+              <div class="danger-title" data-i18n="delete_sessions_title">
+                <i class="fa-solid fa-devices" style="margin-right:6px;color:var(--warn)"></i>
+                সব সেশন বাতিল
+              </div>
+              <div class="danger-desc" data-i18n="delete_sessions_desc">সকল ডিভাইস থেকে লগআউট করুন।</div>
+            </div>
+            <button class="btn btn-danger" onclick="revokeAllSessions()">
+              <i class="fa-solid fa-power-off"></i>
+              <span data-i18n="btn_revoke_sessions">সব সেশন বাতিল</span>
+            </button>
+          </div>
+
+          <div class="danger-row">
+            <div class="danger-info">
+              <div class="danger-title" style="color:var(--danger)" data-i18n="delete_account_title">
+                <i class="fa-solid fa-trash-can" style="margin-right:6px"></i>
+                অ্যাকাউন্ট ডিলিট
+              </div>
+              <div class="danger-desc" data-i18n="delete_account_desc">
+                এই অ্যাকাউন্ট, সমস্ত কোর্স এনরোলমেন্ট ও ডেটা স্থায়ীভাবে মুছে যাবে।
+                <br><span class="firebase-badge" style="margin-top:6px;display:inline-flex">
+                  <i class="fa-solid fa-fire-flame-curved"></i> Firebase Auth + Firestore
+                </span>
+              </div>
+            </div>
+            <button class="btn btn-danger-solid" onclick="openDeleteModal()">
+              <i class="fa-solid fa-trash-can"></i>
+              <span data-i18n="btn_delete_account">অ্যাকাউন্ট ডিলিট করুন</span>
+            </button>
+          </div>
+        </div>
+      </div>
+
+    </div><!-- /settings-body -->
+  </div><!-- /content-wrap -->
+</main>
+
+<!-- ════ DELETE ACCOUNT MODAL ════ -->
+<div class="modal-overlay" id="deleteModal" onclick="closeDeleteModal(event)">
+  <div class="modal">
+    <div class="modal-header">
+      <div>
+        <h3 data-i18n="modal_delete_title">অ্যাকাউন্ট ডিলিট নিশ্চিত করুন</h3>
+        <p data-i18n="modal_delete_desc">এই কাজ পূর্বাবস্থায় ফেরানো যাবে না। নিশ্চিত করতে আপনার ইমেইল টাইপ করুন।</p>
+      </div>
+      <button class="modal-close" onclick="closeDeleteModal(null,true)"><i class="fa-solid fa-xmark"></i></button>
+    </div>
+    <div class="modal-body">
+      <div class="field" style="background:var(--danger-bg);border:1px solid var(--danger-border);border-radius:var(--r-md);padding:12px 14px;margin-bottom:16px">
+        <p style="font-size:12.5px;color:var(--danger)">
+          <i class="fa-solid fa-triangle-exclamation" style="margin-right:6px"></i>
+          <span data-i18n="modal_delete_warn">আপনার সমস্ত কোর্স এনরোলমেন্ট, পেমেন্ট হিস্ট্রি ও সার্টিফিকেট মুছে যাবে।</span>
+        </p>
+      </div>
+      <div class="field">
+        <label class="field-label" data-i18n="modal_delete_confirm_label">ইমেইল টাইপ করুন: <strong>rahat@example.com</strong></label>
+        <input class="field-input" type="email" id="deleteConfirmEmail"
+          placeholder="rahat@example.com"/>
+        <p class="field-hint error-msg" id="deleteEmailErr" data-i18n="err_email_mismatch">ইমেইল মিলছে না।</p>
+      </div>
+      <div class="field">
+        <label class="field-label" data-i18n="modal_delete_pw_label">পাসওয়ার্ড নিশ্চিত করুন</label>
+        <input class="field-input" type="password" id="deleteConfirmPw" placeholder="••••••••"/>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeDeleteModal(null,true)" data-i18n="btn_cancel">বাতিল</button>
+      <button class="btn btn-danger-solid" onclick="confirmDeleteAccount()">
+        <i class="fa-solid fa-trash-can"></i>
+        <span data-i18n="btn_confirm_delete">চিরতরে ডিলিট করুন</span>
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- Toast Stack -->
+<div class="toast-stack" id="toastStack"></div>
+
+<script>
+/* ════════════════════════════════════════════
+   FIREBASE INIT
+════════════════════════════════════════════ */
+const auth = firebase.auth();
+const db   = firebase.firestore();
+let currentUser = null;
+
+/* ════════════════════════════════════════════
+   STATE
+════════════════════════════════════════════ */
+let currentTheme = localStorage.getItem('theme') || 'dark';
+let currentLang  = localStorage.getItem('lang')  || 'bn';
+let pendingLang  = currentLang;
+let avatarUrl    = '';
+
+/* ════════════════════════════════════════════
+   AUTH STATE LISTENER — ব্যবহারকারী লোড
+════════════════════════════════════════════ */
+auth.onAuthStateChanged(async user => {
+  if (!user) {
+    window.location.href = 'index.html';
+    return;
+  }
+  currentUser = user;
+
+  try {
+    const snap = await db.collection('users').doc(user.uid).get();
+    const data = snap.exists ? snap.data() : {};
+
+    const name  = data.name  || user.displayName || '';
+    const phone = data.phone || '';
+    const bio   = data.bio   || '';
+    avatarUrl   = data.photoURL || user.photoURL || '';
+
+    document.getElementById('inputName').value  = name;
+    document.getElementById('inputPhone').value = phone;
+    document.getElementById('inputBio').value   = bio;
+    document.querySelector('[readonly][type="email"]').value = user.email;
+
+    document.getElementById('sbName').textContent       = name || user.email;
+    document.getElementById('sbEmail').textContent = user.email;
+
+    if (avatarUrl) {
+      document.getElementById('avatarUrlInput').value = avatarUrl;
+      previewAvatar(avatarUrl);
+      const sbImg = document.getElementById('sbAvatarImg');
+      sbImg.src = avatarUrl;
+      sbImg.onload  = () => { sbImg.style.display='block'; document.getElementById('sbAvatarInitials').style.display='none'; };
+    }
+
+    const initial = [...(name||user.email)].find(c => /\p{L}/u.test(c)) || (name||user.email)[0] || '?';
+    document.getElementById('sbAvatarInitials').textContent = initial;
+    document.getElementById('avatarInitials').textContent   = initial;
+
+    _orig.name  = name;
+    _orig.phone = phone;
+    _orig.bio   = bio;
+
+  } catch(e) {
+    console.error('Profile load error:', e);
+    showToast('প্রোফাইল লোড হয়নি', 'error', 'fa-triangle-exclamation');
+  }
+});
+
+/* ════════════════════════════════════════════
+   I18N
+════════════════════════════════════════════ */
+const i18n = {
+  bn: {
+    nav_main:'Main', nav_home:'হোম', nav_courses:'আমার কোর্স', nav_explore:'সব কোর্স',
+    nav_notice:'নোটিশ', nav_account:'Account', nav_profile:'প্রোফাইল',
+    nav_settings:'সেটিংস', nav_certs:'সার্টিফিকেট',
+    sec_account:'Account', sec_profile:'প্রোফাইল তথ্য', sec_appearance:'থিম ও ডিজাইন',
+    sec_language:'ভাষা', sec_security:'পাসওয়ার্ড ও নিরাপত্তা', sec_danger:'Danger Zone',
+    sec_security_group:'Security', sec_danger_group:'Danger',
+    sec_profile_desc:'আপনার নাম, ছবি ও ব্যক্তিগত তথ্য আপডেট করুন।',
+    sec_appearance_desc:'আপনার পছন্দের থিম বেছে নিন।',
+    sec_language_desc:'আপনার পছন্দের ভাষায় ইন্টারফেস দেখুন।',
+    sec_security_desc:'আপনার অ্যাকাউন্ট সুরক্ষিত রাখুন।',
+    sec_danger_desc:'এই সেকশনের অ্যাকশনগুলো অপরিবর্তনযোগ্য।',
+    avatar_title:'প্রোফাইল ছবি', avatar_sub:'লিংক দিয়ে ছবি যোগ করুন',
+    avatar_url_label:'ছবির URL', btn_apply:'প্রয়োগ', btn_remove_photo:'ছবি সরিয়ে নিন',
+    avatar_hint:'JPG, PNG বা WebP ফরম্যাট সমর্থিত।',
+    info_title:'ব্যক্তিগত তথ্য', label_name:'পূর্ণ নাম', label_phone:'ফোন নম্বর',
+    label_email:'ইমেইল', label_bio:'সংক্ষিপ্ত বায়ো',
+    email_readonly_hint:'ইমেইল Firebase Auth-এ লক করা আছে।',
+    btn_save_changes:'পরিবর্তন সেভ করুন', btn_cancel:'বাতিল',
+    err_name_required:'নাম খালি রাখা যাবে না।',
+    theme_title:'Theme', theme_sub:'ডার্ক, লাইট বা সিস্টেম থিম বেছে নিন',
+    theme_dark:'Dark', theme_light:'Light', theme_system:'System',
+    display_title:'Display Preferences',
+    toggle_animations:'Animations', toggle_animations_desc:'পেজ ট্রানজিশন ও মাইক্রো-ইন্টারঅ্যাকশন দেখান',
+    toggle_compact:'Compact Mode', toggle_compact_desc:'কম স্পেস ব্যবহার করে বেশি কনটেন্ট দেখান',
+    toggle_sidebar_labels:'Sidebar Labels', toggle_sidebar_labels_desc:'Sidebar-এ টেক্সট লেবেল দেখান',
+    lang_title:'Interface Language', lang_sub:'UI ভাষা পরিবর্তন করুন',
+    lang_hint:'ভাষা পরিবর্তন করলে পেজ রিলোড হবে।',
+    btn_apply_lang:'ভাষা প্রয়োগ করুন',
+    pw_title:'পাসওয়ার্ড পরিবর্তন', label_current_pw:'বর্তমান পাসওয়ার্ড',
+    label_new_pw:'নতুন পাসওয়ার্ড', label_confirm_pw:'পাসওয়ার্ড নিশ্চিত করুন',
+    pw_min:'কমপক্ষে ৮ অক্ষর, ১টি বড় হাতের অক্ষর ও সংখ্যা দিন',
+    btn_update_pw:'পাসওয়ার্ড আপডেট করুন', err_pw_mismatch:'পাসওয়ার্ড মিলছে না।',
+    notif_title:'Notifications', notif_email:'ইমেইল নোটিফিকেশন',
+    notif_email_desc:'কোর্স আপডেট ও অফার ইমেইলে পাঠান',
+    notif_push:'Push Notifications', notif_push_desc:'ব্রাউজারে তাৎক্ষণিক নোটিফিকেশন',
+    logout_title:'লগআউট', logout_desc:'এই ডিভাইস থেকে সাইন আউট হবে।',
+    btn_logout:'লগআউট', delete_sessions_title:'সব সেশন বাতিল',
+    delete_sessions_desc:'সকল ডিভাইস থেকে লগআউট করুন।',
+    btn_revoke_sessions:'সব সেশন বাতিল',
+    delete_account_title:'অ্যাকাউন্ট ডিলিট', btn_delete_account:'অ্যাকাউন্ট ডিলিট করুন',
+    delete_account_desc:'এই অ্যাকাউন্ট, সমস্ত কোর্স এনরোলমেন্ট ও ডেটা স্থায়ীভাবে মুছে যাবে।',
+    modal_delete_title:'অ্যাকাউন্ট ডিলিট নিশ্চিত করুন',
+    modal_delete_desc:'এই কাজ পূর্বাবস্থায় ফেরানো যাবে না।',
+    modal_delete_warn:'আপনার সমস্ত কোর্স এনরোলমেন্ট, পেমেন্ট হিস্ট্রি ও সার্টিফিকেট মুছে যাবে।',
+    modal_delete_confirm_label:'ইমেইল টাইপ করুন:',
+    modal_delete_pw_label:'পাসওয়ার্ড নিশ্চিত করুন',
+    err_email_mismatch:'ইমেইল মিলছে না।', btn_confirm_delete:'চিরতরে ডিলিট করুন',
+  },
+  en: {
+    nav_main:'Main', nav_home:'Home', nav_courses:'My Courses', nav_explore:'All Courses',
+    nav_notice:'Notices', nav_account:'Account', nav_profile:'Profile',
+    nav_settings:'Settings', nav_certs:'Certificates',
+    sec_account:'Account', sec_profile:'Profile Info', sec_appearance:'Appearance',
+    sec_language:'Language', sec_security:'Password & Security', sec_danger:'Danger Zone',
+    sec_security_group:'Security', sec_danger_group:'Danger',
+    sec_profile_desc:'Update your name, photo, and personal details.',
+    sec_appearance_desc:'Choose your preferred theme.',
+    sec_language_desc:'View the interface in your preferred language.',
+    sec_security_desc:'Keep your account secure.',
+    sec_danger_desc:'Actions in this section are irreversible.',
+    avatar_title:'Profile Photo', avatar_sub:'Add a photo using a link',
+    avatar_url_label:'Photo URL', btn_apply:'Apply', btn_remove_photo:'Remove photo',
+    avatar_hint:'JPG, PNG or WebP formats are supported.',
+    info_title:'Personal Information', label_name:'Full name', label_phone:'Phone number',
+    label_email:'Email', label_bio:'Short bio',
+    email_readonly_hint:'Email is locked in Firebase Auth.',
+    btn_save_changes:'Save changes', btn_cancel:'Cancel',
+    err_name_required:'Name cannot be empty.',
+    theme_title:'Theme', theme_sub:'Choose dark, light or system theme',
+    theme_dark:'Dark', theme_light:'Light', theme_system:'System',
+    display_title:'Display Preferences',
+    toggle_animations:'Animations', toggle_animations_desc:'Show page transitions & micro-interactions',
+    toggle_compact:'Compact Mode', toggle_compact_desc:'Show more content in less space',
+    toggle_sidebar_labels:'Sidebar Labels', toggle_sidebar_labels_desc:'Show text labels in sidebar',
+    lang_title:'Interface Language', lang_sub:'Change UI language',
+    lang_hint:'Changing the language will reload the page.',
+    btn_apply_lang:'Apply Language',
+    pw_title:'Change Password', label_current_pw:'Current Password',
+    label_new_pw:'New Password', label_confirm_pw:'Confirm Password',
+    pw_min:'At least 8 characters, 1 uppercase letter & a number',
+    btn_update_pw:'Update Password', err_pw_mismatch:'Passwords do not match.',
+    notif_title:'Notifications', notif_email:'Email Notifications',
+    notif_email_desc:'Send course updates and offers by email',
+    notif_push:'Push Notifications', notif_push_desc:'Instant browser notifications',
+    logout_title:'Logout', logout_desc:'You will be signed out from this device.',
+    btn_logout:'Logout', delete_sessions_title:'Revoke All Sessions',
+    delete_sessions_desc:'Log out from all devices.',
+    btn_revoke_sessions:'Revoke All Sessions',
+    delete_account_title:'Delete Account', btn_delete_account:'Delete Account',
+    delete_account_desc:'Your account, all course enrollments and data will be permanently deleted.',
+    modal_delete_title:'Confirm Account Deletion',
+    modal_delete_desc:'This action cannot be undone.',
+    modal_delete_warn:'All your course enrollments, payment history and certificates will be deleted.',
+    modal_delete_confirm_label:'Type your email:',
+    modal_delete_pw_label:'Confirm your password',
+    err_email_mismatch:'Email does not match.', btn_confirm_delete:'Delete Permanently',
+  }
+};
+
+function t(key) { return (i18n[currentLang]||i18n.bn)[key] || key; }
+
+function applyI18n() {
+  document.querySelectorAll('[data-i18n]').forEach(el => {
+    const key = el.getAttribute('data-i18n');
+    const val = t(key);
+    if (val) el.textContent = val;
+  });
+  document.documentElement.lang = currentLang === 'bn' ? 'bn' : 'en';
+}
+
+/* ════════════════════════════════════════════
+   THEME
+════════════════════════════════════════════ */
+function applyTheme(theme) {
+  const resolved = theme === 'system'
+    ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light')
+    : theme;
+  document.documentElement.setAttribute('data-theme', resolved);
+  currentTheme = theme;
+  localStorage.setItem('theme', theme);
+
+  // sync UI
+  ['dark','light','system'].forEach(t => {
+    document.getElementById('themeOpt'+t.charAt(0).toUpperCase()+t.slice(1))
+      ?.classList.toggle('selected', t === theme);
+  });
+  const icon = document.getElementById('tbThemeIcon');
+  if (icon) {
+    icon.className = resolved === 'dark'
+      ? 'fa-solid fa-moon'
+      : 'fa-solid fa-sun';
+  }
+}
+
+function setTheme(theme) {
+  applyTheme(theme);
+  showToast(theme === 'dark' ? 'Dark theme চালু' : theme === 'light' ? 'Light theme চালু' : 'System theme চালু', 'success', 'fa-palette');
+}
+
+function quickToggleTheme() {
+  setTheme(document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark');
+}
+
+/* ════════════════════════════════════════════
+   LANGUAGE
+════════════════════════════════════════════ */
+function setLanguage(lang) {
+  pendingLang = lang;
+  document.getElementById('langOptBn').classList.toggle('selected', lang === 'bn');
+  document.getElementById('langOptEn').classList.toggle('selected', lang === 'en');
+}
+
+function applyLanguage() {
+  currentLang = pendingLang;
+  localStorage.setItem('lang', currentLang);
+  applyI18n();
+  showToast(currentLang === 'bn' ? 'বাংলা ভাষা প্রয়োগ হয়েছে' : 'English language applied', 'success', 'fa-globe');
+}
+
+/* ════════════════════════════════════════════
+   SECTION NAVIGATION
+════════════════════════════════════════════ */
+function switchSection(name, triggerEl) {
+  // hide all sections
+  document.querySelectorAll('.settings-section').forEach(s => s.classList.remove('active'));
+  document.getElementById('sec-' + name).classList.add('active');
+
+  // update desktop sidenav
+  document.querySelectorAll('.sn-item').forEach(i => i.classList.remove('active'));
+  // update mobile tabs
+  document.querySelectorAll('.section-tab').forEach(i => i.classList.remove('active'));
+
+  if (triggerEl) triggerEl.classList.add('active');
+
+  // sync counterpart
+  const allItems = [...document.querySelectorAll('.sn-item'), ...document.querySelectorAll('.section-tab')];
+  allItems.forEach(el => {
+    const fn = el.getAttribute('onclick') || '';
+    if (fn.includes(`'${name}'`)) el.classList.add('active');
+  });
+
+  closeSidebar();
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+/* ════════════════════════════════════════════
+   PROFILE
+════════════════════════════════════════════ */
+// _orig will be populated after Firebase loads user data
+const _orig = { name: '', phone: '', bio: '' };
+
+async function saveProfile() {
+  const name  = document.getElementById('inputName').value.trim();
+  const phone = document.getElementById('inputPhone').value.trim();
+  const bio   = document.getElementById('inputBio').value.trim();
+  const nameErr = document.getElementById('nameErr');
+
+  if (!name) {
+    document.getElementById('inputName').classList.add('error');
+    nameErr.classList.add('show');
+    return;
+  }
+  document.getElementById('inputName').classList.remove('error');
+  nameErr.classList.remove('show');
+
+  try {
+    await db.collection('users').doc(currentUser.uid).set(
+      { name, phone, bio, photoURL: avatarUrl },
+      { merge: true }
+    );
+
+    // update UI
+    document.getElementById('sbName').textContent = name;
+    const initial = [...name].find(c => /\p{L}/u.test(c)) || name[0];
+    document.getElementById('sbAvatarInitials').textContent = initial;
+    document.getElementById('avatarInitials').textContent   = initial;
+    _orig.name = name; _orig.phone = phone; _orig.bio = bio;
+
+    showToast(t('btn_save_changes') + ' ✓', 'success', 'fa-floppy-disk');
+  } catch(e) {
+    console.error(e);
+    showToast('সেভ হয়নি: ' + e.message, 'error', 'fa-xmark');
+  }
+}
+
+function resetProfile() {
+  document.getElementById('inputName').value  = _orig.name;
+  document.getElementById('inputPhone').value = _orig.phone;
+  document.getElementById('inputBio').value   = _orig.bio;
+  document.getElementById('inputName').classList.remove('error');
+  document.getElementById('nameErr').classList.remove('show');
+  showToast('পরিবর্তন বাতিল হয়েছে', 'info', 'fa-rotate-left');
+}
+
+/* ════════════════════════════════════════════
+   AVATAR
+════════════════════════════════════════════ */
+function previewAvatar(url) {
+  const img = document.getElementById('avatarPreviewImg');
+  const initials = document.getElementById('avatarInitials');
+  if (!url) { img.style.display='none'; initials.style.display=''; return; }
+  img.src = url;
+  img.onload  = () => { img.style.display='block'; initials.style.display='none'; };
+  img.onerror = () => { img.style.display='none';  initials.style.display=''; };
+}
+
+function applyAvatar() {
+  const url = document.getElementById('avatarUrlInput').value.trim();
+  if (!url) { showToast('URL খালি রাখা যাবে না', 'error', 'fa-xmark'); return; }
+  avatarUrl = url;
+  // also update sidebar avatar
+  const sbImg = document.getElementById('sbAvatarImg');
+  sbImg.src = url;
+  sbImg.onload  = () => { sbImg.style.display='block'; document.getElementById('sbAvatarInitials').style.display='none'; };
+  sbImg.onerror = () => { sbImg.style.display='none';  document.getElementById('sbAvatarInitials').style.display=''; };
+  showToast('ছবি প্রয়োগ হয়েছে! সেভ করুন।', 'success', 'fa-image');
+}
+
+function removeAvatar() {
+  avatarUrl = '';
+  document.getElementById('avatarUrlInput').value = '';
+  document.getElementById('avatarPreviewImg').style.display = 'none';
+  document.getElementById('avatarInitials').style.display = '';
+  document.getElementById('sbAvatarImg').style.display = 'none';
+  document.getElementById('sbAvatarInitials').style.display = '';
+  showToast('ছবি সরানো হয়েছে', 'info', 'fa-image');
+}
+
+/* ════════════════════════════════════════════
+   APPEARANCE
+════════════════════════════════════════════ */
+function saveAppearance() {
+  showToast('Appearance সেভ হয়েছে!', 'success', 'fa-palette');
+}
+function handleToggle(key, val) {
+  localStorage.setItem('pref_' + key, val);
+  showToast(val ? 'চালু করা হয়েছে' : 'বন্ধ করা হয়েছে', 'info', val ? 'fa-toggle-on' : 'fa-toggle-off');
+}
+
+/* ════════════════════════════════════════════
+   PASSWORD
+════════════════════════════════════════════ */
+function togglePw(id, btn) {
+  const inp = document.getElementById(id);
+  const icon = btn.querySelector('i');
+  if (inp.type === 'password') {
+    inp.type = 'text';
+    icon.className = 'fa-solid fa-eye-slash';
+  } else {
+    inp.type = 'password';
+    icon.className = 'fa-solid fa-eye';
+  }
+}
+
+function checkStrength(val) {
+  const bars  = ['pb1','pb2','pb3','pb4'].map(id => document.getElementById(id));
+  const label = document.getElementById('pwLabel');
+  bars.forEach(b => { b.className = 'pw-bar'; });
+
+  if (!val) { label.className='pw-label'; label.textContent = t('pw_min'); return; }
+
+  let score = 0;
+  if (val.length >= 8)           score++;
+  if (/[A-Z]/.test(val))         score++;
+  if (/[0-9]/.test(val))         score++;
+  if (/[^A-Za-z0-9]/.test(val)) score++;
+
+  const level = score <= 1 ? 'weak' : score <= 3 ? 'medium' : 'strong';
+  const labels = { weak: '🔴 দুর্বল', medium: '🟡 মাঝারি', strong: '🟢 শক্তিশালী' };
+
+  for (let i = 0; i < score; i++) bars[i].classList.add(level);
+  label.className = 'pw-label ' + level;
+  label.textContent = labels[level];
+}
+
+async function changePassword() {
+  const cur  = document.getElementById('currentPw').value.trim();
+  const nw   = document.getElementById('newPw').value.trim();
+  const conf = document.getElementById('confirmPw').value.trim();
+  const matchErr = document.getElementById('pwMatchErr');
+
+  matchErr.classList.remove('show');
+  document.getElementById('confirmPw').classList.remove('error');
+
+  if (!cur)        { showToast('বর্তমান পাসওয়ার্ড দিন', 'error', 'fa-key'); return; }
+  if (nw.length < 8) { showToast('পাসওয়ার্ড কমপক্ষে ৮ অক্ষরের হতে হবে', 'error', 'fa-key'); return; }
+  if (nw !== conf) {
+    document.getElementById('confirmPw').classList.add('error');
+    matchErr.classList.add('show');
+    return;
+  }
+
+  try {
+    const cred = firebase.auth.EmailAuthProvider.credential(currentUser.email, cur);
+    await currentUser.reauthenticateWithCredential(cred);
+    await currentUser.updatePassword(nw);
+
+    ['currentPw','newPw','confirmPw'].forEach(id => document.getElementById(id).value='');
+    checkStrength('');
+    showToast('পাসওয়ার্ড সফলভাবে আপডেট হয়েছে!', 'success', 'fa-shield-halved');
+  } catch(e) {
+    if (e.code === 'auth/wrong-password') {
+      showToast('বর্তমান পাসওয়ার্ড ভুল', 'error', 'fa-key');
+    } else {
+      showToast('পাসওয়ার্ড আপডেট হয়নি: ' + e.message, 'error', 'fa-xmark');
+    }
+  }
+}
+
+/* ════════════════════════════════════════════
+   DANGER ZONE
+════════════════════════════════════════════ */
+async function revokeAllSessions() {
+  try {
+    await currentUser.getIdToken(true);
+    showToast('সব সেশন রিসেট হয়েছে', 'success', 'fa-right-from-bracket');
+  } catch(e) {
+    showToast('সেশন বাতিল হয়নি: ' + e.message, 'error', 'fa-xmark');
+  }
+}
+
+async function doLogout() {
+  try {
+    await auth.signOut();
+    window.location.href = 'index.html';
+  } catch(e) {
+    showToast('লগআউট হয়নি: ' + e.message, 'error', 'fa-xmark');
+  }
+}
+
+function openDeleteModal() {
+  document.getElementById('deleteModal').classList.add('show');
+  document.body.style.overflow = 'hidden';
+  document.getElementById('deleteConfirmEmail').value = '';
+  document.getElementById('deleteConfirmPw').value = '';
+  document.getElementById('deleteEmailErr').classList.remove('show');
+}
+
+function closeDeleteModal(e, force) {
+  if (!force && e && document.querySelector('.modal').contains(e.target)) return;
+  document.getElementById('deleteModal').classList.remove('show');
+  document.body.style.overflow = '';
+}
+
+async function confirmDeleteAccount() {
+  const email = document.getElementById('deleteConfirmEmail').value.trim();
+  const pw    = document.getElementById('deleteConfirmPw').value.trim();
+  const errEl = document.getElementById('deleteEmailErr');
+
+  errEl.classList.remove('show');
+
+  if (email !== currentUser.email) {
+    errEl.classList.add('show');
+    document.getElementById('deleteConfirmEmail').classList.add('error');
+    return;
+  }
+  if (!pw) { showToast('পাসওয়ার্ড দিন', 'error', 'fa-key'); return; }
+
+  try {
+    const cred = firebase.auth.EmailAuthProvider.credential(currentUser.email, pw);
+    await currentUser.reauthenticateWithCredential(cred);
+    await db.collection('users').doc(currentUser.uid).delete();
+    await currentUser.delete();
+    window.location.href = 'index.html';
+  } catch(e) {
+    if (e.code === 'auth/wrong-password') {
+      showToast('পাসওয়ার্ড ভুল', 'error', 'fa-key');
+    } else {
+      showToast('ডিলিট হয়নি: ' + e.message, 'error', 'fa-xmark');
+    }
+  }
+}
+
+/* ════════════════════════════════════════════
+   TOAST
+════════════════════════════════════════════ */
+function showToast(msg, type = 'success', icon = 'fa-check') {
+  const stack = document.getElementById('toastStack');
+  const el = document.createElement('div');
+  el.className = `toast ${type}`;
+  el.innerHTML = `<i class="fa-solid ${icon} toast-icon"></i><span>${msg}</span>`;
+  stack.appendChild(el);
+  requestAnimationFrame(() => { requestAnimationFrame(() => el.classList.add('show')); });
+  setTimeout(() => {
+    el.classList.remove('show');
+    setTimeout(() => el.remove(), 350);
+  }, 3000);
+}
+
+/* ════════════════════════════════════════════
+   SIDEBAR
+════════════════════════════════════════════ */
+function toggleSidebar() {
+  document.getElementById('sidebar').classList.toggle('open');
+  document.getElementById('sbOverlay').classList.toggle('show');
+}
+function closeSidebar() {
+  document.getElementById('sidebar').classList.remove('open');
+  document.getElementById('sbOverlay').classList.remove('show');
+}
+function nav(url) { window.location.href = url; }
+
+/* ════════════════════════════════════════════
+   INIT
+════════════════════════════════════════════ */
+document.addEventListener('DOMContentLoaded', () => {
+  applyTheme(currentTheme);
+  currentLang = localStorage.getItem('lang') || 'bn';
+  pendingLang = currentLang;
+  document.getElementById('langOptBn').classList.toggle('selected', currentLang === 'bn');
+  document.getElementById('langOptEn').classList.toggle('selected', currentLang === 'en');
+  applyI18n();
+});
+
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') closeDeleteModal(null, true);
+});
+</script>
+</body>
+</html>
